@@ -16,7 +16,7 @@ srcdir= $(PWD)
 ### End User configurable options ###
 
 .SUFFIXES:	.c .C .f90
-CFLAGS	  = -g $(OPTFLAGS) 
+CFLAGS	  = -O2 -g $(OPTFLAGS) 
 CCFLAGS	  = $(CFLAGS)
 LIBS	  = -lm 
 

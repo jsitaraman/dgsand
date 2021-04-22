@@ -1,6 +1,6 @@
 pde=0                           # type of pde 0=Euler, nothing else is implemented
 itype=1                         # type of initialization 1=vortex 0=freestream
-nsteps=2000                     # number of steps
+nsteps=200                     # number of steps
 dt=0.04                         # non-dimensional dt
 nsave=50                        # frequency to save output files
 param[0]=1.0                    # density
