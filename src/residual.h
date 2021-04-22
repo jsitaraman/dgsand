@@ -38,13 +38,16 @@ void volIntegral(double *residual, double *bv, double *bvd, double *q, double *d
 	flux_function[pde](flux[j],qv,qvd,j);
       m=0;
       for(f=0;f<nfields;f++)
-	for(b=0;b<nbasis;b++)
+        {
+         for(j=0;j<d;j++) flux[j][f]*=wgt;
+	 for(b=0;b<nbasis;b++)
 	  {
 	    if (w==0) residual[m]=0;
 	    for(j=0;j<d;j++)
-	      residual[m]+=wgt*(bvvd[b*d+j]*flux[j][f]); /* \grad b . F */
+	      residual[m]+=(bvvd[b*d+j]*flux[j][f]); /* \grad b . F */
 	    m++;
 	  }
+        }
     }
 }
 
@@ -57,8 +60,7 @@ void faceIntegral(double *residual, double *fflux, double *bf, double *bfd, int 
   double wgt,v;
   double *bvv,*bvvd;
   int nfields=get_nfields[pde](d);
-  double flux[d][nfields];
-  double qv[nfields],qvd[nfields][d];
+  double flux[nfields];
   int g=p2gf[e][p];
   int nfp=facePerElem[e];
   double resf[nfields*nbasis];
@@ -76,8 +78,8 @@ void faceIntegral(double *residual, double *fflux, double *bf, double *bfd, int 
       fst=iptrf[pf*(fid+(1-fsgn)/2)+1]-(1-fsgn)*nfields/2+(1+fsgn)*nfields;
       for(w=0;w<ngGL[e][p];w++)
 	{
-	  v=gaussgl[e][g][(d)*w];
-	  wgt=gaussgl[e][g][(d)*w+1];
+	  //v=gaussgl[e][g][(d)*w];
+	  wgt=gaussgl[e][g][(d)*w+1]*fsgn;
           // get the basis and basis derivative for this gauss point
           bvv=bf+l;
           bvvd=bf+ld;
@@ -87,10 +89,11 @@ void faceIntegral(double *residual, double *fflux, double *bf, double *bfd, int 
 	  m=0;
 	  for(f=0;f<nfields;f++)
 	    {
+              flux[f]=fflux[fst+f]*wgt;
 	      for(b=0;b<nbasis;b++)
 		{
-                  resf[m]-=(wgt*fsgn*fflux[fst+f]*bvv[b]);
-		  residual[m]-=(wgt*fsgn*fflux[fst+f]*bvv[b]);
+                  resf[m]-=(flux[f]*bvv[b]);
+		  residual[m]-=(flux[f]*bvv[b]);
 		  m++;
 		}
 	    }
