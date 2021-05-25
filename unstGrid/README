@@ -1,0 +1,63 @@
+This directory contains the source and
+examples for a 2-D unstructured grid generator code.
+
+This program was concieved 
+by Jayanarayanan Sitaraman in 1996 as part of a 
+undergraduate CFD class in Indian Institute of Technology, Madras.
+
+There have been minor I/O modifications over the last 12 years,
+but the core algorithm is untouched. 
+
+Packaged by J. Sitaraman on 02 Sep 08
+e-mail : jsitaraman@gmail.com
+
+To Build:
+=========
+cd src;make
+this should build executables make_domain and ugrid and copy it to
+bin directory.
+
+To execute: 
+========== 
+Domain boundary information can be provided in
+file called "domain" which is read by "make_domain" and processed to
+produce "nodes". The file "nodes" is the input file for "ugrid" which
+produces a tecplot visualization file "triangles.dat". You can make your
+flow solver compatible with "triangles.dat" or write a i/o filter as
+desired. The ugrid program also produces the cell connectivity (i.e
+neighbor information file). This is commented out now, but you can
+revive it by appopriately editing the source.
+
+Summary:
+
+domain -> make_domain -> nodes
+nodes -> ugrid -> triangles.dat
+
+example:
+
+cd example/flapslat
+../../bin/make_domain
+../../bin/ugrid
+tecplot triangles.dat
+
+
+References:
+===========
+
+see doc/grid.pdf
+I wrote a report on this code during my first year as a graduate student
+in University of Maryland
+
+Also tons of references are available at:
+http://www.andrew.cmu.edu/user/sowen/topics/delaunay.html
+
+Copyright:
+=========
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2, or (at your option)
+any later version.
+
+Program is provdied without any guarantee. Use at your own risk.
+
