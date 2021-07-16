@@ -37,14 +37,16 @@ void find_faces(int *bface,
 		int **elem2face,
 		int **faces,
 		int *nfaces,
+    int *ibc,
 		int nsurfcells,
-	        int nv,
+    int nbnodes,
+	  int nv,
 		int nvmax)
 {
   int i,n,np1;
   int e[2];
   int *flist;
-  int *iptr;
+  int *iptr,*bcnode;
   int nnodes;
   int ileft,iright;
   int fleft,fright;
@@ -59,6 +61,11 @@ void find_faces(int *bface,
   //
   for (i=0;i<nnodes;i++)
     iptr[i]=-1;
+  
+  bcnode=(int *)calloc(nnodes,sizeof(int));
+  for(i=0;i<nbnodes;i++)
+    bcnode[ibc[2*i]]=ibc[2*i+1];
+  
   //
   for(i=0;i<nsurfcells;i++)
     {
@@ -82,7 +89,12 @@ void find_faces(int *bface,
       fright=flist[7*i+5];
       (*elem2face)[nv*ileft+fleft]=(i+1);
       if (iright > -1) {
-	(*elem2face)[nv*iright+fright]=-(i+1);
+	      (*elem2face)[nv*iright+fright]=-(i+1);
+      }
+      else {
+        if (bcnode[flist[7*i]]==1 || bcnode[flist[7*i+1]]==1) flist[7*i+4]=-1;
+        if (bcnode[flist[7*i]]==2 || bcnode[flist[7*i+1]]==2) flist[7*i+4]=-2;
+        printf("%d %d\n",i,flist[7*i+4]);
       }
       for(n=0;n<6;n++) (*faces)[6*i+n]=flist[7*i+n];
     }
@@ -91,5 +103,6 @@ void find_faces(int *bface,
   //
   free(iptr);
   free(flist);
+  free(bcnode);
 }
 

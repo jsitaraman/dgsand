@@ -1,6 +1,6 @@
 program ugrid_test
  implicit none
- integer :: i,nnodes,nbnodes,nelem,ndom,nb1,nedges,iter
+ integer :: i,j,m,nnodes,nbnodes,nelem,ndom,nb1,nedges,iter
  real*8, allocatable :: xb(:),yb(:),nsf(:),x(:,:),xe(:,:)
  integer, allocatable :: tri(:,:),bb(:),edge(:,:),trie(:,:)
  !
@@ -58,6 +58,23 @@ program ugrid_test
  do i=1,nelem
     write(10,"(6(1x,I10))") tri(:,i),trie(:,i)
  enddo
+ write(10,*) nbnodes
+ if (ndom == 1) then 
+  do i=1,nbnodes
+   write(10,"(2(1x,I10))") i,1
+  enddo
+ else
+   m=0
+   do i=1,ndom-1
+    do j=1,bb(i)
+     m=m+1
+     write(10,"(2(1x,I10))") m,1
+    enddo
+   enddo
+   do j=m+1,nbnodes
+     write(10,"(2(1x,I10))") j,2
+   enddo
+ endif   
  close(10)
  !
  deallocate(xb,yb,nsf,x,tri,bb,trie,xe)

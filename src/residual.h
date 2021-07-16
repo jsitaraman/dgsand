@@ -165,19 +165,29 @@ void FILL_FACES(double *fnorm, double *fflux, int *elem2face,int *iptr, int *ipt
 void FILL_BC(double *fnorm,double *fflux, int *faces,
 	     int pde,int d, int e, int p, int nfaces)
 {
-  int i,j,ifp;
+  int i,j,ifl,ifp,inr;
   int nfields=get_nfields[pde](d);
   for(i=0;i<nfaces;i++)
     {
       /* TODO                                        */
       /* there should be a way to avoid this if loop */
-      /* collect boundary faces in to a separate list in preproc */
-      if (faces[6*i+4]==-1) {
-	for(j=0;j<ngGL[e][p];j++)
-	  {
-	    ifp=(i*ngGL[e][p]+j)*3*nfields+nfields;
-	    far_field[pde](fflux+ifp);
-	  }
+      /* collect boundary faces in to a separate list in preproc */ 
+      if (faces[6*i+4] == -1) {
+	    for(j=0;j<ngGL[e][p];j++)
+	      {
+	      ifp=(i*ngGL[e][p]+j)*3*nfields+nfields;
+	      far_field[pde](fflux+ifp);
+	      }
+      }
+      else if (faces[6*i+4]==-2) {
+          for(j=0;j<ngGL[e][p];j++)
+            {
+              inr=((i*ngGL[e][p]+j)*d);
+              ifl=(i*ngGL[e][p]+j)*3*nfields;
+              ifp=ifl+nfields;
+              wall_bc[pde](fflux+ifp,fflux+ifl,fnorm+inr,d);
+              //far_field[pde](fflux+ifp);
+            }
       }
     }
 }
@@ -194,7 +204,7 @@ void COMPUTE_FACE_FLUXES(double *fnorm, double *fflux,
     {
       f=i/ngGL[e][p];
       for(j=0;j<d;j++)
-	xnorm[j]=fnorm[d*i+j];
+	    xnorm[j]=fnorm[d*i+j];
 
       ifl=i*3*nfields;
       ifr=ifl+nfields;

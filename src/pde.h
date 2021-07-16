@@ -99,6 +99,24 @@ void newtonian_fluid_farfield_values(double *F)
   F[3]=fsv[3];
 }
 
+void newtonian_fluid_inviscid_wall_bc(double *FR, double *FL,double *normal, int d)
+{
+  double unorm[d],u[d],udotn,umag;
+
+  unorm[0]=normal[0];
+  unorm[1]=normal[1];
+  umag=sqrt(unorm[0]*unorm[0]+unorm[1]*unorm[1]);
+  unorm[0]/=umag;
+  unorm[1]/=umag;
+  u[0]=FL[1]/FL[0];
+  u[1]=FL[2]/FL[0];
+  udotn=u[0]*unorm[0]+u[1]*unorm[1];
+
+  FR[0]=FL[0];
+  FR[1]=FL[0]*(u[0]-2*udotn*unorm[0]);
+  FR[2]=FL[0]*(u[1]-2*udotn*unorm[1]);
+  FR[3]=FL[3];
+}
 
 #include "roeflx.h"
 
@@ -112,3 +130,4 @@ INIT_fields init_fields[1]={&newtonian_fluid_init};
 FLUX_function flux_function[1]={&newtonian_fluid_flux2D};
 INTERFACE_flux gradient_indep_flux[1]={&roeflx};
 INIT_fields far_field[1]={&newtonian_fluid_farfield_values};
+INIT_fields  wall_bc[1]={&newtonian_fluid_inviscid_wall_bc};

@@ -45,6 +45,8 @@ void main(void)
   /* input and post processed from a grid file */
   int nnodes;                       // number of nodes in grid
   int nelem;                        // number of elements
+  int nbnodes;                      // number of primal nodes on physical boundaries
+  int *ibc;                         // boundary condition node indices and their types
   int nfaces;                       // number of faces 
   double *xcoord;                   // coordinates of provided grid
   int *elem2node;                   // element to node connectivity
@@ -62,12 +64,12 @@ void main(void)
   nfields=get_nfields[pde](d);
 
   /* read a 2D grid */
-  readgrid2D(&xcoord,&elem2node,&p,&nnodes,&nelem);
+  readgrid2D(&xcoord,&elem2node,&ibc,&p,&nnodes,&nelem,&nbnodes);
   nbasis=order2basis[etype][p];         // basis for solution
   nbasisx=order2basis[etype][p+(p==0)]; // basis for grid
 
   /* find element to face connectivity */
-  find_faces(elem2node,&elem2face,&faces,&nfaces,nelem,3,nbasisx);
+  find_faces(elem2node,&elem2face,&faces,&nfaces,ibc,nelem,nbnodes,3,nbasisx);
 
   /* allocate memory */
   /* field parameters per element */
@@ -194,6 +196,8 @@ void main(void)
           }
 	 rnorm+=(R[i]*R[i]);
       }
+      rnorm=sqrt(rnorm/ndof);
+      rmax*=(rk[3]*dt);
       printf("%d\t%18.16f\t%d\t%18.16f\n",n,rnorm,imax,rmax);
       if (n%nsave==0) OUTPUT_TECPLOT(n,x,q,pc,iptr,pde,d,etype,p,nelem);
     }
