@@ -1,0 +1,23 @@
+To Do
+============
+- Add routine to integrate over removed mass matrix portion
+   - need to create new array of cut mass matrices only
+   - currently only storing 1 mass matrix since it's the same for all elements
+- Add routine to cut volume integral from residual
+   - Do this after or during resid calc?
+- Add Routine to handle fluxes on cut boundary
+   - Do this after or during 
+- Add routine to get q values and fluxes across boundary? 
+   - Need this for baseline and conservative overset
+- Add code to not compute fluxes across outside of boundary triangle
+- Add routine to go between local coords in one element to another
+   - Use to find quad pt locations in sub element
+- Add in quadrature rules for quads 
+
+Data Structures that I need
+==================================
+- array containing information on cut cells
+- map between global ID's of cut cells and ID in cut cells-only array
+- vertices of the polygon to be cut (ordering matters?)
+- q values at new nodes of the cut volume (basically treated as an entirely new element)
+- q values from other mesh at faces

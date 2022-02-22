@@ -12,6 +12,9 @@ void volIntegral(double *residual, double *bv, double *bvd, double *q, double *d
   int g=p2g[e][p];
   
   l=ld=0;
+
+  // XXX need to add cutting 
+
   // for all gauss-quadrature points 
   for(w=0;w<ngElem[e][p];w++)
     {
@@ -70,6 +73,8 @@ void faceIntegral(double *residual, double *fflux, double *bf, double *bfd, int 
     for(b=0;b<nbasis;b++)
         resf[m++]=0; 
 
+  // Need to add cutting
+  //
   for(i=0;i<nfp;i++)
     {
       fsgn=elem2face[i]/abs(elem2face[i]);
@@ -199,6 +204,8 @@ void COMPUTE_FACE_FLUXES(double *fnorm, double *fflux,
   int nfields=get_nfields[pde](d);
   double normal[d],xnorm[d];
   int i,j,ifl,ifr,iflux,f;
+
+  // XXX need to add cut cells
 
   for(i=0;i<nfaces*ngGL[e][p];i++)
     {

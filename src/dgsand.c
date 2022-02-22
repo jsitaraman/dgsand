@@ -129,15 +129,22 @@ void main(void)
       iptf[ix]+=(i*d*ngGL[etype][p]);            //faceNormal
       iptf[ix+1]+=(i*3*nfields*ngGL[etype][p]);  //faceFlux
     }
+  // Do similar things and set iptrc for the cut cells here XXX
   
   /* initialize fields on all the elements */
   INIT_FIELDS(xcoord,elem2node,Q,x,q,iptr,pde,etype,p,d,nbasis,itype,nelem,pc);
+
   /* compute grid metrics */
   COMPUTE_GRID_METRICS(x,bv,bvd,JinvV,detJ,
   		       bf,bfd,JinvF,faceWeight,iptr,d,etype,p,nelem,pc);
 
   /* compute the mass matrix for each element */
+  // currently this just computes 1 mass matrix for each element type
+  // will need to fix this for boundary elements
   MASS_MATRIX(mass,x,iptr,d,etype,p,nelem,pc);
+
+  /* compute get jacobians, basis, and mass matrix for cut cells */
+  COMPUTE_CUT_METRICS()
 
   /* compute some statistics of the mesh and report them */
   totalArea=0.0;
