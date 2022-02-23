@@ -36,7 +36,7 @@ void main(void)
   int d=2;                          // dimensions (only implemented for 2D now)
   int nfields;                      // number of fields for this pde
   int p;                            // p order
-  int etype=0;                      // element type (triangle = 0)
+  int etype=0;                      // element type (triangle = 0, quad = 1)
   
   int nbasis;                       // number of bases for solution
   int nbasisx;                      // number of bases for grid
@@ -99,6 +99,25 @@ void main(void)
 
   fnorm     =dgsand_alloc(double,(d*ngGL[etype][p]*nfaces));          // face normals
   fflux     =dgsand_alloc(double,(3*nfields*ngGL[etype][p]*nfaces));  // face fields and flux        
+ 
+  /* Cut region parameters */ 
+  xcut       =dgsand_alloc(double,(d*(nbasisx))*necut);              // coord modal coefficients (p0 mod)
+  bvcut      =dgsand_alloc(double,(necut*nbasis*ngElem[etype][p]));        // basis value at volume QP
+  bvdcut     =dgsand_alloc(double,(necut*d*nbasis*ngElem[etype][p]*nelem));// basis derivative value at volume QP
+  JinvVcut   =dgsand_alloc(double,(necut*d*d*ngElem[etype][p]*nelem));     // J^{-1} at volume QP
+  detJcut    =dgsand_calloc(double,(necut*ngElem[etype][p]*nelem));        // |J| at volume QP
+
+  // Need to think more on these
+  // Are they the right size? 
+  fpe = facePerElem[etype];
+  bfcut     =dgsand_alloc(double,(nbasis*ngGL[etype][p]*fpe));  // basis value at face QP
+  bfdcut    =dgsand_alloc(double,(d*nbasis*ngGL[etype][p]*fpe*nelem));// basis der. value at face QP
+  JinvF     =dgsand_alloc(double,(d*d*ngGL[etype][p]*fpe*nelem));     // J^{-1} at face QP
+  faceWeight=dgsand_alloc(double,(d*ngGL[etype][p]*fpe*nelem));       // faceNormals at face QP
+  mcut      =dgsand_alloc(double,(nbasis*nbasis*nelem));              // mass matrix
+
+  fnorm     =dgsand_alloc(double,(d*ngGL[etype][p]*nfaces));          // face normals
+  fflux     =dgsand_alloc(double,(3*nfields*ngGL[etype][p]*nfaces));  // face fields and flux        
   
   /* pointer array into each data array above */
   pc=11; // number of unique sizes with elements
@@ -135,16 +154,15 @@ void main(void)
   INIT_FIELDS(xcoord,elem2node,Q,x,q,iptr,pde,etype,p,d,nbasis,itype,nelem,pc);
 
   /* compute grid metrics */
+  // XXX need to add in inputs for cut cells
   COMPUTE_GRID_METRICS(x,bv,bvd,JinvV,detJ,
   		       bf,bfd,JinvF,faceWeight,iptr,d,etype,p,nelem,pc);
 
   /* compute the mass matrix for each element */
-  // currently this just computes 1 mass matrix for each element type
-  // will need to fix this for boundary elements
   MASS_MATRIX(mass,x,iptr,d,etype,p,nelem,pc);
 
   /* compute get jacobians, basis, and mass matrix for cut cells */
-  COMPUTE_CUT_METRICS()
+  MASS_MATRIX(masscut,xcut,ciptr,d,ecut,p,ncut,pc); // can just directly reuse Jay's code?
 
   /* compute some statistics of the mesh and report them */
   totalArea=0.0;
