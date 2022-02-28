@@ -106,37 +106,6 @@ void main(void)
   iptr=dgsand_calloc(int,(pc*nelem));
   iptf=dgsand_calloc(int,(pf*nfaces));
  
-  /* Cut region parameters */ 
-  // XXX need to decide how to handle etype here.
-  // will we need an array to tell us how many nodes are in each element
-  // or will we keep all cut cells as triangles?
-  necut = 0; 
-  ncfaces = 0; 
-  if(necut>0){
-    xcut       =dgsand_alloc(double,(d*(nbasisx))*necut);              // coord modal coefficients (p0 mod)
-    bvcut      =dgsand_alloc(double,(necut*nbasis*ngElem[etype][p]));        // basis value at volume QP
-    bvdcut     =dgsand_alloc(double,(necut*d*nbasis*ngElem[etype][p]));// basis derivative value at volume QP
-    JinvVcut   =dgsand_alloc(double,(necut*d*d*ngElem[etype][p]));     // J^{-1} at volume QP
-    detJcut    =dgsand_calloc(double,(necut*ngElem[etype][p]));        // |J| at volume QP
-  
-    // Need to think more on these
-    // Are they the right size? XXX
-    fpe = facePerElem[etype];
-    ncfaces = fpe*necut; // XXX is this right? 
-    bfcut     =dgsand_alloc(double,(nbasis*ngGL[etype][p]*fpe*necut));  // basis value at face QP
-    bfdcut    =dgsand_alloc(double,(d*nbasis*ngGL[etype][p]*fpe*necut));// basis der. value at face QP
-    JinvFcut  =dgsand_alloc(double,(d*d*ngGL[etype][p]*fpe*necut));     // J^{-1} at face QP
-    fwcut     =dgsand_alloc(double,(d*ngGL[etype][p]*fpe*necut));       // faceNormals at face QP
-    mcut      =dgsand_alloc(double,(nbasis*nbasis*necut));              // mass matrix
-
-    fcnorm     =dgsand_alloc(double,(d*ngGL[etype][p]*ncfaces));          // face normals
-    fcflux     =dgsand_alloc(double,(3*nfields*ngGL[etype][p]*ncfaces));  // face fields and flux        
-
-    /* pointer array into each data array above */
-    iptrc=dgsand_calloc(int,(pc*necut));
-    iptrcf=dgsand_calloc(int,(pf*ncfaces));
-  }
-  
   /* set the pointers, TODO: this has to change when there is a variety of elements */
   for(i=0;i<nelem;i++)
     {
@@ -160,6 +129,37 @@ void main(void)
       iptf[ix]+=(i*d*ngGL[etype][p]);            //faceNormal
       iptf[ix+1]+=(i*3*nfields*ngGL[etype][p]);  //faceFlux
     }
+
+  /* Cut region parameters */ 
+  // XXX need to decide how to handle etype here.
+  // will we need an array to tell us how many nodes are in each element
+  // or will we keep all cut cells as triangles?
+  necut = 0; 
+  ncfaces = 0; 
+
+  xcut       =dgsand_alloc(double,(d*(nbasisx))*necut);              // coord modal coefficients (p0 mod)
+  bvcut      =dgsand_alloc(double,(necut*nbasis*ngElem[etype][p]));        // basis value at volume QP
+  bvdcut     =dgsand_alloc(double,(necut*d*nbasis*ngElem[etype][p]));// basis derivative value at volume QP
+  JinvVcut   =dgsand_alloc(double,(necut*d*d*ngElem[etype][p]));     // J^{-1} at volume QP
+  detJcut    =dgsand_calloc(double,(necut*ngElem[etype][p]));        // |J| at volume QP
+  
+  // Need to think more on these
+  // Are they the right size? XXX
+  fpe = facePerElem[etype];
+  ncfaces = fpe*necut; // XXX is this right? 
+  bfcut     =dgsand_alloc(double,(nbasis*ngGL[etype][p]*fpe*necut));  // basis value at face QP
+  bfdcut    =dgsand_alloc(double,(d*nbasis*ngGL[etype][p]*fpe*necut));// basis der. value at face QP
+  JinvFcut  =dgsand_alloc(double,(d*d*ngGL[etype][p]*fpe*necut));     // J^{-1} at face QP
+  fwcut     =dgsand_alloc(double,(d*ngGL[etype][p]*fpe*necut));       // faceNormals at face QP
+  mcut      =dgsand_alloc(double,(nbasis*nbasis*necut));              // mass matrix
+
+  fcnorm     =dgsand_alloc(double,(d*ngGL[etype][p]*ncfaces));          // face normals
+  fcflux     =dgsand_alloc(double,(3*nfields*ngGL[etype][p]*ncfaces));  // face fields and flux        
+
+  /* pointer array into each data array above */
+  iptrc=dgsand_calloc(int,(pc*necut));
+  iptrcf=dgsand_calloc(int,(pf*ncfaces));
+  
   // XXX how do I handle fpe and element type being different for certain cut regions?
   // Assume for now all cuts are triangles?
   for(i=0;i<necut;i++)
@@ -239,7 +239,9 @@ void main(void)
 		  bf,bfd,JinvF,faceWeight,fnorm,fflux,
 		  x,q,elem2face,iptr,iptf,faces,
 		  pc,pf,pde,d,etype,p,nfaces,nelem,
-                  XXX);
+                  bvcut,bvdcut,JinvVcut,detJcut,
+                  bfcut,bfdcut,JinvFcut,fwcut,fcnorm,fcflux,
+                  xcut,iptrc,iptrcf,necut);
       
       UPDATE_DOFS(qstar,rk[1]*dt,q,R,ndof);
       UPDATE_DOFS(q,rk[0]*dt,q,R,ndof);
@@ -247,14 +249,21 @@ void main(void)
       COMPUTE_RHS(R,mass,bv,bvd,JinvV,detJ,
 		  bf,bfd,JinvF,faceWeight,fnorm,fflux,
 		  x,qstar,elem2face,iptr,iptf,faces,
-		  pc,pf,pde,d,etype,p,nfaces,nelem);
+		  pc,pf,pde,d,etype,p,nfaces,nelem,
+                  bvcut,bvdcut,JinvVcut,detJcut,
+                  bfcut,bfdcut,JinvFcut,fwcut,fcnorm,fcflux,
+                  xcut,iptrc,iptrcf,necut);
       
       UPDATE_DOFS(qstar,rk[2]*dt,q,R,ndof);
 
       COMPUTE_RHS(R,mass,bv,bvd,JinvV,detJ,
 		  bf,bfd,JinvF,faceWeight,fnorm,fflux,
 		  x,qstar,elem2face,iptr,iptf,faces,
-		  pc,pf,pde,d,etype,p,nfaces,nelem);
+		  pc,pf,pde,d,etype,p,nfaces,nelem,
+                  bvcut,bvdcut,JinvVcut,detJcut,
+                  bfcut,bfdcut,JinvFcut,fwcut,fcnorm,fcflux,
+                  xcut,iptrc,iptrcf,necut);
+
 
       UPDATE_DOFS(q,rk[3]*dt,q,R,ndof);
       

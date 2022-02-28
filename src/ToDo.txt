@@ -1,13 +1,13 @@
 To Do
 ============
-- Add routine to cut volume integral from residual
-- Add routine to cut face integrals from residual
 - Handle all of the overset stuff
    - baseline overset 
        - interpolating values from other grid
 
 Done but not tested
 =========
+- Add routine to cut volume integral from residual
+- Add routine to cut face integrals from residual
 - put all cut stuff in if(cut) loop
 - Add routine to integrate over removed mass matrix portion
 - wrote routine to get rst coords of cut cell quads in orig cell coord syst

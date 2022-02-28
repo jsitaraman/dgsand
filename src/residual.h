@@ -13,8 +13,6 @@ void volIntegral(double *residual, double *bv, double *bvd, double *q, double *d
   
   l=ld=0;
 
-  // XXX need to add cutting 
-
   // for all gauss-quadrature points 
   for(w=0;w<ngElem[e][p];w++)
     {
@@ -73,8 +71,6 @@ void faceIntegral(double *residual, double *fflux, double *bf, double *bfd, int 
     for(b=0;b<nbasis;b++)
         resf[m++]=0; 
 
-  // Need to add cutting
-  //
   for(i=0;i<nfp;i++)
     {
       fsgn=elem2face[i]/abs(elem2face[i]);
@@ -99,6 +95,109 @@ void faceIntegral(double *residual, double *fflux, double *bf, double *bfd, int 
 		{
                   resf[m]-=(flux[f]*bvv[b]);
 		  residual[m]-=(flux[f]*bvv[b]);
+		  m++;
+		}
+	    }
+	  fst+=(3*fsgn*nfields);
+	}
+    }
+}
+
+
+void cutVol(double *residual, double *bv, double *bvd, double *q, double *detJ,
+	    int pde, int d, int e, int p)
+{
+  int b,w,i,j,l,ld,m,f;
+  int nbasis=order2basis[e][p];
+  double wgt;
+  double *bvv,*bvvd;
+  int nfields=get_nfields[pde](d);
+  double flux[d][nfields];
+  double qv[nfields],qvd[nfields][d];
+  int g=p2g[e][p];
+  
+  l=ld=0;
+
+  // for all gauss-quadrature points 
+  for(w=0;w<ngElem[e][p];w++)
+    {
+      wgt=gauss[e][g][(d+1)*w+2]*detJ[w];	  
+      /* collect basis values for this quadrature point */
+      bvv=bv+w*nbasis;
+      bvvd=bvd+w*nbasis*d;
+ 
+      /* project the q field to the gauss point */
+      for(f=0;f<nfields;f++)
+	{
+	  qv[f]=bvv[0]*q[f*nbasis];
+	  for(b=1;b<nbasis;b++)	    
+	    qv[f]+=(bvv[b]*q[f*nbasis+b]);
+	  for(j=0;j<d;j++)
+	    {
+	      qvd[f][j]=bvvd[j]*q[f*nbasis];
+	      for(b=1;b<nbasis;b++)
+		qvd[f][j]+=(bvvd[b*d+j]*q[f*nbasis+b]);
+	    }
+	}
+      /* compute the flux function in each dimension */
+      for(j=0;j<d;j++)
+	flux_function[pde](flux[j],qv,qvd,j);
+      m=0;
+      for(f=0;f<nfields;f++)
+        {
+         for(j=0;j<d;j++) flux[j][f]*=wgt;
+	 for(b=0;b<nbasis;b++)
+	  {
+	    for(j=0;j<d;j++)
+ 	      //notice the sign change from the volIntegral routine
+	      residual[m]-=(bvvd[b*d+j]*flux[j][f]); /* \grad b . F */
+	    m++;
+	  }
+        }
+    }
+}
+
+
+void cutFace(double *residual, double *fflux, double *bf, double *bfd, int *elem2face,
+	     int *iptrf,double *q, int pf, int pde, int d, int e, int p, int ielem)
+{
+  int b,w,i,j,l,ld,m,f,fid,fst,fsgn;
+  int nbasis=order2basis[e][p];
+  double wgt,v;
+  double *bvv,*bvvd;
+  int nfields=get_nfields[pde](d);
+  double flux[nfields];
+  int g=p2gf[e][p];
+  int nfp=facePerElem[e];
+  double resf[nfields*nbasis];
+
+  l=ld=m=0;
+
+  for(i=0;i<nfp;i++)
+    {
+      fsgn=elem2face[i]/abs(elem2face[i]);
+      fid=abs(elem2face[i])-1;
+      // make sure to get the right place to take the flux
+      fst=iptrf[pf*(fid+(1-fsgn)/2)+1]-(1-fsgn)*nfields/2+(1+fsgn)*nfields;
+      for(w=0;w<ngGL[e][p];w++)
+	{
+	  //v=gaussgl[e][g][(d)*w];
+	  wgt=gaussgl[e][g][(d)*w+1]*fsgn;
+          // get the basis and basis derivative for this gauss point
+          bvv=bf+l;
+          bvvd=bf+ld;
+          l+=nbasis;
+          ld+=(nbasis*d);
+
+	  m=0;
+	  for(f=0;f<nfields;f++)
+	    {
+              flux[f]=fflux[fst+f]*wgt;
+	      for(b=0;b<nbasis;b++)
+		{
+ 	          //notice the sign change from the faceIntegral routine
+                  resf[m]+=(flux[f]*bvv[b]);
+		  residual[m]+=(flux[f]*bvv[b]);
 		  m++;
 		}
 	    }
@@ -343,10 +442,16 @@ void COMPUTE_RESIDUAL(double *R, double *mass, double *q, double *detJ, double *
 		      double *bf, double *bfd,
 		      int *iptr,int *iptrf,int *elem2face,
 		      int pc, int pf,
-		      int pde, int d, int e, int p, int nelem)
+		      int pde, int d, int e, int p, int nelem,
+                      double *detJcut, double *fcflux,
+                      double *bvcut, double *bvdcut, double *bfcut, double *bfdcut,
+                      int *iptrc, int *iptrcf, int necut);
+
 {
   int i,ix,idet,im,iR,iq,ibv,ibvd,ibf,ibfd;
   int nfp=facePerElem[e];
+
+  //Accumulate residual on all elements
   for(i=0;i<nelem;i++)
     {
       ix=pc*i;
@@ -360,16 +465,46 @@ void COMPUTE_RESIDUAL(double *R, double *mass, double *q, double *detJ, double *
             
       volIntegral(R+iR,bv+ibv,bvd+ibvd,q+iq,detJ+idet, pde,d,e,p);
       faceIntegral(R+iR,fflux,bf+ibf,bfd+ibfd,elem2face+nfp*i,iptrf,q,pf,pde,d,e,p,i);
+    }
+
+  //Modify residual for cut cells
+  for(i=0;i<necut;i++)
+    {
+      // get original element quantities
+      eid = XXX[i]; 
+      ix=pc*eid;
+      iR=iq=iptrc[ix];
+
+      //cut cell quantities
+      ix=pc*i; 
+      ibv=iptrc[ix+2];
+      ibvd=iptrc[ix+3];
+      idet=iptrc[ix+5];
+      ibf=iptrc[ix+6];
+      ibfd=iptrc[ix+7];
+            
+      cutVol(R+iR,bv+ibv,bvd+ibvd,q+iq,detJ+idet,pde,d,e,p);
+      cutFace(R+iR,fflux,bf+ibf,bfd+ibfd,elem2face+nfp*i,iptrf,q,pf,pde,d,e,p,i);
+    }
+
+  //Solve each element
+  for(i=0;i<nelem;i++)
+    {
+      iR=iq=iptr[ix];
+      im=iptr[ix+10];
       invertMass(mass+im,R+iR,pde,d,e,p,i);
     }
 }
-
 
 void COMPUTE_RHS(double *R,double *mass,double *bv, double *bvd, double *JinvV, double *detJ,
 		 double *bf, double *bfd, double *JinvF,
 		 double *faceWeight, double *fnorm, double *fflux,
 		 double *x, double *q, int *elem2face, int *iptr, int *iptrf, int *faces,
-		 int pc, int pf, int pde, int d , int e, int p, int nfaces, int nelem)
+		 int pc, int pf, int pde, int d , int e, int p, int nfaces, int nelem,
+                 double *bvcut, double *bvdcut,double *JinvVcut,double *detJcut,
+                 double *bfcut, double *bfdcut,double *JinvFcut,double *fwcut,
+                 double *fcnorm,double *fcflux,double *xcut, int *iptrc,
+                 int *iptrcf, int necut);
 {
 
   FILL_FACES(fnorm, fflux, elem2face, iptr, iptrf, 
@@ -386,7 +521,11 @@ void COMPUTE_RHS(double *R,double *mass,double *bv, double *bvd, double *JinvV, 
 		   bv,bvd,bf,bfd,
 		   iptr,iptrf,elem2face,
 		   pc,pf,
-		   pde,d, e, p, nelem);
+		   pde,d, e, p, nelem,
+                   detJcut, fcflux, 
+                   bvcut, bvdcut, bfcut, bfdcut, 
+                   iptrc, iptrcf, necut); 
+
 
 }
 

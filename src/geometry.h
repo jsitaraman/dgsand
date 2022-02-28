@@ -247,7 +247,6 @@ void COMPUTE_GRID_METRICS(double *x, double *bv, double *bvd,double *JinvV,
 {
   int i,j,b;
   int ip,ix,ibv,ibvd,ibf,ij,idetj,ibfd,ijf,ifw;
-  int cip,cix,cibv,cibvd,cibf,cij,cidetj,cibfd,cijf,cifw;
   
   // Metrics for the uncut cells
   for(i=0;i<nelem;i++)
@@ -277,7 +276,7 @@ void COMPUTE_CUT_METRICS(double *x, double *JinvV,
 			 double *fwcut, int* iptrc, int necut)
 {
   int i,j,b;
-  int ip,ix,ibv,ibvd,ibf,ij,idetj,ibfd,ijf,ifw;
+  int ip,ix,ij,idetj,ijf;
   int cip,cix,cibv,cibvd,cibf,cij,cidetj,cibfd,cijf,cifw;
 
   // Metrics for the cut regions
