@@ -1,15 +1,15 @@
 To Do
 ============
-- Add routine to integrate over removed mass matrix portion
 - Add routine to cut volume integral from residual
-- Add code to not compute fluxes across outside of boundary triangle
-   - skip this for now?
+- Add routine to cut face integrals from residual
 - Handle all of the overset stuff
-   - find mesh boundary edges 
-   - handle fluxes on mesh boundary edges
+   - baseline overset 
+       - interpolating values from other grid
 
-Done
+Done but not tested
 =========
+- put all cut stuff in if(cut) loop
+- Add routine to integrate over removed mass matrix portion
 - wrote routine to get rst coords of cut cell quads in orig cell coord syst
 - Added gauss pts for quad
 

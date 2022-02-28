@@ -18,7 +18,7 @@ void mass_matrix(double *M, double *x, int d, int e, int p)
 	    {
 	      for(jj=0;jj<d;jj++)
 		u[jj]=gauss[e][g][(d+1)*w+jj];
-	      /* evaluate the jacobian, it's not stored at this many locations */
+	      /* evaluate the jacobian, it's not stored at this many locations (p=p+1)*/
 	      for(b=0;b<nbasis;b++)
 		for(jj=0;jj<d;jj++)
 		  bd[b][jj]=basis_d[e][b*d+jj](u);
@@ -243,10 +243,7 @@ void FaceWeights(double *x, double *bf, double *bfd, double *Jinv, double *faceW
 
 void COMPUTE_GRID_METRICS(double *x, double *bv, double *bvd,double *JinvV, 
 			  double *detJ,double *bf, double *bfd, double *JinvF, double *faceWeight,
-			  int *iptr, int d, int e, int p, int nelem, int pc,
-			  double *xcut, double *bvcut, double *bvdcut, double *JinvVcut,
-			  double *detJcut, double *bfcut, double *bfdcut, double *JinvFcut, 
-			  double *fwcut, int* iptrc, int necut)
+			  int *iptr, int d, int e, int p, int nelem, int pc)
 {
   int i,j,b;
   int ip,ix,ibv,ibvd,ibf,ij,idetj,ibfd,ijf,ifw;
@@ -270,6 +267,18 @@ void COMPUTE_GRID_METRICS(double *x, double *bv, double *bvd,double *JinvV,
       Jacobian(x+ix, bv+ibv, bvd+ibvd, JinvV+ij,detJ+idetj,d,e,p); // basis on vol
       FaceWeights(x+ix,bf+ibf,bfd+ibfd,JinvF+ijf,faceWeight+ifw,d,e,p); // basis on face
     }
+}
+
+void COMPUTE_CUT_METRICS(double *x, double *JinvV, 
+			 double *detJ,double *JinvF,
+			 int *iptr, int d, int e, int p, int pc,
+			 double *xcut, double *bvcut, double *bvdcut, double *JinvVcut,
+			 double *detJcut, double *bfcut, double *bfdcut, double *JinvFcut, 
+			 double *fwcut, int* iptrc, int necut)
+{
+  int i,j,b;
+  int ip,ix,ibv,ibvd,ibf,ij,idetj,ibfd,ijf,ifw;
+  int cip,cix,cibv,cibvd,cibf,cij,cidetj,cibfd,cijf,cifw;
 
   // Metrics for the cut regions
   for(i=0;i<necut;i++)
@@ -278,14 +287,10 @@ void COMPUTE_GRID_METRICS(double *x, double *bv, double *bvd,double *JinvV,
 
     // Quantities for the original element
     ix   =iptr[ip+1]; 
-    ibvd =iptr[ip+3];
     ij   =iptr[ip+4];
     idetj=iptr[ip+5];
 
-    ibf  =iptr[ip+6];
-    ibfd =iptr[ip+7];
     ijf  =iptr[ip+8];
-    ifw  =iptr[ip+9];
 
     // Quantities for the cut element
     cip = pc*i;
@@ -317,13 +322,30 @@ void COMPUTE_GRID_METRICS(double *x, double *bv, double *bvd,double *JinvV,
 void MASS_MATRIX(double *mass,double *x, int *iptr, int d, int e, int p, int nelem, int pc)
 {
   int i;
-  int ix,im;
+  int ix,im,ixc;
+  //compute mass matrix of all elements
   for(i=0;i<nelem;i++)
     {
       ix=iptr[pc*i+1];
       im=iptr[pc*i+10];
       mass_matrix(&(mass[im]),&(x[ix]),d,e,p);
     }
+}
+
+void CUT_MASS_MATRIX(double *mass,double *x, int *iptr, double *xcut, int *iptrc, int d, int e, int p, int nelem, int pc, int necut)
+{
+  int i;
+  int ix,im,ixc;
+
+  //subtract out cut portion
+  for(i=0;i<necut;i++){
+      eid = XXX; // find original element id 
+      ix=iptr[pc*eid+1];
+      im=iptr[pc*eid+10];
+      ixc=iptrc[pc*i+1]; 
+      cut_mass_matrix(&(mass[im]),&(x[ix]),&(xcut[ixc]),d,e,p);
+
+  }
 }
 
 void BasesVCut(double *x, double *Jinv,double *detJ,
@@ -554,3 +576,79 @@ void CutFaceWeights(double *x, double *Jinv, double *xcut, double *bfcut, double
     }
 }
 
+void cut_mass_matrix(double *M, double *x, double *xcut, int d, int e, int p)
+{
+  int i,j,ij,w,b,ii,jj;
+  int nbasis=order2basis[e][p+(p==0)];
+  double bd[nbasis][d];
+  double mat[d][d],jac[d][d];
+  double ijk[d],u[d],wgt,det;
+  double detJcut; 
+  double bvtmp[nbasis*ngElem[e][p+1]],bvtmp[nbasis*d*ngElem[e][p+1]];
+  double detJ,Jinv[ngElem[e][p+1]]*d*d]; 
+  int g=p2g[e][p+1]; // gauss point type for this element type, use one
+                     // order higher making sure mass matrix is exact
+
+  if (p > 0 ) 
+
+    // Get jacobian info for the original element at p+1 quad pts
+    // This is needed to interp between cut cell coords and parent elem coords
+    Jacobian(x,bvtmp,bvdtmp,Jinv,detJ,d,e,p+1); 
+
+    for(i=0;i<nbasis;i++)
+      for(j=0;j<nbasis;j++)
+	{
+	  ij=nbasis*i+j;
+	  for(w=0;w<ngElem[e][p+1];w++) // 
+	    {
+	      for(jj=0;jj<d;jj++)
+		ijk[jj]=gauss[e][g][(d+1)*w+jj];
+
+              /*convert sub cell rst coord to orig cell rst somehow*/
+              CutCellInterp(x,d,e,p+1,Jinv,ijk,xcut,u,invJcut,detJcut); 
+
+	      /* evaluate the jacobian, it's not stored at this many locations (p=p+1)*/
+	      for(b=0;b<nbasis;b++)
+		for(jj=0;jj<d;jj++)
+		  bd[b][jj]=basis_d[e][b*d+jj](u);
+
+	      for(ii=0;ii<d;ii++)
+		{
+		  for(jj=0;jj<d;jj++)
+		    {
+		      mat[ii][jj]=x[ii*nbasis]*bd[0][jj];
+		      for(b=1;b<nbasis;b++)
+			mat[ii][jj]+=x[ii*nbasis+b]*bd[b][jj];
+		    }
+		}
+	      
+	      if (d==2) invmat2x2(mat,jac,det);
+	      wgt=gauss[e][g][(d+1)*w+2]*det;
+	      /* could use bv here instead of reevaluating */
+	      /* revaluate this if mesh is deforming */
+
+              // subtract cut region from original mass matrix
+	      M[ij]-=(wgt*basis[e][i](u)*basis[e][j](u));
+	    }
+	}
+  }
+/*
+  else {
+    // p=0 
+      for(b=0;b<nbasis;b++)
+       for(jj=0;jj<d;jj++)
+          bd[b][jj]=basis_d[e][b*d+jj](u);
+      
+      for(ii=0;ii<d;ii++)
+	{
+	  for(jj=0;jj<d;jj++)
+	    {
+	      mat[ii][jj]=x[ii*nbasis]*bd[0][jj];
+	      for(b=1;b<nbasis;b++)
+		mat[ii][jj]+=x[ii*nbasis+b]*bd[b][jj];
+	    }
+	}
+      if (d==2) invmat2x2(mat,jac,det);
+      M[0]=0.5*det;
+  }
+*/

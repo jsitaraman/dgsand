@@ -99,37 +99,43 @@ void main(void)
 
   fnorm     =dgsand_alloc(double,(d*ngGL[etype][p]*nfaces));          // face normals
   fflux     =dgsand_alloc(double,(3*nfields*ngGL[etype][p]*nfaces));  // face fields and flux        
- 
-  /* Cut region parameters */ 
-  // XXX need to decide how to handle etype here.
-  // will we need an array to tell us how many nodes are in each element
-  // or will we keep all cut cells as triangles?
-  xcut       =dgsand_alloc(double,(d*(nbasisx))*necut);              // coord modal coefficients (p0 mod)
-  bvcut      =dgsand_alloc(double,(necut*nbasis*ngElem[etype][p]));        // basis value at volume QP
-  bvdcut     =dgsand_alloc(double,(necut*d*nbasis*ngElem[etype][p]));// basis derivative value at volume QP
-  JinvVcut   =dgsand_alloc(double,(necut*d*d*ngElem[etype][p]));     // J^{-1} at volume QP
-  detJcut    =dgsand_calloc(double,(necut*ngElem[etype][p]));        // |J| at volume QP
 
-  // Need to think more on these
-  // Are they the right size? XXX
-  fpe = facePerElem[etype];
-  ncfaces = fpe*necut; // XXX is this right? 
-  bfcut     =dgsand_alloc(double,(nbasis*ngGL[etype][p]*fpe*necut));  // basis value at face QP
-  bfdcut    =dgsand_alloc(double,(d*nbasis*ngGL[etype][p]*fpe*necut));// basis der. value at face QP
-  JinvFcut  =dgsand_alloc(double,(d*d*ngGL[etype][p]*fpe*necut));     // J^{-1} at face QP
-  fwcut     =dgsand_alloc(double,(d*ngGL[etype][p]*fpe*necut));       // faceNormals at face QP
-  mcut      =dgsand_alloc(double,(nbasis*nbasis*necut));              // mass matrix
-
-  fnorm     =dgsand_alloc(double,(d*ngGL[etype][p]*ncfaces));          // face normals
-  fflux     =dgsand_alloc(double,(3*nfields*ngGL[etype][p]*ncfaces));  // face fields and flux        
-  
   /* pointer array into each data array above */
   pc=11; // number of unique sizes with elements
   pf=2;  // number of unique sizes associated with faces
   iptr=dgsand_calloc(int,(pc*nelem));
   iptf=dgsand_calloc(int,(pf*nfaces));
-  iptrc=dgsand_calloc(int,(pc*necut));
-  iptrcf=dgsand_calloc(int,(pf*ncfaces));
+ 
+  /* Cut region parameters */ 
+  // XXX need to decide how to handle etype here.
+  // will we need an array to tell us how many nodes are in each element
+  // or will we keep all cut cells as triangles?
+  necut = 0; 
+  ncfaces = 0; 
+  if(necut>0){
+    xcut       =dgsand_alloc(double,(d*(nbasisx))*necut);              // coord modal coefficients (p0 mod)
+    bvcut      =dgsand_alloc(double,(necut*nbasis*ngElem[etype][p]));        // basis value at volume QP
+    bvdcut     =dgsand_alloc(double,(necut*d*nbasis*ngElem[etype][p]));// basis derivative value at volume QP
+    JinvVcut   =dgsand_alloc(double,(necut*d*d*ngElem[etype][p]));     // J^{-1} at volume QP
+    detJcut    =dgsand_calloc(double,(necut*ngElem[etype][p]));        // |J| at volume QP
+  
+    // Need to think more on these
+    // Are they the right size? XXX
+    fpe = facePerElem[etype];
+    ncfaces = fpe*necut; // XXX is this right? 
+    bfcut     =dgsand_alloc(double,(nbasis*ngGL[etype][p]*fpe*necut));  // basis value at face QP
+    bfdcut    =dgsand_alloc(double,(d*nbasis*ngGL[etype][p]*fpe*necut));// basis der. value at face QP
+    JinvFcut  =dgsand_alloc(double,(d*d*ngGL[etype][p]*fpe*necut));     // J^{-1} at face QP
+    fwcut     =dgsand_alloc(double,(d*ngGL[etype][p]*fpe*necut));       // faceNormals at face QP
+    mcut      =dgsand_alloc(double,(nbasis*nbasis*necut));              // mass matrix
+
+    fcnorm     =dgsand_alloc(double,(d*ngGL[etype][p]*ncfaces));          // face normals
+    fcflux     =dgsand_alloc(double,(3*nfields*ngGL[etype][p]*ncfaces));  // face fields and flux        
+
+    /* pointer array into each data array above */
+    iptrc=dgsand_calloc(int,(pc*necut));
+    iptrcf=dgsand_calloc(int,(pf*ncfaces));
+  }
   
   /* set the pointers, TODO: this has to change when there is a variety of elements */
   for(i=0;i<nelem;i++)
@@ -172,7 +178,7 @@ void main(void)
       iptrc[ix+9]+=i*(d*ngGL[etype][p]*fpe);       // faceWeight
       iptrc[ix+10]+=i*(nbasis*nbasis);             // mass 
     }
-  for(i=0;i<nfaces;i++)
+  for(i=0;i<ncfaces;i++)
     {
       etype = XXX // get element type
 
@@ -185,18 +191,22 @@ void main(void)
   INIT_FIELDS(xcoord,elem2node,Q,x,q,iptr,pde,etype,p,d,nbasis,itype,nelem,pc);
 
   /* compute grid metrics */
-  // XXX need to add in inputs for cut cells
   COMPUTE_GRID_METRICS(x,bv,bvd,JinvV,detJ,
-  		       bf,bfd,JinvF,faceWeight,iptr,d,etype,p,nelem,pc,
-                       xcut,bvcut,bvdcut,JinvVcut,detJcut,
-		       bfcut,bfdcut,JinvFcut,fwcut,
- 		       iptrc,necut);
+  		       bf,bfd,JinvF,faceWeight,iptr,d,etype,p,nelem,pc);
 
   /* compute the mass matrix for each element */
   MASS_MATRIX(mass,x,iptr,d,etype,p,nelem,pc);
 
-  /* compute get jacobians, basis, and mass matrix for cut cells */
-  MASS_MATRIX(mcut,xcut,iptrc,d,etype,p,necut,pc); // can just directly reuse Jay's code?
+  /* Handle cut cells */
+  if(necut>0){
+    COMPUTE_CUT_METRICS(x,JinvV,detJ,
+                        JinvF,iptr,d,etype,p,pc,
+                        xcut,bvcut,bvdcut,JinvVcut,detJcut,
+                        bfcut,bfdcut,JinvFcut,fwcut,
+                        iptrc,necut);
+
+    CUT_MASS_MATRIX(mass,x,iptr,d,etype,p,nelem,pc,necut);
+  }
 
   /* compute some statistics of the mesh and report them */
   totalArea=0.0;
