@@ -1,11 +1,12 @@
 To Do
 ============
-- Handle all of the overset stuff
-   - baseline overset 
-       - interpolating values from other grid
+- blanking cells 
+- defining overlap
+- getting fluxes from other mesh -- maybe get this from inflow bc for now
 
 Done but not tested
 =========
+- copies and shrunk the grid
 - Add routine to cut volume integral from residual
 - Add routine to cut face integrals from residual
 - put all cut stuff in if(cut) loop

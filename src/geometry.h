@@ -268,6 +268,7 @@ void COMPUTE_GRID_METRICS(double *x, double *bv, double *bvd,double *JinvV,
     }
 }
 
+/*
 void COMPUTE_CUT_METRICS(double *x, double *JinvV, 
 			 double *detJ,double *JinvF,
 			 int *iptr, int d, int e, int p, int pc,
@@ -318,6 +319,8 @@ void COMPUTE_CUT_METRICS(double *x, double *JinvV,
 
 }
 
+*/
+
 void MASS_MATRIX(double *mass,double *x, int *iptr, int d, int e, int p, int nelem, int pc)
 {
   int i;
@@ -331,6 +334,7 @@ void MASS_MATRIX(double *mass,double *x, int *iptr, int d, int e, int p, int nel
     }
 }
 
+/*
 void CUT_MASS_MATRIX(double *mass,double *x, int *iptr, double *xcut, int *iptrc, int d, int e, int p, int nelem, int pc, int necut)
 {
   int i;
@@ -502,9 +506,9 @@ void CutFaceWeights(double *x, double *Jinv, double *xcut, double *bfcut, double
 	  v=gaussgl[e][g][(d)*w];  // gauss location from 0 to 1
 	  wgt=gaussgl[e][g][(d)*w+1];	 // gauss weight
 
-	  /* this is specific to 2-D */
-	  /* remember fill order will be reversed for element
-             sharing this edge */  
+	  // this is specific to 2-D 
+	  // remember fill order will be reversed for element
+          // sharing this edge   
           f1=(f+1)%nfaces;
 
 	  // do 1D interp to get rst coord (on sub element) of quad pt
@@ -537,7 +541,7 @@ void CutFaceWeights(double *x, double *Jinv, double *xcut, double *bfcut, double
 		  for(b=1;b<nbasis+(nbasis==1);b++)
 		    mat[i][j]+=x[i*nbasis+b]*bd[b][j]; 
 		} 
-	      /* need a cross product here */
+	      // need a cross product here 
               for(j=0;j<d;j++)
 	       {
                 Ja[i]+=(mat[i][j]*face2elem[e][d*f+j]); // face2elem is...?
@@ -603,10 +607,10 @@ void cut_mass_matrix(double *M, double *x, double *xcut, int d, int e, int p)
 	      for(jj=0;jj<d;jj++)
 		ijk[jj]=gauss[e][g][(d+1)*w+jj];
 
-              /*convert sub cell rst coord to orig cell rst somehow*/
+              //convert sub cell rst coord to orig cell rst somehow
               CutCellInterp(x,d,e,p+1,Jinv,ijk,xcut,u,invJcut,detJcut); 
 
-	      /* evaluate the jacobian, it's not stored at this many locations (p=p+1)*/
+	      // evaluate the jacobian, it's not stored at this many locations (p=p+1)
 	      for(b=0;b<nbasis;b++)
 		for(jj=0;jj<d;jj++)
 		  bd[b][jj]=basis_d[e][b*d+jj](u);
@@ -623,15 +627,15 @@ void cut_mass_matrix(double *M, double *x, double *xcut, int d, int e, int p)
 	      
 	      if (d==2) invmat2x2(mat,jac,det);
 	      wgt=gauss[e][g][(d+1)*w+2]*det;
-	      /* could use bv here instead of reevaluating */
-	      /* revaluate this if mesh is deforming */
+	      // could use bv here instead of reevaluating 
+	      // revaluate this if mesh is deforming 
 
               // subtract cut region from original mass matrix
 	      M[ij]-=(wgt*basis[e][i](u)*basis[e][j](u));
 	    }
 	}
   }
-/*
+  /// XXX Still need to fix this
   else {
     // p=0 
       for(b=0;b<nbasis;b++)

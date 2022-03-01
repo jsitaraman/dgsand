@@ -28,8 +28,10 @@ double gl2[6]= {  1.127016653792585e-01, 2.777777777777780e-01,
 		  5.000000000000000e-01, 4.444444444444445e-01,
 		  8.872983346207415e-01, 2.777777777777780e-01 };
 
-/* (r,w) of quadrilateral GL points - weights are correct */
-/* quad ref element goes from {x,y} = 0-1*/
+/*
+ *
+ * // (r,w) of quadrilateral GL points - weights are correct 
+ * // quad ref element goes from {x,y} = 0-1*
 double quad0[3] = {0.5, 0.5, 1};
 
 double quad1[16] = {2.113248654051870e-01, 2.113248654051870e-01, 0.25, 
@@ -46,10 +48,9 @@ double quad2[27] = {1.127016653792585e-01, 1.127016653792585e-01, 0.077160493827
                     8.872983346207415e-01, 1.127016653792585e-01, 0.0771604938271606,
                     8.872983346207415e-01, 5.000000000000000e-01, 0.123456790123457,
                     8.872983346207415e-01, 8.872983346207415e-01, 0.0771604938271606};
+*/
                    
-double *gauss[2][3];
-gauss[1][3]={tri0,tri1,tri2};
-gauss[2][3]={quad0,quad1,quad2};
+double *gauss[1][3]={tri0,tri1,tri2};
 
 double *gaussgl[1][3]={gl0,gl1,gl2};
 

@@ -445,7 +445,7 @@ void COMPUTE_RESIDUAL(double *R, double *mass, double *q, double *detJ, double *
 		      int pde, int d, int e, int p, int nelem,
                       double *detJcut, double *fcflux,
                       double *bvcut, double *bvdcut, double *bfcut, double *bfdcut,
-                      int *iptrc, int *iptrcf, int necut);
+                      int *iptrc, int *iptrcf, int necut)
 
 {
   int i,ix,idet,im,iR,iq,ibv,ibvd,ibf,ibfd;
@@ -468,6 +468,7 @@ void COMPUTE_RESIDUAL(double *R, double *mass, double *q, double *detJ, double *
     }
 
   //Modify residual for cut cells
+  /*
   for(i=0;i<necut;i++)
     {
       // get original element quantities
@@ -486,6 +487,7 @@ void COMPUTE_RESIDUAL(double *R, double *mass, double *q, double *detJ, double *
       cutVol(R+iR,bv+ibv,bvd+ibvd,q+iq,detJ+idet,pde,d,e,p);
       cutFace(R+iR,fflux,bf+ibf,bfd+ibfd,elem2face+nfp*i,iptrf,q,pf,pde,d,e,p,i);
     }
+  */
 
   //Solve each element
   for(i=0;i<nelem;i++)
@@ -504,7 +506,7 @@ void COMPUTE_RHS(double *R,double *mass,double *bv, double *bvd, double *JinvV, 
                  double *bvcut, double *bvdcut,double *JinvVcut,double *detJcut,
                  double *bfcut, double *bfdcut,double *JinvFcut,double *fwcut,
                  double *fcnorm,double *fcflux,double *xcut, int *iptrc,
-                 int *iptrcf, int necut);
+                 int *iptrcf, int necut)
 {
 
   FILL_FACES(fnorm, fflux, elem2face, iptr, iptrf, 

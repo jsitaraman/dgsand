@@ -25,10 +25,13 @@
 void main(void)
 {
   double *q,*qstar,*Q,*R;                           // field
-  double *x,*bv,*bvd,*JinvBkD,*JinvV,*detJ;  // volumetric quantities
+  double *x,*bv,*bvd,*JinvV,*detJ;  // volumetric quantities
+  double *xcut,*bvcut,*bvdcut,*JinvVcut,*detJcut;  // volumetric quantities
   double *bf,*bfd,*JinvF,*faceWeight;        // face quantities
+  double *bfcut,*bfdcut,*JinvFcut,*fwcut;        // face quantities
   double *mass;                              // mass matrix
   double *fnorm,*fflux;                      // face normals and face flux
+  double *fcnorm,*fcflux;                      // face normals and face flux
   double xsum;
 
   /* inputs */
@@ -38,27 +41,29 @@ void main(void)
   int p;                            // p order
   int etype=0;                      // element type (triangle = 0, quad = 1)
   
-  int nbasis[nmesh];                // number of bases for solution
-  int nbasisx[nmesh];                      // number of bases for grid
+  int nbasis;                // number of bases for solution
+  int nbasisx;                      // number of bases for grid
   int itype;                        // initialization type
   
   /* overset inputs */
   int nmesh = 1; 
 
   /* input and post processed from a grid file */
-  int nnodes[nmesh];                       // number of nodes in grid
-  int nelem[nmesh];                        // number of elements
-  int nbnodes[nmesh];                      // number of primal nodes on physical boundaries
-  int *ibc[nmesh];                         // boundary condition node indices and their types
-  int nfaces[nmesh];                       // number of faces 
-  double *xcoord[nmesh];                   // coordinates of provided grid
-  int *elem2node[nmesh]             // element to node connectivity
-  int *faces[nmesh],*elem2face[nmesh];     // face to cell connectivity and element to face information
-  int *iptr[nmesh],*iptf[nmesh];                  // pointer into data arrays
+  /* Hacking this and assuming that both grids are identical */
+  int nnodes;                       // number of nodes in grid
+  int nelem;                        // number of elements in each mesh
+  int nbnodes;                      // number of primal nodes on physical boundaries
+  int *ibc;                         // boundary condition node indices and their types
+  int nfaces;                       // number of faces 
+  double *xcoord;                   // coordinates of provided grid (contains both grids)
+  int *elem2node;             // element to node connectivity
+  int *faces,*elem2face;     // face to cell connectivity and element to face information
+  int *iptr,*iptf;                  // pointer into data arrays
+  int *iptrc,*iptrcf;                  // pointer into data arrays
 
 
   /* local variables */
-  int n,i,j,m,b,ix, pc,pf,fpe,imax,n,ndof,nsteps,nsave;
+  int a,i,j,m,b,ix, pc,pf,fpe,imax,ndof,n,nsteps,nsave;
   double wgt,totalArea,rnorm,rmax,dt;
   /* rk3 coefficients */
   double rk[4]={0.25,8./15,5./12,3./4};
@@ -68,16 +73,12 @@ void main(void)
   nfields=get_nfields[pde](d);
 
   /* read a 2D grid */
-  for(i=0;i<nmesh;i++){
-    readgrid2D(&xcoord[i],&elem2node[i],&ibc[i],&p,&nnodes[i],&nelem[i],&nbnodes[i]);
-    nbasis[i]=order2basis[etype][p];         // basis for solution
-    nbasisx[i]=order2basis[etype][p+(p==0)]; // basis for grid
-  }
+  readgrid2D(&xcoord,&elem2node,&ibc,&p,&nnodes,&nelem,&nbnodes,&nmesh);
+  nbasis=order2basis[etype][p];         // basis for solution
+  nbasisx=order2basis[etype][p+(p==0)]; // basis for grid
 
   /* find element to face connectivity */
-  for(i=0;i<nmesh;i++){
-    find_faces(elem2node[i],&elem2face[i],&faces[i],&nfaces[i],ibc[i],nelem[i],nbnodes[i],3,nbasisx[i]);
-  }
+  find_faces(elem2node,&elem2face,&faces,&nfaces,ibc,nelem,nbnodes,3,nbasisx);
 
   /* allocate memory */
   /* field parameters per element */  
@@ -88,35 +89,34 @@ void main(void)
 
   /* geometrical parameters per volume QP of each element */
   /* TODO: some of these such as bv and JinvV can be optimized or omitted */
-  x       =dgsand_alloc(double,(d*(nbasisx))*nelem);              // coord modal coefficients (p0 mod)
+  x       =dgsand_alloc(double,(d*(nbasisx))*nelem*nmesh);              // coord modal coefficients (p0 mod)
   bv      =dgsand_alloc(double,(nbasis*ngElem[etype][p]));        // basis value at volume QP
-  bvd     =dgsand_alloc(double,(d*nbasis*ngElem[etype][p]*nelem));// basis derivative value at volume QP
-  JinvV   =dgsand_alloc(double,(d*d*ngElem[etype][p]*nelem));     // J^{-1} at volume QP
-  detJ    =dgsand_calloc(double,(ngElem[etype][p]*nelem));        // |J| at volume QP
+  bvd     =dgsand_alloc(double,(d*nbasis*ngElem[etype][p]*nelem*nmesh));// basis derivative value at volume QP
+  JinvV   =dgsand_alloc(double,(d*d*ngElem[etype][p]*nelem*nmesh));     // J^{-1} at volume QP
+  detJ    =dgsand_calloc(double,(ngElem[etype][p]*nelem*nmesh));        // |J| at volume QP
 
   /* geometrical parameters per face QP of each element */
   /* TODO : some these such as bf and JinvF can optimized/omitted */
-  
   fpe = facePerElem[etype];
   bf        =dgsand_alloc(double,(nbasis*ngGL[etype][p]*fpe));  // basis value at face QP
-  bfd       =dgsand_alloc(double,(d*nbasis*ngGL[etype][p]*fpe*nelem));// basis der. value at face QP
-  JinvF     =dgsand_alloc(double,(d*d*ngGL[etype][p]*fpe*nelem));     // J^{-1} at face QP
-  faceWeight=dgsand_alloc(double,(d*ngGL[etype][p]*fpe*nelem));       // faceNormals at face QP
-  mass      =dgsand_alloc(double,(nbasis*nbasis*nelem));              // mass matrix
+  bfd       =dgsand_alloc(double,(d*nbasis*ngGL[etype][p]*fpe*nelem*nmesh));// basis der. value at face QP
+  JinvF     =dgsand_alloc(double,(d*d*ngGL[etype][p]*fpe*nelem*nmesh));     // J^{-1} at face QP
+  faceWeight=dgsand_alloc(double,(d*ngGL[etype][p]*fpe*nelem*nmesh));       // faceNormals at face QP
+  mass      =dgsand_alloc(double,(nbasis*nbasis*nelem*nmesh));              // mass matrix
 
-  fnorm     =dgsand_alloc(double,(d*ngGL[etype][p]*nfaces));          // face normals
-  fflux     =dgsand_alloc(double,(3*nfields*ngGL[etype][p]*nfaces));  // face fields and flux        
+  fnorm     =dgsand_alloc(double,(d*ngGL[etype][p]*nfaces*nmesh));          // face normals
+  fflux     =dgsand_alloc(double,(3*nfields*ngGL[etype][p]*nfaces*nmesh));  // face fields and flux        
 
   /* pointer array into each data array above */
   pc=11; // number of unique sizes with elements
   pf=2;  // number of unique sizes associated with faces
-  iptr=dgsand_calloc(int,(pc*nelem));
-  iptf=dgsand_calloc(int,(pf*nfaces));
+  iptr=dgsand_calloc(int,(pc*nelem*nmesh));
+  iptf=dgsand_calloc(int,(pf*nfaces*nmesh));
  
   /* set the pointers, TODO: this has to change when there is a variety of elements */
-  for(n=0;n<nmesh;n++){
+  for(a=0;a<nmesh;a++){
     for(i=0;i<nelem;i++){    
-      ix=(n+1)*pc*i;
+      ix=a*pc*nelem+pc*i;
       iptr[ix]+=i*(nfields*nbasis);               // q, Q, R
       iptr[ix+1]+=i*(d*(nbasisx));                // x
       iptr[ix+2]+=0;                              // bv (this is same per element type)
@@ -131,7 +131,7 @@ void main(void)
       iptr[ix+10]+=i*(nbasis*nbasis);             // mass 
     }
     for(i=0;i<nfaces;i++){
-      ix=(n+1)*pf*i;
+      ix=a*pf*nfaces+pf*i;
       iptf[ix]+=(i*d*ngGL[etype][p]);            //faceNormal
       iptf[ix+1]+=(i*3*nfields*ngGL[etype][p]);  //faceFlux
     }
@@ -141,8 +141,11 @@ void main(void)
   // XXX need to decide how to handle etype here.
   // will we need an array to tell us how many nodes are in each element
   // or will we keep all cut cells as triangles?
-  necut = 0; 
-  ncfaces = 0; 
+  //
+  // Assume for the hacked problem that the overlap only happens in the boundary elements
+  //
+  int necut = 0; 
+  int ncfaces = 0; 
 
   xcut       =dgsand_alloc(double,(d*(nbasisx))*necut);              // coord modal coefficients (p0 mod)
   bvcut      =dgsand_alloc(double,(necut*nbasis*ngElem[etype][p]));        // basis value at volume QP
@@ -158,7 +161,6 @@ void main(void)
   bfdcut    =dgsand_alloc(double,(d*nbasis*ngGL[etype][p]*fpe*necut));// basis der. value at face QP
   JinvFcut  =dgsand_alloc(double,(d*d*ngGL[etype][p]*fpe*necut));     // J^{-1} at face QP
   fwcut     =dgsand_alloc(double,(d*ngGL[etype][p]*fpe*necut));       // faceNormals at face QP
-  mcut      =dgsand_alloc(double,(nbasis*nbasis*necut));              // mass matrix
 
   fcnorm     =dgsand_alloc(double,(d*ngGL[etype][p]*ncfaces));          // face normals
   fcflux     =dgsand_alloc(double,(3*nfields*ngGL[etype][p]*ncfaces));  // face fields and flux        
@@ -169,26 +171,24 @@ void main(void)
   
   // XXX how do I handle fpe and element type being different for certain cut regions?
   // Assume for now all cuts are triangles?
-  for(n=0;n<nmesh;n++){
+  for(a=0;a<nmesh;a++){
     for(i=0;i<necut;i++){
-      ix=pc*i;
+      ix=a*pc*necut + pc*i;
       iptrc[ix]+=i*(nfields*nbasis);               // q, Q, R
       iptrc[ix+1]+=i*(d*(nbasisx));                // x
-      iptrc[ix+2]+=0;                              // bv (this is same per element type)
+      iptrc[ix+2]+=i*(nbasis*ngElem[etype][p]);   // bv (this is NOT same per element type)
       iptrc[ix+3]+=i*(d*nbasis*ngElem[etype][p]);  // bvd
       iptrc[ix+4]+=i*(d*d*ngElem[etype][p]);       // JinvV
       iptrc[ix+5]+=i*(ngElem[etype][p]);           // detJ
 
-      iptrc[ix+6]+=0;                              // bf (this is same per element type)
+      iptrc[ix+6]+=i*(nbasis*ngGL[etype][p]*fpe); // bf (this is NOT same per element type)
       iptrc[ix+7]+=i*(d*nbasis*ngGL[etype][p]*fpe);// bfd
       iptrc[ix+8]+=i*(d*d*ngGL[etype][p]*fpe);     // JinvF
       iptrc[ix+9]+=i*(d*ngGL[etype][p]*fpe);       // faceWeight
       iptrc[ix+10]+=i*(nbasis*nbasis);             // mass 
     }
     for(i=0;i<ncfaces;i++){
-      etype = XXX // get element type
-
-      ix=pf*i;
+      ix=a*pf*ncfaces + pf*i;
       iptrcf[ix]+=(i*d*ngGL[etype][p]);            //faceNormal
       iptrcf[ix+1]+=(i*3*nfields*ngGL[etype][p]);  //faceFlux
     }
@@ -208,6 +208,7 @@ void main(void)
 
 
   /* Handle cut cells */
+/*
   if(necut>0){
     COMPUTE_CUT_METRICS(x,JinvV,detJ,
                         JinvF,iptr,d,etype,p,pc,
@@ -217,6 +218,8 @@ void main(void)
 
     CUT_MASS_MATRIX(mass,x,iptr,d,etype,p,nelem,pc,necut);
   }
+*/
+
 
   /* compute some statistics of the mesh and report them */
   totalArea=0.0;

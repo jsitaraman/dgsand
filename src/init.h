@@ -60,7 +60,7 @@ void init_data(double *x,double *q, double *X, double *Q, int d, int nfields, in
 void INIT_FIELDS(double *xcoord,int *e2n, 
 		 double *Q, double *x, double *q, // data populated here
 		 int *iptr, int pde, int e, int p,
-		 int d, int nbasis, int itype, int nelem, int pc)
+		 int d, int nbasis, int itype, int nelem, int pc, int nmesh)
 {
   int nvert=order2basis[e][p+(p==0)];
   int nfields=get_nfields[pde](d);  
