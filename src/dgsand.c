@@ -38,23 +38,27 @@ void main(void)
   int p;                            // p order
   int etype=0;                      // element type (triangle = 0, quad = 1)
   
-  int nbasis;                       // number of bases for solution
-  int nbasisx;                      // number of bases for grid
+  int nbasis[nmesh];                // number of bases for solution
+  int nbasisx[nmesh];                      // number of bases for grid
   int itype;                        // initialization type
+  
+  /* overset inputs */
+  int nmesh = 1; 
 
   /* input and post processed from a grid file */
-  int nnodes;                       // number of nodes in grid
-  int nelem;                        // number of elements
-  int nbnodes;                      // number of primal nodes on physical boundaries
-  int *ibc;                         // boundary condition node indices and their types
-  int nfaces;                       // number of faces 
-  double *xcoord;                   // coordinates of provided grid
-  int *elem2node;                   // element to node connectivity
-  int *faces,*elem2face;            // face to cell connectivity and element to face information
-  int *iptr,*iptf;                  // pointer into data arrays
+  int nnodes[nmesh];                       // number of nodes in grid
+  int nelem[nmesh];                        // number of elements
+  int nbnodes[nmesh];                      // number of primal nodes on physical boundaries
+  int *ibc[nmesh];                         // boundary condition node indices and their types
+  int nfaces[nmesh];                       // number of faces 
+  double *xcoord[nmesh];                   // coordinates of provided grid
+  int *elem2node[nmesh]             // element to node connectivity
+  int *faces[nmesh],*elem2face[nmesh];     // face to cell connectivity and element to face information
+  int *iptr[nmesh],*iptf[nmesh];                  // pointer into data arrays
+
 
   /* local variables */
-  int i,j,m,b,ix, pc,pf,fpe,nfields2,imax,n,ndof,nsteps,nsave;
+  int n,i,j,m,b,ix, pc,pf,fpe,imax,n,ndof,nsteps,nsave;
   double wgt,totalArea,rnorm,rmax,dt;
   /* rk3 coefficients */
   double rk[4]={0.25,8./15,5./12,3./4};
@@ -64,16 +68,19 @@ void main(void)
   nfields=get_nfields[pde](d);
 
   /* read a 2D grid */
-  readgrid2D(&xcoord,&elem2node,&ibc,&p,&nnodes,&nelem,&nbnodes);
-  nbasis=order2basis[etype][p];         // basis for solution
-  nbasisx=order2basis[etype][p+(p==0)]; // basis for grid
+  for(i=0;i<nmesh;i++){
+    readgrid2D(&xcoord[i],&elem2node[i],&ibc[i],&p,&nnodes[i],&nelem[i],&nbnodes[i]);
+    nbasis[i]=order2basis[etype][p];         // basis for solution
+    nbasisx[i]=order2basis[etype][p+(p==0)]; // basis for grid
+  }
 
   /* find element to face connectivity */
-  find_faces(elem2node,&elem2face,&faces,&nfaces,ibc,nelem,nbnodes,3,nbasisx);
+  for(i=0;i<nmesh;i++){
+    find_faces(elem2node[i],&elem2face[i],&faces[i],&nfaces[i],ibc[i],nelem[i],nbnodes[i],3,nbasisx[i]);
+  }
 
   /* allocate memory */
-  /* field parameters per element */
-
+  /* field parameters per element */  
   q=dgsand_alloc(double,(nfields*nbasis*nelem));     // modal coefficients
   qstar=dgsand_alloc(double,(nfields*nbasis*nelem)); // modal coefficients
   Q=dgsand_alloc(double,(nfields*nbasis*nelem));     // values at physical locations
@@ -107,9 +114,9 @@ void main(void)
   iptf=dgsand_calloc(int,(pf*nfaces));
  
   /* set the pointers, TODO: this has to change when there is a variety of elements */
-  for(i=0;i<nelem;i++)
-    {
-      ix=pc*i;
+  for(n=0;n<nmesh;n++){
+    for(i=0;i<nelem;i++){    
+      ix=(n+1)*pc*i;
       iptr[ix]+=i*(nfields*nbasis);               // q, Q, R
       iptr[ix+1]+=i*(d*(nbasisx));                // x
       iptr[ix+2]+=0;                              // bv (this is same per element type)
@@ -123,12 +130,12 @@ void main(void)
       iptr[ix+9]+=i*(d*ngGL[etype][p]*fpe);       // faceWeight
       iptr[ix+10]+=i*(nbasis*nbasis);             // mass 
     }
-  for(i=0;i<nfaces;i++)
-    {
-      ix=pf*i;
+    for(i=0;i<nfaces;i++){
+      ix=(n+1)*pf*i;
       iptf[ix]+=(i*d*ngGL[etype][p]);            //faceNormal
       iptf[ix+1]+=(i*3*nfields*ngGL[etype][p]);  //faceFlux
     }
+  }
 
   /* Cut region parameters */ 
   // XXX need to decide how to handle etype here.
@@ -162,8 +169,8 @@ void main(void)
   
   // XXX how do I handle fpe and element type being different for certain cut regions?
   // Assume for now all cuts are triangles?
-  for(i=0;i<necut;i++)
-    {
+  for(n=0;n<nmesh;n++){
+    for(i=0;i<necut;i++){
       ix=pc*i;
       iptrc[ix]+=i*(nfields*nbasis);               // q, Q, R
       iptrc[ix+1]+=i*(d*(nbasisx));                // x
@@ -178,24 +185,27 @@ void main(void)
       iptrc[ix+9]+=i*(d*ngGL[etype][p]*fpe);       // faceWeight
       iptrc[ix+10]+=i*(nbasis*nbasis);             // mass 
     }
-  for(i=0;i<ncfaces;i++)
-    {
+    for(i=0;i<ncfaces;i++){
       etype = XXX // get element type
 
       ix=pf*i;
       iptrcf[ix]+=(i*d*ngGL[etype][p]);            //faceNormal
       iptrcf[ix+1]+=(i*3*nfields*ngGL[etype][p]);  //faceFlux
     }
+  }
  
   /* initialize fields on all the elements */
-  INIT_FIELDS(xcoord,elem2node,Q,x,q,iptr,pde,etype,p,d,nbasis,itype,nelem,pc);
+  INIT_FIELDS(xcoord,elem2node,Q,x,q,iptr,pde,etype,p,d,nbasis,itype,nelem,pc,nmesh);
 
   /* compute grid metrics */
   COMPUTE_GRID_METRICS(x,bv,bvd,JinvV,detJ,
   		       bf,bfd,JinvF,faceWeight,iptr,d,etype,p,nelem,pc);
 
+  /* Do the blanking here based on detJ */
+
   /* compute the mass matrix for each element */
   MASS_MATRIX(mass,x,iptr,d,etype,p,nelem,pc);
+
 
   /* Handle cut cells */
   if(necut>0){
