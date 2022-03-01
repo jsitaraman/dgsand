@@ -115,7 +115,7 @@ void main(void)
  
   /* set the pointers, TODO: this has to change when there is a variety of elements */
   for(i=0;i<nelem;i++){    
-      ix=a*pc*nelem+pc*i;
+      ix=pc*i;
       iptr[ix]+=i*(nfields*nbasis);               // q, Q, R
       iptr[ix+1]+=i*(d*(nbasisx));                // x
       iptr[ix+2]+=0;                              // bv (this is same per element type)
@@ -130,7 +130,7 @@ void main(void)
       iptr[ix+10]+=i*(nbasis*nbasis);             // mass 
   }
   for(i=0;i<nfaces;i++){
-      ix=a*pf*nfaces+pf*i;
+      ix=pf*i;
       iptf[ix]+=(i*d*ngGL[etype][p]);            //faceNormal
       iptf[ix+1]+=(i*3*nfields*ngGL[etype][p]);  //faceFlux
   }
@@ -170,7 +170,7 @@ void main(void)
   // XXX how do I handle fpe and element type being different for certain cut regions?
   // Assume for now all cuts are triangles?
   for(i=0;i<necut;i++){
-      ix=a*pc*necut + pc*i;
+      ix=pc*i;
       iptrc[ix]+=i*(nfields*nbasis);               // q, Q, R
       iptrc[ix+1]+=i*(d*(nbasisx));                // x
       iptrc[ix+2]+=i*(nbasis*ngElem[etype][p]);   // bv (this is NOT same per element type)
@@ -185,7 +185,7 @@ void main(void)
       iptrc[ix+10]+=i*(nbasis*nbasis);             // mass 
   }
   for(i=0;i<ncfaces;i++){
-      ix=a*pf*ncfaces + pf*i;
+      ix=pf*i;
       iptrcf[ix]+=(i*d*ngGL[etype][p]);            //faceNormal
       iptrcf[ix+1]+=(i*3*nfields*ngGL[etype][p]);  //faceFlux
   }

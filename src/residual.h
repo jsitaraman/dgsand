@@ -465,6 +465,7 @@ void COMPUTE_RESIDUAL(double *R, double *mass, double *q, double *detJ, double *
             
       volIntegral(R+iR,bv+ibv,bvd+ibvd,q+iq,detJ+idet, pde,d,e,p);
       faceIntegral(R+iR,fflux,bf+ibf,bfd+ibfd,elem2face+nfp*i,iptrf,q,pf,pde,d,e,p,i);
+     // invertMass(mass+im,R+iR,pde,d,e,p,i);
     }
 
   //Modify residual for cut cells
@@ -492,10 +493,12 @@ void COMPUTE_RESIDUAL(double *R, double *mass, double *q, double *detJ, double *
   //Solve each element
   for(i=0;i<nelem;i++)
     {
+      ix=pc*i;
       iR=iq=iptr[ix];
       im=iptr[ix+10];
       invertMass(mass+im,R+iR,pde,d,e,p,i);
     }
+
 }
 
 void COMPUTE_RHS(double *R,double *mass,double *bv, double *bvd, double *JinvV, double *detJ,
