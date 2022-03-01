@@ -46,7 +46,7 @@ void main(void)
   int itype;                        // initialization type
   
   /* overset inputs */
-  int nmesh = 1; 
+  int nmesh = 2; 
 
   /* input and post processed from a grid file */
   /* Hacking this and assuming that both grids are identical */
@@ -73,7 +73,7 @@ void main(void)
   nfields=get_nfields[pde](d);
 
   /* read a 2D grid */
-  readgrid2D(&xcoord,&elem2node,&ibc,&p,&nnodes,&nelem,&nbnodes,&nmesh);
+  readgrid2D(&xcoord,&elem2node,&ibc,&p,&nnodes,&nelem,&nbnodes);
   nbasis=order2basis[etype][p];         // basis for solution
   nbasisx=order2basis[etype][p+(p==0)]; // basis for grid
 
@@ -89,33 +89,32 @@ void main(void)
 
   /* geometrical parameters per volume QP of each element */
   /* TODO: some of these such as bv and JinvV can be optimized or omitted */
-  x       =dgsand_alloc(double,(d*(nbasisx))*nelem*nmesh);              // coord modal coefficients (p0 mod)
+  x       =dgsand_alloc(double,(d*(nbasisx))*nelem);              // coord modal coefficients (p0 mod)
   bv      =dgsand_alloc(double,(nbasis*ngElem[etype][p]));        // basis value at volume QP
-  bvd     =dgsand_alloc(double,(d*nbasis*ngElem[etype][p]*nelem*nmesh));// basis derivative value at volume QP
-  JinvV   =dgsand_alloc(double,(d*d*ngElem[etype][p]*nelem*nmesh));     // J^{-1} at volume QP
-  detJ    =dgsand_calloc(double,(ngElem[etype][p]*nelem*nmesh));        // |J| at volume QP
+  bvd     =dgsand_alloc(double,(d*nbasis*ngElem[etype][p]*nelem));// basis derivative value at volume QP
+  JinvV   =dgsand_alloc(double,(d*d*ngElem[etype][p]*nelem));     // J^{-1} at volume QP
+  detJ    =dgsand_calloc(double,(ngElem[etype][p]*nelem));        // |J| at volume QP
 
   /* geometrical parameters per face QP of each element */
   /* TODO : some these such as bf and JinvF can optimized/omitted */
   fpe = facePerElem[etype];
   bf        =dgsand_alloc(double,(nbasis*ngGL[etype][p]*fpe));  // basis value at face QP
-  bfd       =dgsand_alloc(double,(d*nbasis*ngGL[etype][p]*fpe*nelem*nmesh));// basis der. value at face QP
-  JinvF     =dgsand_alloc(double,(d*d*ngGL[etype][p]*fpe*nelem*nmesh));     // J^{-1} at face QP
-  faceWeight=dgsand_alloc(double,(d*ngGL[etype][p]*fpe*nelem*nmesh));       // faceNormals at face QP
-  mass      =dgsand_alloc(double,(nbasis*nbasis*nelem*nmesh));              // mass matrix
+  bfd       =dgsand_alloc(double,(d*nbasis*ngGL[etype][p]*fpe*nelem));// basis der. value at face QP
+  JinvF     =dgsand_alloc(double,(d*d*ngGL[etype][p]*fpe*nelem));     // J^{-1} at face QP
+  faceWeight=dgsand_alloc(double,(d*ngGL[etype][p]*fpe*nelem));       // faceNormals at face QP
+  mass      =dgsand_alloc(double,(nbasis*nbasis*nelem));              // mass matrix
 
-  fnorm     =dgsand_alloc(double,(d*ngGL[etype][p]*nfaces*nmesh));          // face normals
-  fflux     =dgsand_alloc(double,(3*nfields*ngGL[etype][p]*nfaces*nmesh));  // face fields and flux        
+  fnorm     =dgsand_alloc(double,(d*ngGL[etype][p]*nfaces));          // face normals
+  fflux     =dgsand_alloc(double,(3*nfields*ngGL[etype][p]*nfaces));  // face fields and flux        
 
   /* pointer array into each data array above */
   pc=11; // number of unique sizes with elements
   pf=2;  // number of unique sizes associated with faces
-  iptr=dgsand_calloc(int,(pc*nelem*nmesh));
-  iptf=dgsand_calloc(int,(pf*nfaces*nmesh));
+  iptr=dgsand_calloc(int,(pc*nelem));
+  iptf=dgsand_calloc(int,(pf*nfaces));
  
   /* set the pointers, TODO: this has to change when there is a variety of elements */
-  for(a=0;a<nmesh;a++){
-    for(i=0;i<nelem;i++){    
+  for(i=0;i<nelem;i++){    
       ix=a*pc*nelem+pc*i;
       iptr[ix]+=i*(nfields*nbasis);               // q, Q, R
       iptr[ix+1]+=i*(d*(nbasisx));                // x
@@ -129,12 +128,11 @@ void main(void)
       iptr[ix+8]+=i*(d*d*ngGL[etype][p]*fpe);     // JinvF
       iptr[ix+9]+=i*(d*ngGL[etype][p]*fpe);       // faceWeight
       iptr[ix+10]+=i*(nbasis*nbasis);             // mass 
-    }
-    for(i=0;i<nfaces;i++){
+  }
+  for(i=0;i<nfaces;i++){
       ix=a*pf*nfaces+pf*i;
       iptf[ix]+=(i*d*ngGL[etype][p]);            //faceNormal
       iptf[ix+1]+=(i*3*nfields*ngGL[etype][p]);  //faceFlux
-    }
   }
 
   /* Cut region parameters */ 
@@ -171,8 +169,7 @@ void main(void)
   
   // XXX how do I handle fpe and element type being different for certain cut regions?
   // Assume for now all cuts are triangles?
-  for(a=0;a<nmesh;a++){
-    for(i=0;i<necut;i++){
+  for(i=0;i<necut;i++){
       ix=a*pc*necut + pc*i;
       iptrc[ix]+=i*(nfields*nbasis);               // q, Q, R
       iptrc[ix+1]+=i*(d*(nbasisx));                // x
@@ -186,16 +183,15 @@ void main(void)
       iptrc[ix+8]+=i*(d*d*ngGL[etype][p]*fpe);     // JinvF
       iptrc[ix+9]+=i*(d*ngGL[etype][p]*fpe);       // faceWeight
       iptrc[ix+10]+=i*(nbasis*nbasis);             // mass 
-    }
-    for(i=0;i<ncfaces;i++){
+  }
+  for(i=0;i<ncfaces;i++){
       ix=a*pf*ncfaces + pf*i;
       iptrcf[ix]+=(i*d*ngGL[etype][p]);            //faceNormal
       iptrcf[ix+1]+=(i*3*nfields*ngGL[etype][p]);  //faceFlux
-    }
   }
  
   /* initialize fields on all the elements */
-  INIT_FIELDS(xcoord,elem2node,Q,x,q,iptr,pde,etype,p,d,nbasis,itype,nelem,pc,nmesh);
+  INIT_FIELDS(xcoord,elem2node,Q,x,q,iptr,pde,etype,p,d,nbasis,itype,nelem,pc);
 
   /* compute grid metrics */
   COMPUTE_GRID_METRICS(x,bv,bvd,JinvV,detJ,
