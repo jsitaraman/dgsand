@@ -12,6 +12,7 @@
 #include "inputParser.h"
 #include "solvec.h"
 #include "basislib_u.h"
+#include "cutter.h"
 #include "quadrature.h"
 #include "memutil.h"
 #include "pde.h"
@@ -49,13 +50,12 @@ void main(void)
   int nmesh = 2; 
 
   /* input and post processed from a grid file */
-  /* Hacking this and assuming that both grids are identical */
   int nnodes;                       // number of nodes in grid
   int nelem;                        // number of elements in each mesh
   int nbnodes;                      // number of primal nodes on physical boundaries
   int *ibc;                         // boundary condition node indices and their types
   int nfaces;                       // number of faces 
-  double *xcoord;                   // coordinates of provided grid (contains both grids)
+  double *xcoord;                   // coordinates of provided grid 
   int *elem2node;             // element to node connectivity
   int *faces,*elem2face;     // face to cell connectivity and element to face information
   int *iptr,*iptf;                  // pointer into data arrays
@@ -135,12 +135,21 @@ void main(void)
       iptf[ix+1]+=(i*3*nfields*ngGL[etype][p]);  //faceFlux
   }
 
+  /* initialize fields on all the elements */
+  INIT_FIELDS(xcoord,elem2node,Q,x,q,iptr,pde,etype,p,d,nbasis,itype,nelem,pc);
+
+  /* compute grid metrics */
+  COMPUTE_GRID_METRICS(x,bv,bvd,JinvV,detJ,
+  		       bf,bfd,JinvF,faceWeight,iptr,d,etype,p,nelem,pc);
+
+  // Arbitrarily cut the cells  along some straight line
+  //CUT_CELLS(x, 
+  
+  
   /* Cut region parameters */ 
   // XXX need to decide how to handle etype here.
   // will we need an array to tell us how many nodes are in each element
   // or will we keep all cut cells as triangles?
-  //
-  // Assume for the hacked problem that the overlap only happens in the boundary elements
   //
   int necut = 0; 
   int ncfaces = 0; 
@@ -190,14 +199,6 @@ void main(void)
       iptrcf[ix+1]+=(i*3*nfields*ngGL[etype][p]);  //faceFlux
   }
  
-  /* initialize fields on all the elements */
-  INIT_FIELDS(xcoord,elem2node,Q,x,q,iptr,pde,etype,p,d,nbasis,itype,nelem,pc);
-
-  /* compute grid metrics */
-  COMPUTE_GRID_METRICS(x,bv,bvd,JinvV,detJ,
-  		       bf,bfd,JinvF,faceWeight,iptr,d,etype,p,nelem,pc);
-
-  /* Do the blanking here based on detJ */
 
   /* compute the mass matrix for each element */
   MASS_MATRIX(mass,x,iptr,d,etype,p,nelem,pc);

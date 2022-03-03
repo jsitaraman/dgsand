@@ -31,6 +31,7 @@ void init_data(double *x,double *q, double *X, double *Q, int d, int nfields, in
     {
       for(i=0;i<d;i++)
 	Y[i][j]=X[d*j+i];
+        printf("X(%i) = %f\n",d*j+i,Y[i][j]);    
       for(i=d;i<nfields+d;i++)
 	Y[i][j]=Q[(i-d)*nbasis+j];
     }
