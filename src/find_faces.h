@@ -94,7 +94,7 @@ void find_faces(int *bface,
       else {
         if (bcnode[flist[7*i]]==1 || bcnode[flist[7*i+1]]==1) flist[7*i+4]=-1;
         if (bcnode[flist[7*i]]==2 || bcnode[flist[7*i+1]]==2) flist[7*i+4]=-2;
-        printf("%d %d\n",i,flist[7*i+4]);
+        //printf("%d %d\n",i,flist[7*i+4]);
       }
       for(n=0;n<6;n++) (*faces)[6*i+n]=flist[7*i+n];
     }

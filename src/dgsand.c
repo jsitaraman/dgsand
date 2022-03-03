@@ -34,6 +34,7 @@ void main(void)
   double *fnorm,*fflux;                      // face normals and face flux
   double *fcnorm,*fcflux;                      // face normals and face flux
   double xsum;
+  int *cut2e;
 
   /* inputs */
   int pde;                          // pde type, only Euler eqns are implemented now
@@ -143,18 +144,12 @@ void main(void)
   		       bf,bfd,JinvF,faceWeight,iptr,d,etype,p,nelem,pc);
 
   // Arbitrarily cut the cells  along some straight line
-  //CUT_CELLS(x, 
+  int necut, ncfaces; 
+  xcut       =dgsand_alloc(double,(d*(nbasisx))*nelem);  // don't know necut yet so using nelem
+  cut2e      =dgsand_alloc(int,nelem);  // don't know necut yet so using nelem
+  CUT_CELLS(x, xcut, iptr, cut2e, necut, d, etype, nelem, ncfaces, pc);
   
-  
-  /* Cut region parameters */ 
-  // XXX need to decide how to handle etype here.
-  // will we need an array to tell us how many nodes are in each element
-  // or will we keep all cut cells as triangles?
-  //
-  int necut = 0; 
-  int ncfaces = 0; 
-
-  xcut       =dgsand_alloc(double,(d*(nbasisx))*necut);              // coord modal coefficients (p0 mod)
+  //create all the cut cell pointers
   bvcut      =dgsand_alloc(double,(necut*nbasis*ngElem[etype][p]));        // basis value at volume QP
   bvdcut     =dgsand_alloc(double,(necut*d*nbasis*ngElem[etype][p]));// basis derivative value at volume QP
   JinvVcut   =dgsand_alloc(double,(necut*d*d*ngElem[etype][p]));     // J^{-1} at volume QP
@@ -163,7 +158,6 @@ void main(void)
   // Need to think more on these
   // Are they the right size? XXX
   fpe = facePerElem[etype];
-  ncfaces = fpe*necut; // XXX is this right? 
   bfcut     =dgsand_alloc(double,(nbasis*ngGL[etype][p]*fpe*necut));  // basis value at face QP
   bfdcut    =dgsand_alloc(double,(d*nbasis*ngGL[etype][p]*fpe*necut));// basis der. value at face QP
   JinvFcut  =dgsand_alloc(double,(d*d*ngGL[etype][p]*fpe*necut));     // J^{-1} at face QP
@@ -232,6 +226,7 @@ void main(void)
   printf("#ndof=%d\n",nelem*nbasis);
   printf("#nfaces=%d\n",nfaces);
   printf("#totalArea=%f\n",totalArea);
+  printf("#necut=%d\n",necut);
   printf("#Input parameters = ");
   for(i=0;i<6;i++) printf("%f ",param[i]);
   printf("\n#--------------------------\n");
