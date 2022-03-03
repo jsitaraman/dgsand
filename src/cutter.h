@@ -1,34 +1,11 @@
-void checkJac( double *xtmp,double det){
-  double jac[4]; 
-  jac[0] = xtmp[0]-xtmp[2];
-  jac[1] = xtmp[1]-xtmp[2];
-  jac[2] = xtmp[3]-xtmp[5];
-  jac[3] = xtmp[4]-xtmp[5];
+double checkJac( double *xtmp){
+  double jac[4],det; 
+  jac[0] = xtmp[1]-xtmp[0];
+  jac[1] = xtmp[2]-xtmp[0];
+  jac[2] = xtmp[4]-xtmp[3];
+  jac[3] = xtmp[5]-xtmp[3];
   det = jac[0]*jac[3]-jac[1]*jac[2];
-}
-
-void test(double *x,int e, int d, int nfp, int nbasis){
-int j,k;
-double xvert[6],bv[nbasis],u[2];
-
-      // get bases at rst = [0 0 ; 1 0; 0 1]
-      for(j=0;j<nfp;j++){ // loop over vertices
-        u[0]=eloc[e][1][d*j];
-        u[1]=eloc[e][1][d*j+1];
-      printf("u = %f %f\n",u[0],u[1]);
-      printf("1elem vertices: %f %f, %f %f, %f %f\n",x[0],x[1],x[2],x[3],x[4],x[5]);
-        // get the vertex global coordinates of the original trying
-        // by doing x = sum(Ni * xi)
-	xvert[2*j] = 0;
-	xvert[2*j+1] = 0;
-        for(k=0;k<nbasis;k++){ // accumulate bases and vertex coords
-          bv[j] = basis[e][k](u);
-          xvert[2*j]   += bv[j]*x[k];
-          xvert[2*j+1] += bv[j]*x[k+nbasis];
-        }         
-      }
-      printf("elem vertices: %f %f, %f %f, %f %f\n",xvert[0],xvert[1],xvert[2],xvert[3],xvert[4],xvert[5]);
-      
+  return det;
 }
 
 void CUT_CELLS(double *x, double* xcut, int* iptr, int* cut2e, int necut, int d, int e, int nelem, int ncfaces, int pc)
@@ -66,9 +43,6 @@ void CUT_CELLS(double *x, double* xcut, int* iptr, int* cut2e, int necut, int d,
   n = 0; 
   for(i=0;i<nelem;i++){
       ix=iptr[pc*i+1];
-
-//      test(x+ix,e,d,nfp,nbasis); 
-
       // get bases at rst = [0 0 ; 1 0; 0 1]
       for(j=0;j<nfp;j++){ // loop over vertices
         tally[j]=0;
@@ -87,21 +61,24 @@ void CUT_CELLS(double *x, double* xcut, int* iptr, int* cut2e, int necut, int d,
 
 	//keep track of how many vertices are on right side of cut boundary
         if(xvert[2*j]<x0) tally[j]=1;
-        printf("e %i, j% i, t %i, xy %e %e \n",i,j,tally[j],xvert[2*j],xvert[2*j+1]); 
       }
 
       // check if element has vertices on both sides of x=x0 then 
       // track which vertices will be cut and which kept
       sum=0;
       for(j=0;j<nfp;j++) sum+=tally[j];
+      vcut[0]=vcut[1]=-1;
+      vorig[0]=vorig[1]=-1;
       if(sum>0 && sum<nfp){
         l=0;
         m=0;
         for(j=0;j<nfp;j++){
           if(tally[j]==1){
-            vcut[l++] = j;
+            vcut[l] = j;
+            l++; 
           } else{
-            vorig[n++] = j;
+            vorig[m] = j;
+            m++; 
           }
         }
       }
@@ -112,7 +89,6 @@ void CUT_CELLS(double *x, double* xcut, int* iptr, int* cut2e, int necut, int d,
       // tri cut region (1 original node, 2 intersect pts)
       if(sum==1){ 
 
-        printf("\t Inside sum=%i\n",sum);
 
         xtmp[0]= xvert[2*vcut[0]];
         xtmp[1]= xvert[2*vcut[0]+1];
@@ -140,23 +116,24 @@ void CUT_CELLS(double *x, double* xcut, int* iptr, int* cut2e, int necut, int d,
 
         // double check for positive jacobian XXX
         //
-        printf("\t\txtmp=[%f %f; %f %f; %f %f]\n",xtmp[0],xtmp[1],xtmp[2],xtmp[3],xtmp[4],xtmp[5]);
-        checkJac(xtmp,det); 
+        det=checkJac(xtmp); 
         if(det>0){
           xcut[m*3*2]   = xtmp[0];
-          xcut[m*3*2+1] = xtmp[1];
-          xcut[m*3*2+2] = xtmp[2];
-          xcut[m*3*2+3] = xtmp[3];
-          xcut[m*3*2+4] = xtmp[4];
+          xcut[m*3*2+1] = xtmp[2];
+          xcut[m*3*2+2] = xtmp[4];
+
+          xcut[m*3*2+3] = xtmp[1];
+          xcut[m*3*2+4] = xtmp[3];
           xcut[m*3*2+5] = xtmp[5];
         }
         else{
           xcut[m*3*2]   = xtmp[0];
-          xcut[m*3*2+1] = xtmp[2];
-          xcut[m*3*2+2] = xtmp[1];
-          xcut[m*3*2+3] = xtmp[3];
+          xcut[m*3*2+1] = xtmp[4];
+          xcut[m*3*2+2] = xtmp[2];
+
+          xcut[m*3*2+3] = xtmp[1];
           xcut[m*3*2+4] = xtmp[5];
-          xcut[m*3*2+5] = xtmp[4];
+          xcut[m*3*2+5] = xtmp[3];
         }
  
         cut2e[n]=i; //store id of orig elem
@@ -164,18 +141,19 @@ void CUT_CELLS(double *x, double* xcut, int* iptr, int* cut2e, int necut, int d,
         necut++;
         ncfaces = ncfaces+3; 
       }
+
+
       // quad cut region (2 original nodes, 2 intersect pts)
       // need to form 2 triangles here
       else if(sum==2){ 
-        printf("\t Inside sum=%i\n",sum);
 	//First triangle (top cut node, 2 intersect nodes)
 	if(xvert[2*vcut[0]+1]>xvert[2*vcut[1]+1]){
-          xtmp[0]= xvert[2*vcut[0]];
-          xtmp[0+1] = xvert[2*vcut[0]+1];
+          xtmp[0]   = xvert[2*vcut[0]];
+          xtmp[1] = xvert[2*vcut[0]+1];
         }
         else{
-          xtmp[0]= xvert[2*vcut[1]];
-          xtmp[0+1] = xvert[2*vcut[1]+1];
+          xtmp[0]   = xvert[2*vcut[1]];
+          xtmp[1] = xvert[2*vcut[1]+1];
         }
 
         // form edges between vcut and vorig vertices and get intersect pts
@@ -188,34 +166,34 @@ void CUT_CELLS(double *x, double* xcut, int* iptr, int* cut2e, int necut, int d,
         b = xvert[2*vorig[0]+1]-a*xvert[2*vorig[0]]; 
         ycut1=a*x0+b; 
  
-        xtmp[1]   = x0;
-        xtmp[1+4] = ycut1; 
+        xtmp[2]   = x0;
+        xtmp[3] = ycut1; 
         
 	// e2 = vcut - vorig[1]      
         a = (xvert[2*vorig[1]+1] - xvert[2*vcut[0]+1])/(xvert[2*vorig[1]] - xvert[2*vcut[0]]);
         b = xvert[2*vorig[1]+1]-a*xvert[2*vorig[1]]; 
         ycut2=a*x0+b; 
 
-        xtmp[2]   = x0;
-        xtmp[2+4] = ycut2; 
+        xtmp[4]   = x0;
+        xtmp[5] = ycut2; 
 
         // double check for positive jacobian XXX
-        checkJac(xtmp,det);
+        det=checkJac(xtmp);
         if(det>0){
           xcut[m*3*2]   = xtmp[0];
-          xcut[m*3*2+1] = xtmp[1];
-          xcut[m*3*2+2] = xtmp[2];
-          xcut[m*3*2+3] = xtmp[3];
-          xcut[m*3*2+4] = xtmp[4];
+          xcut[m*3*2+1] = xtmp[2];
+          xcut[m*3*2+2] = xtmp[4];
+          xcut[m*3*2+3] = xtmp[1];
+          xcut[m*3*2+4] = xtmp[3];
           xcut[m*3*2+5] = xtmp[5];
         }
         else{
           xcut[m*3*2]   = xtmp[0];
-          xcut[m*3*2+1] = xtmp[2];
-          xcut[m*3*2+2] = xtmp[1];
-          xcut[m*3*2+3] = xtmp[3];
+          xcut[m*3*2+1] = xtmp[4];
+          xcut[m*3*2+2] = xtmp[2];
+          xcut[m*3*2+3] = xtmp[1];
           xcut[m*3*2+4] = xtmp[5];
-          xcut[m*3*2+5] = xtmp[4];
+          xcut[m*3*2+5] = xtmp[3];
         }
  
         cut2e[n]=i; //store id of orig elem
@@ -237,22 +215,22 @@ void CUT_CELLS(double *x, double* xcut, int* iptr, int* cut2e, int necut, int d,
         }
 	
         // double check for positive jacobian XXX
-        checkJac(xtmp,det);
+        det=checkJac(xtmp);
         if(det>0){
           xcut[m*3*2]   = xtmp[0];
-          xcut[m*3*2+1] = xtmp[1];
-          xcut[m*3*2+2] = xtmp[2];
-          xcut[m*3*2+3] = xtmp[3];
-          xcut[m*3*2+4] = xtmp[4];
+          xcut[m*3*2+1] = xtmp[2];
+          xcut[m*3*2+2] = xtmp[4];
+          xcut[m*3*2+3] = xtmp[1];
+          xcut[m*3*2+4] = xtmp[3];
           xcut[m*3*2+5] = xtmp[5];
         }
         else{
           xcut[m*3*2]   = xtmp[0];
-          xcut[m*3*2+1] = xtmp[2];
-          xcut[m*3*2+2] = xtmp[1];
-          xcut[m*3*2+3] = xtmp[3];
+          xcut[m*3*2+1] = xtmp[4];
+          xcut[m*3*2+2] = xtmp[2];
+          xcut[m*3*2+3] = xtmp[1];
           xcut[m*3*2+4] = xtmp[5];
-          xcut[m*3*2+5] = xtmp[4];
+          xcut[m*3*2+5] = xtmp[3];
         }
  
         cut2e[n]=i; //store id of orig elem
@@ -261,6 +239,5 @@ void CUT_CELLS(double *x, double* xcut, int* iptr, int* cut2e, int necut, int d,
         ncfaces = ncfaces+3; 
       }
   }
-
 
 }

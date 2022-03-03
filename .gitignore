@@ -1,1 +1,6 @@
-*sh *log *.o
+dgsand
+*sh 
+*log 
+*flow*
+*.o
+*swp
