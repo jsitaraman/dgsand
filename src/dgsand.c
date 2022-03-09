@@ -144,10 +144,11 @@ void main(void)
   		       bf,bfd,JinvF,faceWeight,iptr,d,etype,p,nelem,pc);
 
   // Arbitrarily cut the cells  along some straight line
-  int necut, ncfaces; 
-  xcut       =dgsand_alloc(double,(d*(nbasisx))*nelem);  // don't know necut yet so using nelem
-  cut2e      =dgsand_alloc(int,nelem);  // don't know necut yet so using nelem
-  CUT_CELLS(x, xcut, iptr, cut2e, &necut, d, etype, nelem, ncfaces, pc);
+  // XXX HACKING THESE IN. NEEDS TO MATCH GRIDS
+  int necut=6;
+  int ncfaces=3*necut; 
+  xcut       =dgsand_alloc(double,(d*(nbasisx))*necut);  
+  cut2e      =dgsand_alloc(int,necut);  
   
   //create all the cut cell pointers
   bvcut      =dgsand_alloc(double,(necut*nbasis*ngElem[etype][p]));        // basis value at volume QP
@@ -191,24 +192,27 @@ void main(void)
       iptrcf[ix]+=(i*d*ngGL[etype][p]);            //faceNormal
       iptrcf[ix+1]+=(i*3*nfields*ngGL[etype][p]);  //faceFlux
   }
+  // XXX Hack together cut cell info 
+  CUT_CELLS(x, xcut, iptr, iptrc, cut2e, &necut, d, etype, nelem, ncfaces, pc);
  
-
   /* compute the mass matrix for each element */
   MASS_MATRIX(mass,x,iptr,d,etype,p,nelem,pc);
 
 
   /* Handle cut cells */
-/*
+
   if(necut>0){
     COMPUTE_CUT_METRICS(x,JinvV,detJ,
                         JinvF,iptr,d,etype,p,pc,
                         xcut,bvcut,bvdcut,JinvVcut,detJcut,
                         bfcut,bfdcut,JinvFcut,fwcut,
                         iptrc,necut,cut2e);
+// XXX TEST
+//    CUT_MASS_MATRIX(mass,x,JinvV,iptr,xcut,iptrc,d,etype,p,nelem,pc,necut,cut2e);
 
-    CUT_MASS_MATRIX(mass,x,JinvV,iptr,d,etype,p,nelem,pc,necut);
+
   }
-*/
+
 
 
   /* compute some statistics of the mesh and report them */

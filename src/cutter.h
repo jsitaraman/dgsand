@@ -1,14 +1,12 @@
-double checkJac( double *xtmp){
-  double jac[4],det; 
+void JacP1Tri( double *jac, double *xtmp, double det){
   jac[0] = xtmp[1]-xtmp[0];
   jac[1] = xtmp[2]-xtmp[0];
   jac[2] = xtmp[4]-xtmp[3];
   jac[3] = xtmp[5]-xtmp[3];
   det = jac[0]*jac[3]-jac[1]*jac[2];
-  return det;
 }
 
-void CUT_CELLS(double *x, double* xcut, int* iptr, int* cut2e, int *necut, int d, int e, int nelem, int ncfaces, int pc)
+void CUT_CELLS(double *x, double* xcut, int* iptr, int* iptrc, int* cut2e, int *necut, int d, int e, int nelem, int ncfaces, int pc)
 // This routine cuts the cells according to some arbitrary vertical line. 
 // This is for testing purposes and will eventually be replaced with 
 // an actual cutting routine.
@@ -33,7 +31,6 @@ void CUT_CELLS(double *x, double* xcut, int* iptr, int* cut2e, int *necut, int d
   double u[2],a,b,ycut1,ycut2;
   double xvert[6]; // x1 y1 x2 y2 x3 y3
   double xtmp[6];
-
   int vcut[2],vorig[2];
 
   int nbasis=order2basis[e][1];
@@ -77,7 +74,7 @@ void CUT_CELLS(double *x, double* xcut, int* iptr, int* cut2e, int *necut, int d
             l++; 
           } else{
             vorig[m] = j;
-            m++; 
+	    m++; 
           }
         }
       }
@@ -113,24 +110,24 @@ void CUT_CELLS(double *x, double* xcut, int* iptr, int* cut2e, int *necut, int d
 
         // double check for positive jacobian
         //
-        det=checkJac(xtmp); 
+        JacP1Tri(jac,xtmp,det); 
         if(det>0){
-          xcut[m*3*2]   = xtmp[0];
-          xcut[m*3*2+1] = xtmp[2];
-          xcut[m*3*2+2] = xtmp[4];
+          xcut[n*3*2]   = xtmp[0];
+          xcut[n*3*2+1] = xtmp[2];
+          xcut[n*3*2+2] = xtmp[4];
 
-          xcut[m*3*2+3] = xtmp[1];
-          xcut[m*3*2+4] = xtmp[3];
-          xcut[m*3*2+5] = xtmp[5];
+          xcut[n*3*2+3] = xtmp[1];
+          xcut[n*3*2+4] = xtmp[3];
+          xcut[n*3*2+5] = xtmp[5];
         }
         else{
-          xcut[m*3*2]   = xtmp[0];
-          xcut[m*3*2+1] = xtmp[4];
-          xcut[m*3*2+2] = xtmp[2];
+          xcut[n*3*2]   = xtmp[0];
+          xcut[n*3*2+1] = xtmp[4];
+          xcut[n*3*2+2] = xtmp[2];
 
-          xcut[m*3*2+3] = xtmp[1];
-          xcut[m*3*2+4] = xtmp[5];
-          xcut[m*3*2+5] = xtmp[3];
+          xcut[n*3*2+3] = xtmp[1];
+          xcut[n*3*2+4] = xtmp[5];
+          xcut[n*3*2+5] = xtmp[3];
         }
  
         cut2e[n]=i; //store id of orig elem
@@ -174,22 +171,22 @@ void CUT_CELLS(double *x, double* xcut, int* iptr, int* cut2e, int *necut, int d
         xtmp[5] = ycut2; 
 
         // double check for positive jacobian 
-        det=checkJac(xtmp);
+        JacP1Tri(jac,xtmp,det); 
         if(det>0){
-          xcut[m*3*2]   = xtmp[0];
-          xcut[m*3*2+1] = xtmp[2];
-          xcut[m*3*2+2] = xtmp[4];
-          xcut[m*3*2+3] = xtmp[1];
-          xcut[m*3*2+4] = xtmp[3];
-          xcut[m*3*2+5] = xtmp[5];
+          xcut[n*3*2]   = xtmp[0];
+          xcut[n*3*2+1] = xtmp[2];
+          xcut[n*3*2+2] = xtmp[4];
+          xcut[n*3*2+3] = xtmp[1];
+          xcut[n*3*2+4] = xtmp[3];
+          xcut[n*3*2+5] = xtmp[5];
         }
         else{
-          xcut[m*3*2]   = xtmp[0];
-          xcut[m*3*2+1] = xtmp[4];
-          xcut[m*3*2+2] = xtmp[2];
-          xcut[m*3*2+3] = xtmp[1];
-          xcut[m*3*2+4] = xtmp[5];
-          xcut[m*3*2+5] = xtmp[3];
+          xcut[n*3*2]   = xtmp[0];
+          xcut[n*3*2+1] = xtmp[4];
+          xcut[n*3*2+2] = xtmp[2];
+          xcut[n*3*2+3] = xtmp[1];
+          xcut[n*3*2+4] = xtmp[5];
+          xcut[n*3*2+5] = xtmp[3];
         }
  
         cut2e[n]=i; //store id of orig elem
@@ -211,22 +208,22 @@ void CUT_CELLS(double *x, double* xcut, int* iptr, int* cut2e, int *necut, int d
         }
 	
         // double check for positive jacobian 
-        det=checkJac(xtmp);
+        JacP1Tri(jac,xtmp,det); 
         if(det>0){
-          xcut[m*3*2]   = xtmp[0];
-          xcut[m*3*2+1] = xtmp[2];
-          xcut[m*3*2+2] = xtmp[4];
-          xcut[m*3*2+3] = xtmp[1];
-          xcut[m*3*2+4] = xtmp[3];
-          xcut[m*3*2+5] = xtmp[5];
+          xcut[n*3*2]   = xtmp[0];
+          xcut[n*3*2+1] = xtmp[2];
+          xcut[n*3*2+2] = xtmp[4];
+          xcut[n*3*2+3] = xtmp[1];
+          xcut[n*3*2+4] = xtmp[3];
+          xcut[n*3*2+5] = xtmp[5];
         }
         else{
-          xcut[m*3*2]   = xtmp[0];
-          xcut[m*3*2+1] = xtmp[4];
-          xcut[m*3*2+2] = xtmp[2];
-          xcut[m*3*2+3] = xtmp[1];
-          xcut[m*3*2+4] = xtmp[5];
-          xcut[m*3*2+5] = xtmp[3];
+          xcut[n*3*2]   = xtmp[0];
+          xcut[n*3*2+1] = xtmp[4];
+          xcut[n*3*2+2] = xtmp[2];
+          xcut[n*3*2+3] = xtmp[1];
+          xcut[n*3*2+4] = xtmp[5];
+          xcut[n*3*2+5] = xtmp[3];
         }
  
         cut2e[n]=i; //store id of orig elem
@@ -234,6 +231,14 @@ void CUT_CELLS(double *x, double* xcut, int* iptr, int* cut2e, int *necut, int d
         (*necut)++;
         ncfaces = ncfaces+3; 
       }
+//      for(j=0;j<6;j++) printf("elem = %i, n = %i, ind = %i, xcut = %f,xtmp= %f\n",i+1,(n-1), (n-1)*3*2+j,xcut[(n-1)*3*2+j],xtmp[j]);
+      printf("\n");
+  }
+
+//store the xcut variables correctly using iptrc
+  for(i=0;i<(*necut);i++){
+    ix = iptrc[i*pc];
+//    for(j=0;j<6;j++) printf("cut cell %i, xcut[%i] = %f\n",i,j,xcut[i*6+j]);
   }
 
 }

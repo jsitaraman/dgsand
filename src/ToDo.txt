@@ -1,18 +1,12 @@
 To Do
 ============
-- blanking cells 
-- defining overlap
 - getting fluxes from other mesh -- maybe get this from inflow bc for now
 
 Done but not tested
 =========
-- copies and shrunk the grid
 - Add routine to cut volume integral from residual
 - Add routine to cut face integrals from residual
-- put all cut stuff in if(cut) loop
 - Add routine to integrate over removed mass matrix portion
-- wrote routine to get rst coords of cut cell quads in orig cell coord syst
-- Added gauss pts for quad
 
 Data Structures that I need from pundit
 ==================================
@@ -20,4 +14,4 @@ Data Structures that I need from pundit
 - map connecting IDs of the cut regions and the original cells being cut
 - vertices of the polygon to be cut (does ordering matter?)
 - q values from other mesh at new cut face
-- array of cut region element types
+(- array of cut region element types)
