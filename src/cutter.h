@@ -8,7 +8,7 @@ double checkJac( double *xtmp){
   return det;
 }
 
-void CUT_CELLS(double *x, double* xcut, int* iptr, int* cut2e, int necut, int d, int e, int nelem, int ncfaces, int pc)
+void CUT_CELLS(double *x, double* xcut, int* iptr, int* cut2e, int *necut, int d, int e, int nelem, int ncfaces, int pc)
 // This routine cuts the cells according to some arbitrary vertical line. 
 // This is for testing purposes and will eventually be replaced with 
 // an actual cutting routine.
@@ -33,13 +33,12 @@ void CUT_CELLS(double *x, double* xcut, int* iptr, int* cut2e, int necut, int d,
   double u[2],a,b,ycut1,ycut2;
   double xvert[6]; // x1 y1 x2 y2 x3 y3
   double xtmp[6];
-//  double rst[6]={0,0,1,0,0,1}; // r1 s1 r2 s2 r3 s3
 
   int vcut[2],vorig[2];
 
   int nbasis=order2basis[e][1];
   double bv[nbasis*nfp];
-  necut = 0;
+  (*necut) = 0;
   n = 0; 
   for(i=0;i<nelem;i++){
       ix=iptr[pc*i+1];
@@ -88,8 +87,6 @@ void CUT_CELLS(double *x, double* xcut, int* iptr, int* cut2e, int necut, int d,
       //
       // tri cut region (1 original node, 2 intersect pts)
       if(sum==1){ 
-
-
         xtmp[0]= xvert[2*vcut[0]];
         xtmp[1]= xvert[2*vcut[0]+1];
 
@@ -114,7 +111,7 @@ void CUT_CELLS(double *x, double* xcut, int* iptr, int* cut2e, int necut, int d,
         xtmp[4]   = x0;
         xtmp[5] = ycut2; 
 
-        // double check for positive jacobian XXX
+        // double check for positive jacobian
         //
         det=checkJac(xtmp); 
         if(det>0){
@@ -138,10 +135,9 @@ void CUT_CELLS(double *x, double* xcut, int* iptr, int* cut2e, int necut, int d,
  
         cut2e[n]=i; //store id of orig elem
         n++; 
-        necut++;
+        (*necut)++;
         ncfaces = ncfaces+3; 
       }
-
 
       // quad cut region (2 original nodes, 2 intersect pts)
       // need to form 2 triangles here
@@ -177,7 +173,7 @@ void CUT_CELLS(double *x, double* xcut, int* iptr, int* cut2e, int necut, int d,
         xtmp[4]   = x0;
         xtmp[5] = ycut2; 
 
-        // double check for positive jacobian XXX
+        // double check for positive jacobian 
         det=checkJac(xtmp);
         if(det>0){
           xcut[m*3*2]   = xtmp[0];
@@ -198,7 +194,7 @@ void CUT_CELLS(double *x, double* xcut, int* iptr, int* cut2e, int necut, int d,
  
         cut2e[n]=i; //store id of orig elem
         n++; 
-        necut++;
+        (*necut)++;
         ncfaces = ncfaces+3; 
 
 	//Second triangle (both cut nodes, bottom intersect nodes)
@@ -214,7 +210,7 @@ void CUT_CELLS(double *x, double* xcut, int* iptr, int* cut2e, int necut, int d,
           xtmp[5] = ycut2; 
         }
 	
-        // double check for positive jacobian XXX
+        // double check for positive jacobian 
         det=checkJac(xtmp);
         if(det>0){
           xcut[m*3*2]   = xtmp[0];
@@ -235,7 +231,7 @@ void CUT_CELLS(double *x, double* xcut, int* iptr, int* cut2e, int necut, int d,
  
         cut2e[n]=i; //store id of orig elem
         n++; 
-        necut++;
+        (*necut)++;
         ncfaces = ncfaces+3; 
       }
   }

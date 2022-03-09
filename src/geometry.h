@@ -1,3 +1,318 @@
+void cross(double *a,double *b,double *c,int d)
+{
+   a[0]=b[1]*c[2]-b[2]*c[1];
+   a[1]=b[2]*c[0]-b[0]*c[2];
+   if (d == 3) { 
+   a[2]=b[0]*c[1]-b[1]*c[0];
+   }
+   return;
+}
+  
+void axb(double* a, double* x, double* b, int d)
+{
+  int i,j,ind; 
+  for(i=0;i<d;i++){
+    b[i]=0; 
+    for(j=0;j<d;j++){
+      ind = i*d+j; 
+      b[i] += a[ind]*x[j];
+    }
+  }
+}
+void CutCellInterp(double *x, int d, int e, int p, double* Jinv, 
+   		   double *ijk, double *xcut, 
+		   double* rst) //, double *invJcut, double *detJcut)
+//
+// Routine that outputs bases and basis derivs at a specified rst 
+// location on the cut cell. Used for both face and volume quad pts
+//
+// Inputs: 
+//   x = global coords of orig tri
+//   d = number of spat dims
+//   e = original element type
+//   Jinv = orig element inv Jac
+//   ijk = cut cell rst value of desired pt
+//   xcut = global coords of cut region
+//
+// Outputs
+//   rst = rst value of desired point
+{
+ 
+  // notation: 
+  //   xyz = global coord sys
+  //   rst = local coord sys of original cell
+  //   ijk = local coord sys of cut cell
+
+  int b,w,i,j,l,ld,ij,m,n;
+  int nbasis; // number of basis functions
+  double u[d],jcut[d*d],mat[d][d],ijac[d][d],det;
+  double xycut[d];
+  int g=p2g[e][p];
+  double bd[nbasis][d]; 
+  l=m=ld=ij=0;
+
+  //get xyz coord of nodes on the two elements
+  //corresponding to rst = 0,0,1
+  double x0[2] = {*x,*(x+nbasis)}; 
+  double x0cut[2] = {*xcut,*(xcut+nbasis)};
+ 
+  nbasis=order2basis[e][1]; // XXX double check last argument, should be p=1
+  for(b=0;b<nbasis;b++){
+    for(j=0;j<d;j++) bd[b][j]=basis_d[e][b*d+j](ijk); // accumulate bases derivs at quad pt
+  } // loop over bases
+        
+  // Compute p=1 jacobian for subcell element, dx/di
+  // only p=1 required for this regardless of element p 
+  for(i=0;i<d;i++){
+    for(j=0;j<d;j++){
+      mat[i][j]=xcut[i*nbasis]*bd[0][j];
+      for(b=1;b<nbasis+(nbasis==1);b++)
+        mat[i][j]+=x[i*nbasis+b]*bd[b][j];
+    } // loop over d
+  } // loop over d
+
+  // Get and store inverse and detJ for cut cell
+  if(d==2) invmat2x2(mat,ijac,det)
+  //detJcut=det; 
+
+  // reshape
+  for(i=0;i<d;i++)
+    for(j=0;j<d;j++){
+      jcut[(i-1)*d+j] = mat[i][j]; 
+//      invJcut[ij++]=ijac[i][j];
+    }
+
+  // Compute the global x y location of this cut cell quad pt
+  // [xycut] = [jac_cut]*[ij] + x0_cut
+  axb(jcut,u,xycut,d);
+  for(j=0;j<d;j++) xycut[d] = xycut[d] + x0cut[d] - x0[d];
+    
+  // Compute rst coord of cut cell quad
+  // [rs] = [Jinv_orig][xycut - x0_orig]
+  axb(Jinv,xycut,rst,d);
+
+}
+
+void BasesVCut(double *x, double *Jinv,double *detJ,
+               double *xcut, double *bvcut, double *bvdcut, 
+               double *Jinvcut, double *detJcut,
+               int d, int e, int p)
+
+// Routine that builds up the bases and derivs of the interior quad pts
+{
+  int g = p2g[e][p];
+  int l,w,b,i,j,nbasis; 
+  double u[2]; 
+  int  ld = 0; 
+
+  //Loop over vol quad pts  
+  double ijk[d]; 
+  l=0;
+  for(w=0; w<ngElem[e][p]; w++){
+
+    // get local coord of quad pt
+    for(j=0; j<d;j++) ijk[j] = gauss[e][g][(d+1)*w+j]; //double check inputs to gauss XXX
+
+    // get bases and derivs at quad pt
+    // XXX double check that the inputs are correct
+    CutCellInterp(x,d,e,p,Jinv,ijk,xcut,u); //,Jinvcut,detJcut);
+
+    // Store orig cell bases value and deriv at cut cell quad pt
+    // XXX double check this. is Jinv in correct order?
+    nbasis=order2basis[e][p]; 
+    if(p>0){
+      for(b=0;b<nbasis;b++){
+        for(i=0;i<d;i++){
+          bvcut[l++]=basis[e][b](u); // filled in as b[nGL][nbasis]
+          for(j=0;j<d;j++) bvdcut[ld]=Jinv[i*d+j]*basis_d[e][b*d+j](u);
+          ld++; 
+        }
+      }
+    }
+  }
+}
+
+
+
+void CutFaceWeights(double *x, double *Jinv, double *xcut, double *bfcut, double *bfdcut, double *Jinvcut, double *faceWeight, int d, int e, int p)
+{
+  int b,w,i,j,ij,l,ld,n,m,f,f1;
+  double u[d],v,wgt;
+  double mat[d][d],jac[d][d],det;
+  int nbasis=order2basis[e][p+(p==0)];
+  double bd[nbasis][d];  // basis derivative  
+  int nfaces=facePerElem[e];
+  int g=p2gf[e][p]; // gauss quadrature type for this element type
+  double xx,yy;
+  // ok, we are not going above 3D now
+  double Ja[3];
+  double Jb[3]={0,0,1};
+
+  // for every face
+  m=l=0;
+  ld=ij=0;
+  double ijk[2];
+  double detJcut; 
+
+  //printf("---------------\n");
+  for(f=0;f<nfaces;f++)
+    {
+      // for every Gauss-point on this sub face
+      for(w=0;w<ngGL[e][p];w++)
+	{
+	  v=gaussgl[e][g][(d)*w];  // gauss location from 0 to 1
+	  wgt=gaussgl[e][g][(d)*w+1];	 // gauss weight
+
+	  // this is specific to 2-D 
+	  // remember fill order will be reversed for element
+          // sharing this edge   
+          f1=(f+1)%nfaces;
+
+	  // do 1D interp to get rst coord (on sub element) of quad pt
+	  ijk[0]=(1-v)*eloc[e][p][d*f]  +v*eloc[e][p][d*f1]; 
+	  ijk[1]=(1-v)*eloc[e][p][d*f+1]+v*eloc[e][p][d*f1+1];
+
+          // now convert ijk coord on sub elem to rst coord on full elem
+          CutCellInterp(x,d,e,p,Jinv,ijk,xcut,u); //,Jinvcut,detJcut);  
+	  
+	  // get the bases and derivs at gauss legendre pts
+	  for(b=0;b<nbasis;b++)
+	    {
+	      for(j=0;j<d;j++)
+		{
+		  bd[b][j]=basis_d[e][b*d+j](u); 
+		}
+	      // basis[][](u) computes basis function at u
+	      if (p > 0) bfcut[l++]=basis[e][b](u);  // filled as bf[nfaces][nGL][nbasis]
+	    }
+	  if (p==0) bfcut[l++]=1.0;
+
+	  // build the jacobians of the edge	  
+	  for(i=0;i<d;i++)
+	    {
+              faceWeight[d*m+i]=0;
+	      Ja[i]=0;
+	      for(j=0;j<d;j++)
+		{
+	          mat[i][j]=x[i*nbasis]*bd[0][j];
+		  for(b=1;b<nbasis+(nbasis==1);b++)
+		    mat[i][j]+=x[i*nbasis+b]*bd[b][j]; 
+		} 
+	      // need a cross product here 
+              for(j=0;j<d;j++)
+	       {
+                Ja[i]+=(mat[i][j]*face2elem[e][d*f+j]); // face2elem is...?
+		//TODO add Jb[i] calculation for 3D elements here
+	       }
+            }
+	    // do faceWeight = Ja x zhat
+	    // This gives me the normal vector
+	    cross(&(faceWeight[2*m]),Ja,Jb,d); 
+
+            // get [dx/dr]^-1
+            if (d==2) invmat2x2(mat,jac,det);
+
+            // compute [dr/dx][dN/dr]
+	    if (p > 0) {
+ 	     for(b=0;b<nbasis;b++)
+	      {
+		for(i=0;i<d;i++)
+		  {
+		    bfdcut[ld]=jac[0][i]*bd[b][0];
+		    for(j=1;j<d;j++)
+		       bfdcut[ld]+=jac[j][i]*bd[b][j];
+		    ld++;
+		  }
+	      }
+	    }
+	    else {
+              for(i=0;i<d;i++) bfdcut[ld++]=0;
+	    }
+	    for(i=0;i<d;i++)
+              for(j=0;j<d;j++)	     
+	          Jinvcut[ij++]=jac[i][j];
+	    m++;
+	}
+    }
+}
+
+void cut_mass_matrix(double *M, double *x, double *Jinv, double *xcut, int d, int e, int p)
+{
+  int i,j,ij,w,b,ii,jj;
+  int nbasis=order2basis[e][p+(p==0)];
+  double bd[nbasis][d];
+  double mat[d][d],jac[d][d];
+  double ijk[d],u[d],wgt,det;
+  double detJcut; 
+  double bvtmp[nbasis*ngElem[e][p+1]],bvdtmp[nbasis*d*ngElem[e][p+1]];
+  double detJ;
+  int g=p2g[e][p+1]; // gauss point type for this element type, use one
+                     // order higher making sure mass matrix is exact
+
+  if (p > 0 ){
+
+    // Get jacobian info for the original element at p+1 quad pts
+    // This is needed to interp between cut cell coords and parent elem coords
+    
+//    Jacobian(x,bvtmp,bvdtmp,Jinv,detJ,d,e,p+1); 
+
+    for(i=0;i<nbasis;i++)
+      for(j=0;j<nbasis;j++)
+	{
+	  ij=nbasis*i+j;
+	  for(w=0;w<ngElem[e][p+1];w++) // 
+	    {
+	      for(jj=0;jj<d;jj++)
+		ijk[jj]=gauss[e][g][(d+1)*w+jj];
+
+              //convert sub cell rst coord to orig cell rst somehow
+              CutCellInterp(x,d,e,p+1,Jinv,ijk,xcut,u); //,invJcut,detJcut); 
+
+	      // evaluate the jacobian, it's not stored at this many locations (p=p+1)
+	      for(b=0;b<nbasis;b++)
+		for(jj=0;jj<d;jj++)
+		  bd[b][jj]=basis_d[e][b*d+jj](u);
+
+	      for(ii=0;ii<d;ii++)
+		{
+		  for(jj=0;jj<d;jj++)
+		    {
+		      mat[ii][jj]=x[ii*nbasis]*bd[0][jj];
+		      for(b=1;b<nbasis;b++)
+			mat[ii][jj]+=x[ii*nbasis+b]*bd[b][jj];
+		    }
+		}
+	      
+	      if (d==2) invmat2x2(mat,jac,det);
+	      wgt=gauss[e][g][(d+1)*w+2]*det;
+	      // could use bv here instead of reevaluating 
+	      // revaluate this if mesh is deforming 
+
+              // subtract cut region from original mass matrix
+	      M[ij]-=(wgt*basis[e][i](u)*basis[e][j](u));
+	    }
+	}
+  }
+  /// XXX Still need to fix this
+  else {
+    // p=0 
+      for(b=0;b<nbasis;b++)
+       for(jj=0;jj<d;jj++)
+          bd[b][jj]=basis_d[e][b*d+jj](u);
+      
+      for(ii=0;ii<d;ii++)
+	{
+	  for(jj=0;jj<d;jj++)
+	    {
+	      mat[ii][jj]=x[ii*nbasis]*bd[0][jj];
+	      for(b=1;b<nbasis;b++)
+		mat[ii][jj]+=x[ii*nbasis+b]*bd[b][jj];
+	    }
+	}
+      if (d==2) invmat2x2(mat,jac,det);
+      M[0]=0.5*det;
+  }
+}
 void mass_matrix(double *M, double *x, int d, int e, int p)
 {
   int i,j,ij,w,b,ii,jj;
@@ -128,16 +443,6 @@ void Jacobian(double *x,double *bv, double *bvd, double *Jinv,
     }
 }
 
-void cross(double *a,double *b,double *c,int d)
-{
-   a[0]=b[1]*c[2]-b[2]*c[1];
-   a[1]=b[2]*c[0]-b[0]*c[2];
-   if (d == 3) { 
-   a[2]=b[0]*c[1]-b[1]*c[0];
-   }
-   return;
-}
-  
 void FaceWeights(double *x, double *bf, double *bfd, double *Jinv, double *faceWeight, 
 		 int d, int e, int p)
 {
@@ -268,13 +573,12 @@ void COMPUTE_GRID_METRICS(double *x, double *bv, double *bvd,double *JinvV,
     }
 }
 
-/*
 void COMPUTE_CUT_METRICS(double *x, double *JinvV, 
 			 double *detJ,double *JinvF,
 			 int *iptr, int d, int e, int p, int pc,
 			 double *xcut, double *bvcut, double *bvdcut, double *JinvVcut,
 			 double *detJcut, double *bfcut, double *bfdcut, double *JinvFcut, 
-			 double *fwcut, int* iptrc, int necut)
+			 double *fwcut, int* iptrc, int necut, int* cut2e)
 {
   int i,j,b;
   int ip,ix,ij,idetj,ijf;
@@ -283,7 +587,7 @@ void COMPUTE_CUT_METRICS(double *x, double *JinvV,
   // Metrics for the cut regions
   for(i=0;i<necut;i++)
   {
-    ip = eid[i]*pc; // Get elem ID of original elem somehow XXX
+    ip = cut2e[i]*pc; // Get elem ID of original elem somehow XXX
 
     // Quantities for the original element
     ix   =iptr[ip+1]; 
@@ -295,15 +599,15 @@ void COMPUTE_CUT_METRICS(double *x, double *JinvV,
     // Quantities for the cut element
     cip = pc*i;
 
-    cix   =iptc[cip+1]; // x coord
-    cibvd =iptc[cip+3]; // shp func deriv
-    cij   =iptc[cip+4]; // Jinv
-    cidetj=iptc[cip+5]; // detJ
+    cix   =iptrc[cip+1]; // x coord
+    cibvd =iptrc[cip+3]; // shp func deriv
+    cij   =iptrc[cip+4]; // Jinv
+    cidetj=iptrc[cip+5]; // detJ
 
-    cibf  =iptc[cip+6]; // face shp function
-    cibfd =iptc[cip+7]; // face shp deriv 
-    cijf  =iptc[cip+8]; // JinvF
-    cifw  =iptc[cip+9]; // faceWeight
+    cibf  =iptrc[cip+6]; // face shp function
+    cibfd =iptrc[cip+7]; // face shp deriv 
+    cijf  =iptrc[cip+8]; // JinvF
+    cifw  =iptrc[cip+9]; // faceWeight
 
     // get bases at cut vol quad pts
     BasesVCut(x+ix, JinvV+ij, detJ+idetj, 
@@ -312,14 +616,12 @@ void COMPUTE_CUT_METRICS(double *x, double *JinvV,
               d,e,p); 
 
     // basis on face
-    CutFaceWeights(x+ix, Jinvijf, 
+    CutFaceWeights(x+ix, JinvF+ijf, 
                    xcut+cix,bfcut+cibf,bfdcut+cibfd,
                    JinvFcut+cijf,fwcut+cifw,d,e,p); 
   }
 
 }
-
-*/
 
 void MASS_MATRIX(double *mass,double *x, int *iptr, int d, int e, int p, int nelem, int pc)
 {
@@ -334,324 +636,20 @@ void MASS_MATRIX(double *mass,double *x, int *iptr, int d, int e, int p, int nel
     }
 }
 
-/*
-void CUT_MASS_MATRIX(double *mass,double *x, int *iptr, double *xcut, int *iptrc, int d, int e, int p, int nelem, int pc, int necut)
+void CUT_MASS_MATRIX(double *mass,double *x, double *Jinv, int *iptr, double *xcut, int *iptrc, int d, int e, int p, int nelem, int pc, int necut, int* cut2e)
 {
-  int i;
-  int ix,im,ixc;
+  int i,eid;
+  int ix,im,ij,ixc;
 
   //subtract out cut portion
   for(i=0;i<necut;i++){
-      eid = XXX; // find original element id 
+      eid = cut2e[i]; // find original element id 
       ix=iptr[pc*eid+1];
+      ij=iptr[pc*eid+4];
       im=iptr[pc*eid+10];
       ixc=iptrc[pc*i+1]; 
-      cut_mass_matrix(&(mass[im]),&(x[ix]),&(xcut[ixc]),d,e,p);
+      cut_mass_matrix(&(mass[im]),&(x[ix]),&(Jinv[ij]),&(xcut[ixc]),d,e,p);
 
   }
 }
 
-void BasesVCut(double *x, double *Jinv,double *detJ,
-               double *xcut, double *bvcut, double *bvdcut, 
-               double *Jinvcut, double *detJcut,
-               int d, int e, int p)
-
-// Routine that builds up the bases and derivs of the interior quad pts
-{
-  int g = p2g[e][p];
-  int w,j,nbasis; 
-  double u[2]; 
-  int ld = 0; 
-
-  //Loop over vol quad pts  
-  double ijk[d]; 
-  for(w=0; w<ngElem[e][p]; w++){
-
-    // get local coord of quad pt
-    for(j=0; j<d;j++) ijk[j] = gauss[e][g][(d+1)*w+j]; //double check inputs to gauss XXX
-
-    // get bases and derivs at quad pt
-    // XXX double check that the inputs are correct
-    CutCellInterp(x,d,e,p,Jinv,ijk,xcut,u,Jinvcut,detJcut);
-
-    // Store orig cell bases value and deriv at cut cell quad pt
-    // XXX double check this. is Jinv in correct order?
-    nbasis=order2basis[e][p]; 
-    if(p>0){
-      for(int b=0;b<nbasis;b++){
-        for(i=0;i<d;i++){
-          bvcut[l++]=basis[e][b](u); // filled in as b[nGL][nbasis]
-          for(j=0;j<d;j++) bvdcut[ld]=Jinv[xxx]*basis_d[e][b*d+j](u);
-          ld++; 
-        }
-      }
-    }
-  }
-}
-
-void CutCellInterp(double *x, int d, int e, int p, double* Jinv, 
-   		   double *ijk, double *xcut, 
-		   double* rst, double *invJcut, double *detJcut)
-//
-// Routine that outputs bases and basis derivs at a specified rst 
-// location on the cut cell. Used for both face and volume quad pts
-//
-// Inputs: 
-//   x = global coords of orig tri
-//   d = number of spat dims
-//   e = original element type
-//   Jinv = orig element inv Jac
-//   ijk = cut cell rst value of desired pt
-//   xcut = global coords of cut region
-//
-// Outputs
-//   rst = rst value of desired point
-{
- 
-  // notation: 
-  //   xyz = global coord sys
-  //   rst = local coord sys of original cell
-  //   ijk = local coord sys of cut cell
-
-  int b,w,i,j,l,ld,ij,m,n;
-  int nbasis; // number of basis functions
-  double u[d],jcut[d*d],mat[d][d],ijac[d][d],det;
-  double xycut[d*d];
-  int g=p2g[e][p];
-  
-  l=m=ld=ij=0;
-
-  //get xyz coord of nodes on the two elements
-  //corresponding to rst = 0,0,1
-  double x0 = x[XXX]; 
-  double x0cut = xcut[XXX];
- 
-  nbasis=order2basis[e][1]; // XXX double check last argument, should be p=1
-  for(b=0;b<nbasis;b++){
-    for(j=0;j<d;j++) bd[b][j]=basis_d[e][b*d+j](ijk); // accumulate bases derivs at quad pt
-  } // loop over bases
-        
-  // Compute p=1 jacobian for subcell element, dx/di
-  // only p=1 required for this regardless of element p 
-  for(i=0;i<d;i++){
-    for(j=0;j<d;j++){
-      mat[i][j]=xcut[i*nbasis]*bd[0][j];
-      for(b=1;b<nbasis+(nbasis==1);b++)
-        mat[i][j]+=x[i*nbasis+b]*bd[b][j];
-    } // loop over d
-  } // loop over d
-
-  // Get and store inverse and detJ for cut cell
-  if(d==2) invmat2x2(mat,ijac,det)
-  detJcut=det; 
-
-  // reshape
-  for(i=0;i<d;i++)
-    for(j=0;j<d;j++){
-      jcut[(i-1)*d+j] = mat[i][j]; 
-      invJcut[ij++]=ijac[i][j];
-    }
-
-  // Compute the global x y location of this cut cell quad pt
-  // [xycut] = [jac_cut]*[ij] + x0_cut
-  axb(jcut,u,xycut,d);
-  for(j=0;j<d;j++) xycut[d] = xycut[d] + x0cut[d] - x0[d];
-    
-  // Compute rst coord of cut cell quad
-  // [rs] = [Jinv_orig][xycut - x0_orig]
-  axb(Jinv,xycut,rst,d);
-
-}
-
-void axb(double* a, double* x, double* b, int d)
-{
-
-  int ind; 
-  for(int i=0;i<d;i++){
-    b[i]=0; 
-    for(int j=0;j<d;j++){
-      ind = i*d+j; 
-      b[i] += a[ind]*x[j];
-    }
-  }
-
-}
-
-void CutFaceWeights(double *x, double *Jinv, double *xcut, double *bfcut, double *bfdcut, double *Jinvcut, double *faceWeight, int d, int e, int p)
-{
-  int b,w,i,j,ij,l,ld,n,m,f,f1;
-  double u[d],v,wgt;
-  double mat[d][d],jac[d][d],det;
-  int nbasis=order2basis[e][p+(p==0)];
-  double bd[nbasis][d];  // basis derivative  
-  int nfaces=facePerElem[e];
-  int g=p2gf[e][p]; // gauss quadrature type for this element type
-  double xx,yy;
-  // ok, we are not going above 3D now
-  double Ja[3];
-  double Jb[3]={0,0,1};
-
-  // for every face
-  m=l=0;
-  ld=ij=0;
-  double ijk[2];
-  double detJcut; 
-
-  //printf("---------------\n");
-  for(f=0;f<nfaces;f++)
-    {
-      // for every Gauss-point on this sub face
-      for(w=0;w<ngGL[e][p];w++)
-	{
-	  v=gaussgl[e][g][(d)*w];  // gauss location from 0 to 1
-	  wgt=gaussgl[e][g][(d)*w+1];	 // gauss weight
-
-	  // this is specific to 2-D 
-	  // remember fill order will be reversed for element
-          // sharing this edge   
-          f1=(f+1)%nfaces;
-
-	  // do 1D interp to get rst coord (on sub element) of quad pt
-	  ijk[0]=(1-v)*eloc[e][p][d*f]  +v*eloc[e][p][d*f1]; 
-	  ijk[1]=(1-v)*eloc[e][p][d*f+1]+v*eloc[e][p][d*f1+1];
-
-          // now convert ijk coord on sub elem to rst coord on full elem
-          CutCellInterp(x,d,e,p,Jinv,ijk,xcut,u,Jinvcut,detJcut);  
-	  
-	  // get the bases and derivs at gauss legendre pts
-	  for(b=0;b<nbasis;b++)
-	    {
-	      for(j=0;j<d;j++)
-		{
-		  bd[b][j]=basis_d[e][b*d+j](u); 
-		}
-	      // basis[][](u) computes basis function at u
-	      if (p > 0) bfcut[l++]=basis[e][b](u);  // filled as bf[nfaces][nGL][nbasis]
-	    }
-	  if (p==0) bfcut[l++]=1.0;
-
-	  // build the jacobians of the edge	  
-	  for(i=0;i<d;i++)
-	    {
-              faceWeight[d*m+i]=0;
-	      Ja[i]=0;
-	      for(j=0;j<d;j++)
-		{
-	          mat[i][j]=x[i*nbasis]*bd[0][j];
-		  for(b=1;b<nbasis+(nbasis==1);b++)
-		    mat[i][j]+=x[i*nbasis+b]*bd[b][j]; 
-		} 
-	      // need a cross product here 
-              for(j=0;j<d;j++)
-	       {
-                Ja[i]+=(mat[i][j]*face2elem[e][d*f+j]); // face2elem is...?
-		//TODO add Jb[i] calculation for 3D elements here
-	       }
-            }
-	    // do faceWeight = Ja x zhat
-	    // This gives me the normal vector
-	    cross(&(faceWeight[2*m]),Ja,Jb,d); 
-
-            // get [dx/dr]^-1
-            if (d==2) invmat2x2(mat,jac,det);
-
-            // compute [dr/dx][dN/dr]
-	    if (p > 0) {
- 	     for(b=0;b<nbasis;b++)
-	      {
-		for(i=0;i<d;i++)
-		  {
-		    bfdcut[ld]=jac[0][i]*bd[b][0];
-		    for(j=1;j<d;j++)
-		       bfdcut[ld]+=jac[j][i]*bd[b][j];
-		    ld++;
-		  }
-	      }
-	    }
-	    else {
-              for(i=0;i<d;i++) bfdcut[ld++]=0;
-	    }
-	    for(i=0;i<d;i++)
-              for(j=0;j<d;j++)	     
-	          Jinvcut[ij++]=jac[i][j];
-	    m++;
-	}
-    }
-}
-
-void cut_mass_matrix(double *M, double *x, double *xcut, int d, int e, int p)
-{
-  int i,j,ij,w,b,ii,jj;
-  int nbasis=order2basis[e][p+(p==0)];
-  double bd[nbasis][d];
-  double mat[d][d],jac[d][d];
-  double ijk[d],u[d],wgt,det;
-  double detJcut; 
-  double bvtmp[nbasis*ngElem[e][p+1]],bvtmp[nbasis*d*ngElem[e][p+1]];
-  double detJ,Jinv[ngElem[e][p+1]]*d*d]; 
-  int g=p2g[e][p+1]; // gauss point type for this element type, use one
-                     // order higher making sure mass matrix is exact
-
-  if (p > 0 ) 
-
-    // Get jacobian info for the original element at p+1 quad pts
-    // This is needed to interp between cut cell coords and parent elem coords
-    Jacobian(x,bvtmp,bvdtmp,Jinv,detJ,d,e,p+1); 
-
-    for(i=0;i<nbasis;i++)
-      for(j=0;j<nbasis;j++)
-	{
-	  ij=nbasis*i+j;
-	  for(w=0;w<ngElem[e][p+1];w++) // 
-	    {
-	      for(jj=0;jj<d;jj++)
-		ijk[jj]=gauss[e][g][(d+1)*w+jj];
-
-              //convert sub cell rst coord to orig cell rst somehow
-              CutCellInterp(x,d,e,p+1,Jinv,ijk,xcut,u,invJcut,detJcut); 
-
-	      // evaluate the jacobian, it's not stored at this many locations (p=p+1)
-	      for(b=0;b<nbasis;b++)
-		for(jj=0;jj<d;jj++)
-		  bd[b][jj]=basis_d[e][b*d+jj](u);
-
-	      for(ii=0;ii<d;ii++)
-		{
-		  for(jj=0;jj<d;jj++)
-		    {
-		      mat[ii][jj]=x[ii*nbasis]*bd[0][jj];
-		      for(b=1;b<nbasis;b++)
-			mat[ii][jj]+=x[ii*nbasis+b]*bd[b][jj];
-		    }
-		}
-	      
-	      if (d==2) invmat2x2(mat,jac,det);
-	      wgt=gauss[e][g][(d+1)*w+2]*det;
-	      // could use bv here instead of reevaluating 
-	      // revaluate this if mesh is deforming 
-
-              // subtract cut region from original mass matrix
-	      M[ij]-=(wgt*basis[e][i](u)*basis[e][j](u));
-	    }
-	}
-  }
-  /// XXX Still need to fix this
-  else {
-    // p=0 
-      for(b=0;b<nbasis;b++)
-       for(jj=0;jj<d;jj++)
-          bd[b][jj]=basis_d[e][b*d+jj](u);
-      
-      for(ii=0;ii<d;ii++)
-	{
-	  for(jj=0;jj<d;jj++)
-	    {
-	      mat[ii][jj]=x[ii*nbasis]*bd[0][jj];
-	      for(b=1;b<nbasis;b++)
-		mat[ii][jj]+=x[ii*nbasis+b]*bd[b][jj];
-	    }
-	}
-      if (d==2) invmat2x2(mat,jac,det);
-      M[0]=0.5*det;
-  }
-*/

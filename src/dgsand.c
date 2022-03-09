@@ -147,7 +147,7 @@ void main(void)
   int necut, ncfaces; 
   xcut       =dgsand_alloc(double,(d*(nbasisx))*nelem);  // don't know necut yet so using nelem
   cut2e      =dgsand_alloc(int,nelem);  // don't know necut yet so using nelem
-  CUT_CELLS(x, xcut, iptr, cut2e, necut, d, etype, nelem, ncfaces, pc);
+  CUT_CELLS(x, xcut, iptr, cut2e, &necut, d, etype, nelem, ncfaces, pc);
   
   //create all the cut cell pointers
   bvcut      =dgsand_alloc(double,(necut*nbasis*ngElem[etype][p]));        // basis value at volume QP
@@ -170,8 +170,7 @@ void main(void)
   iptrc=dgsand_calloc(int,(pc*necut));
   iptrcf=dgsand_calloc(int,(pf*ncfaces));
   
-  // XXX how do I handle fpe and element type being different for certain cut regions?
-  // Assume for now all cuts are triangles?
+  // Assume for now all cuts are triangles
   for(i=0;i<necut;i++){
       ix=pc*i;
       iptrc[ix]+=i*(nfields*nbasis);               // q, Q, R
@@ -205,9 +204,9 @@ void main(void)
                         JinvF,iptr,d,etype,p,pc,
                         xcut,bvcut,bvdcut,JinvVcut,detJcut,
                         bfcut,bfdcut,JinvFcut,fwcut,
-                        iptrc,necut);
+                        iptrc,necut,cut2e);
 
-    CUT_MASS_MATRIX(mass,x,iptr,d,etype,p,nelem,pc,necut);
+    CUT_MASS_MATRIX(mass,x,JinvV,iptr,d,etype,p,nelem,pc,necut);
   }
 */
 
@@ -239,7 +238,7 @@ void main(void)
   
   for(n=1;n<=nsteps;n++)
     {
-      // XXX need to add inputs for cut cells
+/*
       COMPUTE_RHS(R,mass,bv,bvd,JinvV,detJ,
 		  bf,bfd,JinvF,faceWeight,fnorm,fflux,
 		  x,q,elem2face,iptr,iptf,faces,
@@ -271,7 +270,7 @@ void main(void)
 
 
       UPDATE_DOFS(q,rk[3]*dt,q,R,ndof);
-      
+*/       
       rmax=rnorm=0.0;
       for(i=0;i<ndof;i++) 
       {
