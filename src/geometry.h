@@ -81,18 +81,18 @@ void BasesVCut(double *x, double *Jinv,double *detJ,
                double *Jinvcut, double *detJcut,
                int d, int e, int p)
 
-// Routine that builds up the bases and derivs of the interior quad pts
+// Routine that builds up the bases and derivs of the interior cut cell quad pts
 {
   int g = p2g[e][p];
-  int l,w,b,i,j,nbasis; 
-  double u[2]; 
-  int  ld = 0; 
+  int l,n,m,ld,ii,w,b,i,j; 
+  int nbasis=order2basis[e][p+(p==0)];
+  double u[2],bd[nbasis][d],mat[d][d],jac[d][d],det;
 
   //Loop over vol quad pts  
   double ijk[d]; 
   printf("  orig tri = %f %f; %f %f; %f %f\n",x[0],x[3],x[1],x[4],x[2],x[5]);
   printf("  cut tri = %f %f; %f %f; %f %f\n",xcut[0],xcut[3],xcut[1],xcut[4],xcut[2],xcut[5]);
-  l=0;
+  l=n=m=ld=ii=0;
   for(w=0; w<ngElem[e][p]; w++){
 
     // get local coord of quad pt
@@ -103,22 +103,53 @@ void BasesVCut(double *x, double *Jinv,double *detJ,
     CutCellInterp(x,d,e,p,Jinv,ijk,xcut,u); //,Jinvcut,detJcut);
     printf("  vol quad pt %i, ijk = %f\t%f,rst = %f %f\n",w,ijk[0],ijk[1],u[0],u[1]); 
 
-    // Store orig cell bases value and deriv at cut cell quad pt
-    // XXX double check this. is Jinv in correct order?
-    nbasis=order2basis[e][p]; 
-    if(p>0){
-      for(b=0;b<nbasis;b++){
-        for(i=0;i<d;i++){
-          bvcut[l++]=basis[e][b](u); // filled in as b[nGL][nbasis]
-          for(j=0;j<d;j++) bvdcut[ld]=Jinv[i*d+j]*basis_d[e][b*d+j](u);
-          ld++; 
-        }
+    //store bvcut at each quad pt
+    for(b=0;b<nbasis;b++){ // loop over bases
+      for(j=0;j<d;j++){
+	    bd[b][j]=basis_d[e][b*d+j](u); // accumulate bases derivs at quad pt
+            printf("    bd[%i][%i] = %f\n",b,j,bd[b][j]);
+      }
+      if (p > 0) bvcut[l++]=basis[e][b](u); // filled in as bv[nGL][nbasis]
+    }
+    if (p==0) bvcut[l++]=1;
+    printf("    bvcut = %f %f, %f %f, %f %f\n",bvcut[l-6],bvcut[l-5],bvcut[l-4],bvcut[l-3],bvcut[l-2],bvcut[l-1]);
+   
+    //build jacobian dx/dr of cut cell
+    for(i=0;i<d;i++){
+      for(j=0;j<d;j++){
+	mat[i][j]=xcut[i*nbasis]*bd[0][j];
+	for(b=1;b<nbasis+(nbasis==1);b++)
+  	  mat[i][j]+=xcut[i*nbasis+b]*bd[b][j];
       }
     }
+    printf("    jac = [%f %f; %f %f]\n",mat[0][0],mat[0][1],mat[1][0],mat[1][1]);
+
+    //invert jacobian (stored in jac) and get detJ
+    if (d==2) invmat2x2(mat,jac,det);
+    printf("    Jinvcut = [%f %f; %f %f]\n",jac[0][0],jac[0][1],jac[1][0],jac[1][1]);
+    printf("    detJcut = %f\n",det); 
+    for(i=0;i<d;i++)
+      for(j=0;j<d;j++) 
+        Jinvcut[ii++]=jac[i][j];
+
+    // get basis derivs dN/dx = dN/dr*(dx/dr)^-1
+    if (p > 0) {
+      for(b=0;b<nbasis;b++)
+	for(i=0;i<d;i++){
+	   bvdcut[ld]=jac[0][i]*bd[b][0];
+	   for(j=1;j<d;j++)
+	     bvdcut[ld]+=jac[j][i]*bd[b][j]; // why is this transposed?? XXX
+           printf("    ld = %i, bvdcut[%i][%i] = %f\n",ld,b,i,bvdcut[ld]);
+	   ld++;
+        }
+    }
+    else {
+      for(i=0;i<d;i++) bvdcut[ld++]=0;
+    }
+    detJcut[n++]=det;
+
   }
 }
-
-
 
 void CutFaceWeights(double *x, double *Jinv, double *xcut, double *bfcut, double *bfdcut, double *Jinvcut, double *faceWeight, int d, int e, int p)
 {
