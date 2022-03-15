@@ -207,8 +207,7 @@ void main(void)
                         xcut,bvcut,bvdcut,JinvVcut,detJcut,
                         bfcut,bfdcut,JinvFcut,fwcut,
                         iptrc,necut,cut2e);
-// XXX TEST
-//    CUT_MASS_MATRIX(mass,x,JinvV,iptr,xcut,iptrc,d,etype,p,nelem,pc,necut,cut2e);
+    CUT_MASS_MATRIX(mass,x,JinvV,iptr,xcut,iptrc,d,etype,p,nelem,pc,necut,cut2e);
 
 
   }
