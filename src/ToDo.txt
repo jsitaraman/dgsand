@@ -1,12 +1,12 @@
 To Do
 ============
 - getting fluxes from other mesh -- maybe get this from inflow bc for now
+- fix xcut ordering? not currently using iptrc correctly?
 
 Done but not tested
 =========
 - Add routine to cut volume integral from residual
 - Add routine to cut face integrals from residual
-- Add routine to integrate over removed mass matrix portion
 
 Data Structures that I need from pundit
 ==================================

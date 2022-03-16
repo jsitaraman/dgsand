@@ -124,6 +124,7 @@ void BasesVCut(double *x, double *Jinv,double *detJ,
     //printf("    bvcut = %f %f, %f %f, %f %f\n",bvcut[l-6],bvcut[l-5],bvcut[l-4],bvcut[l-3],bvcut[l-2],bvcut[l-1]);
    
     //build jacobian dx/dr of cut cell
+    //How to get this for p>1? Only have 3 xcut cells
     for(i=0;i<d;i++){
       for(j=0;j<d;j++){
 	mat[i][j]=xcut[i*nbasis]*bd[0][j];
@@ -178,7 +179,6 @@ void CutFaceWeights(double *x, double *Jinv, double *xcut, double *bfcut, double
   m=l=0;
   ld=ij=0;
   double ijk[2];
-  double detJcut; 
   //printf("  orig tri = %f %f; %f %f; %f %f\n",x[0],x[3],x[1],x[4],x[2],x[5]);
   //printf("  cut tri = %f %f; %f %f; %f %f\n",xcut[0],xcut[3],xcut[1],xcut[4],xcut[2],xcut[5]);
 
@@ -266,7 +266,7 @@ void CutFaceWeights(double *x, double *Jinv, double *xcut, double *bfcut, double
     } //loop over faces
 }
 
-void cut_mass_matrix(double *M, double *x, double *Jinv, double *xcut, int d, int e, int p)
+void cut_mass_matrix(double *M, double *x, double *Jinv, double *xcut, double *detJcut, int d, int e, int p)
 {
   int i,j,ij,w,b,ii,jj;
   int nbasis=order2basis[e][p+(p==0)];
@@ -280,7 +280,8 @@ void cut_mass_matrix(double *M, double *x, double *Jinv, double *xcut, int d, in
 
     // Get jacobian info for the original element at p+1 quad pts
     // This is needed to interp between cut cell coords and parent elem coords
-    
+//    double keep[9];  
+//for(j=0;j<9;j++) keep[j] = 0; 
     for(i=0;i<nbasis;i++)
       for(j=0;j<nbasis;j++)
 	{
@@ -290,10 +291,9 @@ void cut_mass_matrix(double *M, double *x, double *Jinv, double *xcut, int d, in
 	      for(jj=0;jj<d;jj++)
 		ijk[jj]=gauss[e][g][(d+1)*w+jj];
 
+/*
               //convert sub cell rst coord to orig cell rst somehow
               // Do I need to do this? Should I be doing it on the full or sub cell?
-              CutCellInterp(x,d,e,p+1,Jinv,ijk,xcut,u); //,invJcut,detJcut); 
-              printf("ijk = %f %f, u = %f %f\n",ijk[0],ijk[1],u[0],u[1]);
 
 	      // evaluate the jacobian of cut cell, it's not stored at this many locations (p=p+1)
 	      for(b=0;b<nbasis;b++)
@@ -306,29 +306,32 @@ void cut_mass_matrix(double *M, double *x, double *Jinv, double *xcut, int d, in
 		    {
 		      mat[ii][jj]=xcut[ii*nbasis]*bd[0][jj];
 		      for(b=1;b<nbasis;b++)
-			mat[ii][jj]+=xcut[ii*nbasis+b]*bd[b][jj];
+			mat[ii][jj]+=xcut[ii*nbasis+b]*bd[b][jj]; // Does this still work for high order?only have 3 xcut pts
 		    }
 		}
-	      
               printf("bd = %f %f %f %f \n",bd[0][0],bd[0][1],bd[1][0],bd[1][1]);
               printf("mat = %f %f %f %f \n",mat[0][0],mat[0][1],mat[1][0],mat[1][1]);
 	      if (d==2) invmat2x2(mat,jac,det);
-// should be using det of cut cell right?
-              printf("det = %f\n",det); 
-	      wgt=gauss[e][g][(d+1)*w+2]*det;
+*/	      
+//              printf("det = %f\n",detJcut[0]); 
+	      wgt=gauss[e][g][(d+1)*w+2]*detJcut[0];
 	      // could use bv here instead of reevaluating 
 	      // revaluate this if mesh is deforming 
 
               // subtract cut region from original mass matrix
-              printf("wgt = %f, M[%i] -= %f\n",wgt,ij,(wgt*basis[e][i](u)*basis[e][j](u)));
+              CutCellInterp(x,d,e,p+1,Jinv,ijk,xcut,u); //,invJcut,detJcut); 
+//              printf("ijk = %f %f, u = %f %f\n",ijk[0],ijk[1],u[0],u[1]);
+//              printf("wgt = %f, basis[%i] = %f, basis[%i] = %f\n",wgt,i,basis[e][i](u),j,basis[e][j](u));
+//              keep[i*nbasis+j] = keep[i*nbasis+j] + wgt*basis[e][i](u)*basis[e][j](u);
 	      M[ij]-=(wgt*basis[e][i](u)*basis[e][j](u));
 	    }
 	}
+//for(j=0;j<9;j++) printf("keep[%i] = %f\n",j,keep[j]);
   }
   /// XXX What to do here? 
   else {
     // p=0 
-      ijk[0] = u[0]; 
+/*      ijk[0] = u[0]; 
       ijk[1] = u[1]; 
       CutCellInterp(x,d,e,p,Jinv,ijk,xcut,u); //,invJcut,detJcut); 
       for(b=0;b<nbasis;b++)
@@ -345,7 +348,8 @@ void cut_mass_matrix(double *M, double *x, double *Jinv, double *xcut, int d, in
 	    }
 	}
       if (d==2) invmat2x2(mat,jac,det);
-      M[0]-=0.5*det;
+*/
+      M[0]-=0.5*detJcut[0];
   }
 }
 void mass_matrix(double *M, double *x, int d, int e, int p)
@@ -673,10 +677,10 @@ void MASS_MATRIX(double *mass,double *x, int *iptr, int d, int e, int p, int nel
     }
 }
 
-void CUT_MASS_MATRIX(double *mass,double *x, double *Jinv, int *iptr, double *xcut, int *iptrc, int d, int e, int p, int nelem, int pc, int necut, int* cut2e)
+void CUT_MASS_MATRIX(double *mass,double *x, double *Jinv, int *iptr, double *xcut, double *detJcut, int *iptrc, int d, int e, int p, int nelem, int pc, int necut, int* cut2e)
 {
   int i,eid;
-  int ix,im,ij,ixc;
+  int ix,im,ij,ixc,id;
 
   //subtract out cut portion
   for(i=0;i<necut;i++){
@@ -684,9 +688,10 @@ void CUT_MASS_MATRIX(double *mass,double *x, double *Jinv, int *iptr, double *xc
       ix=iptr[pc*eid+1];
       ij=iptr[pc*eid+4];
       im=iptr[pc*eid+10];
-      ixc=iptrc[pc*i+1]; 
+      ixc=iptrc[pc*i+1];
+      id=iptrc[pc*i+5]; 
 printf("cut mass: sub cell %i in full cell %i\n",i,eid);
-      cut_mass_matrix(&(mass[im]),&(x[ix]),&(Jinv[ij]),&(xcut[ixc]),d,e,p);
+      cut_mass_matrix(&(mass[im]),&(x[ix]),&(Jinv[ij]),&(xcut[ixc]),&(detJcut[id]),d,e,p);
 
   }
 }
