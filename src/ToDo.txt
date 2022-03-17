@@ -2,6 +2,7 @@ To Do
 ============
 - getting fluxes from other mesh -- maybe get this from inflow bc for now
 - fix xcut ordering? not currently using iptrc correctly?
+- debug fluxes on the faces 
 
 Done but not tested
 =========

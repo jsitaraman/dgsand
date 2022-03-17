@@ -479,6 +479,7 @@ void Jacobian(double *x,double *bv, double *bvd, double *Jinv,
         for(i=0;i<d;i++) bvd[ld++]=0;
       }
       detJ[n++]=det;
+printf("\tquad pt %i, detJ = %f\n",w,det);       
     }
 }
 
@@ -606,7 +607,7 @@ void COMPUTE_GRID_METRICS(double *x, double *bv, double *bvd,double *JinvV,
       ibfd =iptr[ip+7];
       ijf  =iptr[ip+8];
       ifw  =iptr[ip+9];
-
+printf("compute_grid_metrics elem %i\n"); 
       Jacobian(x+ix, bv+ibv, bvd+ibvd, JinvV+ij,detJ+idetj,d,e,p); // basis on vol
       FaceWeights(x+ix,bf+ibf,bfd+ibfd,JinvF+ijf,faceWeight+ifw,d,e,p); // basis on face
     }

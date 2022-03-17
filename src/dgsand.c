@@ -241,14 +241,14 @@ void main(void)
   
   for(n=1;n<=nsteps;n++)
     {
-/*
+
       COMPUTE_RHS(R,mass,bv,bvd,JinvV,detJ,
 		  bf,bfd,JinvF,faceWeight,fnorm,fflux,
 		  x,q,elem2face,iptr,iptf,faces,
 		  pc,pf,pde,d,etype,p,nfaces,nelem,
-                  bvcut,bvdcut,JinvVcut,detJcut,
-                  bfcut,bfdcut,JinvFcut,fwcut,fcnorm,fcflux,
-                  xcut,iptrc,iptrcf,necut);
+                  bvcut,bvdcut,detJcut,
+                  bfcut,bfdcut,fwcut,fcnorm,fcflux,
+                  xcut,iptrc,iptrcf,necut,cut2e);
       
       UPDATE_DOFS(qstar,rk[1]*dt,q,R,ndof);
       UPDATE_DOFS(q,rk[0]*dt,q,R,ndof);
@@ -257,9 +257,9 @@ void main(void)
 		  bf,bfd,JinvF,faceWeight,fnorm,fflux,
 		  x,qstar,elem2face,iptr,iptf,faces,
 		  pc,pf,pde,d,etype,p,nfaces,nelem,
-                  bvcut,bvdcut,JinvVcut,detJcut,
-                  bfcut,bfdcut,JinvFcut,fwcut,fcnorm,fcflux,
-                  xcut,iptrc,iptrcf,necut);
+                  bvcut,bvdcut,detJcut,
+                  bfcut,bfdcut,fwcut,fcnorm,fcflux,
+                  xcut,iptrc,iptrcf,necut,cut2e);
       
       UPDATE_DOFS(qstar,rk[2]*dt,q,R,ndof);
 
@@ -267,13 +267,13 @@ void main(void)
 		  bf,bfd,JinvF,faceWeight,fnorm,fflux,
 		  x,qstar,elem2face,iptr,iptf,faces,
 		  pc,pf,pde,d,etype,p,nfaces,nelem,
-                  bvcut,bvdcut,JinvVcut,detJcut,
-                  bfcut,bfdcut,JinvFcut,fwcut,fcnorm,fcflux,
-                  xcut,iptrc,iptrcf,necut);
+                  bvcut,bvdcut,detJcut,
+                  bfcut,bfdcut,fwcut,fcnorm,fcflux,
+                  xcut,iptrc,iptrcf,necut,cut2e);
 
 
       UPDATE_DOFS(q,rk[3]*dt,q,R,ndof);
-*/       
+       
       rmax=rnorm=0.0;
       for(i=0;i<ndof;i++) 
       {

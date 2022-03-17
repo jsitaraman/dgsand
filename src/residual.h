@@ -445,7 +445,7 @@ void COMPUTE_RESIDUAL(double *R, double *mass, double *q, double *detJ, double *
 		      int pde, int d, int e, int p, int nelem,
                       double *detJcut, double *fcflux,
                       double *bvcut, double *bvdcut, double *bfcut, double *bfdcut,
-                      int *iptrc, int *iptrcf, int necut)
+                      int *iptrc, int *iptrcf, int necut, int* cut2e)
 
 {
   int i,ix,idet,im,iR,iq,ibv,ibvd,ibf,ibfd;
@@ -469,11 +469,10 @@ void COMPUTE_RESIDUAL(double *R, double *mass, double *q, double *detJ, double *
     }
 
   //Modify residual for cut cells
-  /*
   for(i=0;i<necut;i++)
     {
       // get original element quantities
-      eid = XXX[i]; 
+      eid = cut2e[i]; 
       ix=pc*eid;
       iR=iq=iptrc[ix];
 
@@ -488,7 +487,6 @@ void COMPUTE_RESIDUAL(double *R, double *mass, double *q, double *detJ, double *
       cutVol(R+iR,bv+ibv,bvd+ibvd,q+iq,detJ+idet,pde,d,e,p);
       cutFace(R+iR,fflux,bf+ibf,bfd+ibfd,elem2face+nfp*i,iptrf,q,pf,pde,d,e,p,i);
     }
-  */
 
   //Solve each element
   for(i=0;i<nelem;i++)
@@ -506,10 +504,10 @@ void COMPUTE_RHS(double *R,double *mass,double *bv, double *bvd, double *JinvV, 
 		 double *faceWeight, double *fnorm, double *fflux,
 		 double *x, double *q, int *elem2face, int *iptr, int *iptrf, int *faces,
 		 int pc, int pf, int pde, int d , int e, int p, int nfaces, int nelem,
-                 double *bvcut, double *bvdcut,double *JinvVcut,double *detJcut,
-                 double *bfcut, double *bfdcut,double *JinvFcut,double *fwcut,
+                 double *bvcut, double *bvdcut,double *detJcut,
+                 double *bfcut, double *bfdcut,double *fwcut,
                  double *fcnorm,double *fcflux,double *xcut, int *iptrc,
-                 int *iptrcf, int necut)
+                 int *iptrcf, int necut, int* cut2e)
 {
 
   FILL_FACES(fnorm, fflux, elem2face, iptr, iptrf, 
@@ -529,7 +527,7 @@ void COMPUTE_RHS(double *R,double *mass,double *bv, double *bvd, double *JinvV, 
 		   pde,d, e, p, nelem,
                    detJcut, fcflux, 
                    bvcut, bvdcut, bfcut, bfdcut, 
-                   iptrc, iptrcf, necut); 
+                   iptrc, iptrcf, necut, cut2e); 
 
 
 }
