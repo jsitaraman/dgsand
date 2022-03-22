@@ -158,7 +158,8 @@ void cutVol(double *residual, double *bv, double *bvd, double *q, double *detJ,
 }
 
 
-void cutFace(double *residual, double *fflux, double *bf, double *bfd, int *elem2face,
+/*
+  void cutFace(double *residual, double *fflux, double *bf, double *bfd, int *elem2face,
 	     int *iptrf,double *q, int pf, int pde, int d, int e, int p, int ielem)
 {
   int b,w,i,j,l,ld,m,f,fid,fst,fsgn;
@@ -206,6 +207,44 @@ void cutFace(double *residual, double *fflux, double *bf, double *bfd, int *elem
     }
 }
 
+void setCutFaceQuantities(double *fcnorm,double *fcflux,int *cut2face, int *iptrcf,
+		       double *fwcut, double *bfcut,double *bfdcut, double *q, 
+		       int nfields, int pfc, int pde, int d , int e, int p)
+{
+  int b,w,i,j,k,l,f,n,fid,floc,fst,fsgn,nst;
+  int nbasis=order2basis[e][p];
+  double qv[nfields];
+  double *bvv;
+  int nfp=facePerElem[e];
+  l=k=0;
+  for(i=0;i<nfp;i++)
+    {
+      fsgn=cut2face[i]/abs(cut2face[i]);
+      fid=abs(cut2face[i])-1;
+      // pick out the right location for inserting fields for this face
+      // the cell with negative sign for the edge fills in backward order
+      nst=iptrcf[pf*fid];
+      fst=iptrcf[pf*(fid+(1-fsgn)/2)+1]-(1-fsgn)*nfields;
+      n=0;
+      for(w=0;w<ngGL[e][p];w++)
+	{
+          bvv=bfcut+l;
+          l+=nbasis;
+	  for(f=0;f<nfields;f++)
+	    {
+	      floc=fst+f;
+	      fcflux[floc]=bvv[0]*q[f*nbasis];
+	      for(b=1;b<nbasis;b++)	    
+		fcflux[floc]+=(bvv[b]*q[f*nbasis+b]);
+	    }	  
+	  for(j=0;j<d*fsgn;j++)
+	    fcnorm[nst+(n++)]=fwcut[k+j];
+          k+=d;
+	  fst+=(3*fsgn*nfields);
+	}
+    }
+}
+*/
 void setFaceQuantities(double *fnorm,double *fflux,int *elem2face, int *iptrf,
 		       double *faceWeight, double *bf,double *bfd, double *q, 
 		       int nfields, int pf, int pde, int d , int e, int p)
@@ -219,9 +258,12 @@ void setFaceQuantities(double *fnorm,double *fflux,int *elem2face, int *iptrf,
   for(i=0;i<nfp;i++)
     {
       fsgn=elem2face[i]/abs(elem2face[i]);
-      fid=abs(elem2face[i])-1;
+      fid=abs(elem2face[i])-1; 
       // pick out the right location for inserting fields for this face
       // the cell with negative sign for the edge fills in backward order
+      //
+      // nst = fst if fsgn > 0 
+      // fst = iptrf[pf*(fid+1)+1] - 2*nfields ? if fsgn < 0 
       nst=iptrf[pf*fid];
       fst=iptrf[pf*(fid+(1-fsgn)/2)+1]-(1-fsgn)*nfields;
       n=0;
@@ -234,21 +276,23 @@ void setFaceQuantities(double *fnorm,double *fflux,int *elem2face, int *iptrf,
 	      floc=fst+f;
 	      fflux[floc]=bvv[0]*q[f*nbasis];
 	      for(b=1;b<nbasis;b++)	    
-		fflux[floc]+=(bvv[b]*q[f*nbasis+b]);
+		fflux[floc]+=(bvv[b]*q[f*nbasis+b]); 
 	    }	  
 	  for(j=0;j<d*fsgn;j++)
 	    fnorm[nst+(n++)]=faceWeight[k+j];
           k+=d;
-	  fst+=(3*fsgn*nfields);
+	  fst+=(3*fsgn*nfields); // incr forward if fsgn>0 and backward otherwise
 	}
     }
 }
 
-void FILL_FACES(double *fnorm, double *fflux, int *elem2face,int *iptr, int *iptrf,
+void FILL_FACES(double *x, double *fnorm, double *fflux, int *elem2face,int *iptr, int *iptrf,
 		double *faceWeight, double *bf, double *bfd, double *q, 
-		int pc, int pf, int pde, int d, int e, int p, int nelem, int nfaces)
+		int pc, int pf, int pde, int d, int e, int p, int nelem, int nfaces,
+		double* fcnorm, double *fcflux, int *cut2face, int *iptrc, int * iptrcf, 
+                double *fwcut, double *bfcut, double *bfdcut, int* cut2e, int necut)
 {
-  int i,ix;
+  int i,ix,eid;
   int ifw,ibf,ibfd,iq;
   int nfields=get_nfields[pde](d);
   int nfp=facePerElem[e];
@@ -264,6 +308,26 @@ void FILL_FACES(double *fnorm, double *fflux, int *elem2face,int *iptr, int *ipt
 			faceWeight+ifw, bf+ibf, bfd+ibfd, q+iq,
 			nfields, pf, pde, d, e, p);
     }
+/*  if(necut>0){
+    for(i=0;i<necut;i++){
+      eid=cut2e[i]; 
+      ix=pc*eid;
+      iq=iptr[ix]; 
+      ibf=iptrc[ix+6]; 
+      ibfd=iptrc[ix+7]; 
+      ifw=iptrc[ix+9]; 
+
+      //reuse setFaceQ but pass in cut cell quantities instead
+      setFaceQuantities(fcnorm,fflux,elem2face+nfp*eid, iptrf, 
+			faceWeight+ifw, bf+ibf, bfd+ibfd, q+iq,
+			nfields, pf, pde, d, e, p);
+
+      setCutFacesQuantities(x+ix, fcnorm, fcflux,cut2face+npf*i, iptrcf, // XXX double check these pointers
+                            fwcut+ifw,bfcut+ibf, bfdcut+ibfd, q+iq, 
+			     nfields, pfc, pde, d, e, p); 
+    }
+  }
+*/
 }
 
 void FILL_BC(double *fnorm,double *fflux, int *faces,
@@ -469,6 +533,7 @@ void COMPUTE_RESIDUAL(double *R, double *mass, double *q, double *detJ, double *
     }
 
   //Modify residual for cut cells
+  /*
   for(i=0;i<necut;i++)
     {
       // get original element quantities
@@ -484,8 +549,8 @@ void COMPUTE_RESIDUAL(double *R, double *mass, double *q, double *detJ, double *
       ibf=iptrc[ix+6];
       ibfd=iptrc[ix+7];
             
-      cutVol(R+iR,bv+ibv,bvd+ibvd,q+iq,detJ+idet,pde,d,e,p);
-      cutFace(R+iR,fflux,bf+ibf,bfd+ibfd,elem2face+nfp*i,iptrf,q,pf,pde,d,e,p,i);
+      cutVol(R+iR,bvcut+ibv,bvdcut+ibvd,q+iq,detJcut+idet,pde,d,e,p);
+      cutFace(R+iR,fcflux,bfcut+ibf,bfdcut+ibfd,cut2face+nfp*i,iptrcf,q,pf,pde,d,e,p,i);
     }
 
   //Solve each element
@@ -496,7 +561,7 @@ void COMPUTE_RESIDUAL(double *R, double *mass, double *q, double *detJ, double *
       im=iptr[ix+10];
       invertMass(mass+im,R+iR,pde,d,e,p,i);
     }
-
+*/
 }
 
 void COMPUTE_RHS(double *R,double *mass,double *bv, double *bvd, double *JinvV, double *detJ,
@@ -510,9 +575,11 @@ void COMPUTE_RHS(double *R,double *mass,double *bv, double *bvd, double *JinvV, 
                  int *iptrcf, int necut, int* cut2e)
 {
 
-  FILL_FACES(fnorm, fflux, elem2face, iptr, iptrf, 
+  FILL_FACES(x, fnorm, fflux, elem2face, iptr, iptrf, 
 	     faceWeight, bf, bfd, q, 
-	     pc, pf, pde, d, e, p, nelem,nfaces);
+	     pc, pf, pde, d, e, p, nelem,nfaces, 
+	     fcnorm, fcflux, cut2face, iptrc, iptrcf, 
+             fwcut, bfcut, bfdcut, necut);
 
   FILL_BC(fnorm,fflux,faces,pde,d,e,p,nfaces);
 

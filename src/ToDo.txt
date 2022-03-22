@@ -15,4 +15,4 @@ Data Structures that I need from pundit
 - map connecting IDs of the cut regions and the original cells being cut
 - vertices of the polygon to be cut (does ordering matter?)
 - q values from other mesh at new cut face
-(- array of cut region element types)
+- face connectivity between cut edges

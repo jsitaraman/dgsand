@@ -550,7 +550,7 @@ void FaceWeights(double *x, double *bf, double *bfd, double *Jinv, double *faceW
 	      /* need a cross product here */
               for(j=0;j<d;j++)
 	       {
-                Ja[i]+=(mat[i][j]*face2elem[e][d*f+j]); // face2elem is...?
+                Ja[i]+=(mat[i][j]*face2elem[e][d*f+j]); // face2elem goes from edge coord to rst elem coord
 		//TODO add Jb[i] calculation for 3D elements here
 	       }
             }
@@ -660,7 +660,6 @@ void COMPUTE_CUT_METRICS(double *x, double *JinvV,
     CutFaceWeights(x+ix, JinvF+ijf, 
                    xcut+cix,bfcut+cibf,bfdcut+cibfd,
                    JinvFcut+cijf,fwcut+cifw,d,e,p); 
-
   }
 
 }

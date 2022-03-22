@@ -61,6 +61,7 @@ void main(void)
   int *faces,*elem2face;     // face to cell connectivity and element to face information
   int *iptr,*iptf;                  // pointer into data arrays
   int *iptrc,*iptrcf;                  // pointer into data arrays
+  int *cutfaces,*cut2face;
 
 
   /* local variables */
@@ -144,8 +145,7 @@ void main(void)
   		       bf,bfd,JinvF,faceWeight,iptr,d,etype,p,nelem,pc);
 
   // Arbitrarily cut the cells  along some straight line
-  // XXX HACKING THESE IN. NEEDS TO MATCH GRIDS
-  int necut=6;
+  int necut=6; // XXX HACKING THESE IN. NEEDS TO MATCH GRIDS
   int ncfaces=3*necut; 
   xcut       =dgsand_alloc(double,(d*(nbasisx))*necut);  
   cut2e      =dgsand_alloc(int,necut);  
@@ -193,7 +193,7 @@ void main(void)
       iptrcf[ix+1]+=(i*3*nfields*ngGL[etype][p]);  //faceFlux
   }
   // XXX Hack together cut cell info 
-  CUT_CELLS(x, xcut, iptr, iptrc, cut2e, &necut, d, etype, nelem, ncfaces, pc);
+  CUT_CELLS(x, xcut, iptr, iptrc, cut2e, cut2face, &necut, d, etype, nelem, ncfaces, pc);
  
   /* compute the mass matrix for each element */
   MASS_MATRIX(mass,x,iptr,d,etype,p,nelem,pc);
