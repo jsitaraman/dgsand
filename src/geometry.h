@@ -45,7 +45,7 @@ void CutCellInterp(double *x, int d, int e, int p, double* Jinv,
 
   int b,w,i,j,l,ld,ij,m,n;
   int nbasis=order2basis[e][1]; // XXX double check last argument, should be p=1
-  double u[d],jcut[d*d],mat[d][d],ijac[d][d],det;
+  double jcut[d*d],mat[d][d],ijac[d][d],det;
   double xycut[d];
   double bd[nbasis][d]; 
   l=m=ld=ij=0;
@@ -53,8 +53,20 @@ void CutCellInterp(double *x, int d, int e, int p, double* Jinv,
 
   //get xyz coord of nodes on the two elements
   //corresponding to rst = 0,0,1
+  //In general, this might be wrong. x and xcut are the weights, not the actual coords
+  //Need to accumulate these to get coordinates, but they work for now b/c the
+  //first 3 bases are interpolative. Fix this for p>1
+
   double x0[2] = {*x,*(x+nbasis)}; 
   double x0cut[2] = {*xcut,*(xcut+nbasis)};
+/*  double x0[2] = {0.0, 0.0}; 
+//  double x0cut[2] = {0.0, 0.0}; 
+  double u[2] = {0,0};
+  for(i=0;i<nbasis;i++){
+    x0[0] = x0[0] + x[0]*basis[e][i](u);
+    x0[1] = x0[1] + x[nbasis]*basis[e][i](u);
+  }
+*/
 
 //  printf("    x0 = %f %f\n",x0[0],x0[1]); 
 //  printf("    x0cut = %f %f\n",x0cut[0],x0cut[1]); 
@@ -224,9 +236,12 @@ void CutFaceWeights(double *x, double *Jinv, double *xcut, double *bfcut, double
 	      Ja[i]=0;
 	      for(j=0;j<d;j++)
 		{
-	          mat[i][j]=x[i*nbasis]*bd[0][j];
+/*	          mat[i][j]=x[i*nbasis]*bd[0][j];
 		  for(b=1;b<nbasis+(nbasis==1);b++)
 		    mat[i][j]+=x[i*nbasis+b]*bd[b][j]; 
+*/
+		  for(b=0;b<3;b++)
+		    mat[i][j]+=xcut[i*3+b]*bd[b][j]; 
 		} 
 	      // need a cross product here 
               for(j=0;j<d;j++)
@@ -238,6 +253,8 @@ void CutFaceWeights(double *x, double *Jinv, double *xcut, double *bfcut, double
 	    // do faceWeight = Ja x zhat
 	    // This gives me the normal vector
 	    cross(&(faceWeight[2*m]),Ja,Jb,d); 
+
+            // XXX need to multiply det by cut length? XXX
 
             // get [dx/dr]^-1
             if (d==2) invmat2x2(mat,jac,det);
@@ -479,7 +496,7 @@ void Jacobian(double *x,double *bv, double *bvd, double *Jinv,
         for(i=0;i<d;i++) bvd[ld++]=0;
       }
       detJ[n++]=det;
-printf("\tquad pt %i, detJ = %f\n",w,det);       
+//printf("\tquad pt %i, detJ = %f\n",w,det);       
     }
 }
 
@@ -607,7 +624,7 @@ void COMPUTE_GRID_METRICS(double *x, double *bv, double *bvd,double *JinvV,
       ibfd =iptr[ip+7];
       ijf  =iptr[ip+8];
       ifw  =iptr[ip+9];
-printf("compute_grid_metrics elem %i\n"); 
+//printf("compute_grid_metrics elem %i\n"); 
       Jacobian(x+ix, bv+ibv, bvd+ibvd, JinvV+ij,detJ+idetj,d,e,p); // basis on vol
       FaceWeights(x+ix,bf+ibf,bfd+ibfd,JinvF+ijf,faceWeight+ifw,d,e,p); // basis on face
     }

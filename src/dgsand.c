@@ -61,7 +61,7 @@ void main(void)
   int *faces,*elem2face;     // face to cell connectivity and element to face information
   int *iptr,*iptf;                  // pointer into data arrays
   int *iptrc,*iptrcf;                  // pointer into data arrays
-  int *cutfaces,*cut2face;
+  int *cutfaces,*cut2neigh;
 
 
   /* local variables */
@@ -149,7 +149,7 @@ void main(void)
   int ncfaces=3*necut; 
   xcut       =dgsand_alloc(double,(d*(nbasisx))*necut);  
   cut2e      =dgsand_alloc(int,necut);  
-  
+  cut2neigh   =dgsand_alloc(int,necut*3);   // map between cut face and R side neighbor
   //create all the cut cell pointers
   bvcut      =dgsand_alloc(double,(necut*nbasis*ngElem[etype][p]));        // basis value at volume QP
   bvdcut     =dgsand_alloc(double,(necut*d*nbasis*ngElem[etype][p]));// basis derivative value at volume QP
@@ -193,7 +193,8 @@ void main(void)
       iptrcf[ix+1]+=(i*3*nfields*ngGL[etype][p]);  //faceFlux
   }
   // XXX Hack together cut cell info 
-  CUT_CELLS(x, xcut, iptr, iptrc, cut2e, cut2face, &necut, d, etype, nelem, ncfaces, pc);
+  printf("Entering CUT Cells\n" ); 
+  CUT_CELLS(x, xcut, iptr, iptrc, cut2e, &necut, d, etype, nelem, ncfaces, pc, cut2neigh, elem2face, faces);
  
   /* compute the mass matrix for each element */
   MASS_MATRIX(mass,x,iptr,d,etype,p,nelem,pc);
@@ -238,7 +239,7 @@ void main(void)
   ndof=nfields*nbasis*nelem;
 
   /* basic 3rd order RK time stepping */
-  
+  /*
   for(n=1;n<=nsteps;n++)
     {
 
@@ -248,7 +249,7 @@ void main(void)
 		  pc,pf,pde,d,etype,p,nfaces,nelem,
                   bvcut,bvdcut,detJcut,
                   bfcut,bfdcut,fwcut,fcnorm,fcflux,
-                  xcut,iptrc,iptrcf,necut,cut2e);
+                  xcut,iptrc,iptrcf,necut,cut2e,cut2neigh);
       
       UPDATE_DOFS(qstar,rk[1]*dt,q,R,ndof);
       UPDATE_DOFS(q,rk[0]*dt,q,R,ndof);
@@ -259,7 +260,7 @@ void main(void)
 		  pc,pf,pde,d,etype,p,nfaces,nelem,
                   bvcut,bvdcut,detJcut,
                   bfcut,bfdcut,fwcut,fcnorm,fcflux,
-                  xcut,iptrc,iptrcf,necut,cut2e);
+                  xcut,iptrc,iptrcf,necut,cut2e,cut2neigh);
       
       UPDATE_DOFS(qstar,rk[2]*dt,q,R,ndof);
 
@@ -269,7 +270,7 @@ void main(void)
 		  pc,pf,pde,d,etype,p,nfaces,nelem,
                   bvcut,bvdcut,detJcut,
                   bfcut,bfdcut,fwcut,fcnorm,fcflux,
-                  xcut,iptrc,iptrcf,necut,cut2e);
+                  xcut,iptrc,iptrcf,necut,cut2e,cut2neigh);
 
 
       UPDATE_DOFS(q,rk[3]*dt,q,R,ndof);
@@ -288,4 +289,5 @@ void main(void)
       printf("%d\t%18.16f\t%d\t%18.16f\n",n,rnorm,imax,rmax);
       if (n%nsave==0) OUTPUT_TECPLOT(n,x,q,pc,iptr,pde,d,etype,p,nelem);
     }
+*/
 }
