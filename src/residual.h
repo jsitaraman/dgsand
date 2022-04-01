@@ -159,7 +159,7 @@ void cutVol(double *residual, double *bv, double *bvd, double *q, double *detJ,
 
 
 //XXX Debug here
-  void cutFace(double *residual, double *fflux, double *bfL, double *bfdL, 
+  void cutFace(double *residual, double *fflux, double *bfL, double *bfR, 
   	       double *q, int pf, int pde, int d, int e, int p, int ielem)
 {
   int b,w,i,j,l,ld,m,f,floc;
@@ -258,24 +258,22 @@ void setCutFacesQuantities(double *x, double *q, int *iptr, int pc,
 
       // L side quantities
       for(f=0;f<nfields;f++){ 
-        fcflux[floc]=bfcutL[0]*q[iptr[eid*pc]+f*nbasis];
+        fcflux[floc+f]=bfcutL[0]*q[iptr[eid*pc]+f*nbasis];
         for(b=1;b<nbasis;b++)
-          fcflux[floc]+=bfcutL[b]*q[iptr[eid*pc]+f*nbasis+b];
-        floc++; 
+          fcflux[floc+f]+=bfcutL[b]*q[iptr[eid*pc]+f*nbasis+b];
       }// loop over nfields
  
       // R side quantities
       // XXX need to reset floc!!! XXX
       for(f=0;f<nfields;f++){ 
         if(fid!=-1){ // if it's an internal cut face
-          fcflux[floc]=bfcutR[0]*q[iptr[eid*pc]+f*nbasis];
+          fcflux[floc+f]=bfcutR[0]*q[iptr[eid*pc]+f*nbasis];
           for(b=1;b<nbasis;b++)
-            fcflux[floc]+=bfcutR[b]*q[iptr[eid*pc]+f*nbasis+b];    
+            fcflux[floc+f]+=bfcutR[b]*q[iptr[eid*pc]+f*nbasis+b];    
 	}
 	else{ // force overset fluxes to be inflow (will replace later)
-	  far_field[pde](fcflux[floc]);    
+	  far_field[pde](fcflux[floc+f]);    
         } // end of r side
-	floc++; 
       }// loop over nfields
 
       floc+=nfields; // third set of values to be computed later, skip ahead to next quad pt
@@ -508,8 +506,7 @@ void COMPUTE_RESIDUAL(double *R, double *mass, double *q, double *detJ, double *
 		      int pde, int d, int e, int p, int nelem,
                       double *detJcut, double *fcflux,
                       double *bvcut, double *bvdcut, 
-		      double *bfcutL, double *bfdcutL,
-		      double *bfcutR, double *bfdcutR,
+		      double *bfcutL, double *bfcutR,
                       int *iptrc, int necut, int* cut2e, int* cut2neigh)
 
 {
@@ -551,7 +548,7 @@ void COMPUTE_RESIDUAL(double *R, double *mass, double *q, double *detJ, double *
       iflx=iptrc[ix+11];
       
       cutVol(R+iR,bvcut+ibv,bvdcut+ibvd,q+iq,detJcut+idet,pde,d,e,p);
-      cutFace(R+iR,fcflux+iflx,bfcutL+ibf,bfdcutL+ibfd,q,pf,pde,d,e,p,i);
+      cutFace(R+iR,fcflux+iflx,bfcutL+ibf,bfcutR+ibf,q,pf,pde,d,e,p,i);
     }
 
   //Solve each element
@@ -571,9 +568,10 @@ void COMPUTE_RHS(double *R,double *mass,double *bv, double *bvd, double *JinvV, 
 		 int pc, int pf, int pccut, int pde, int d , int e, int p, int nfaces, int nelem,
                  double *bvcut, double *bvdcut,double *detJcut,
                  double *bfcutL, double *bfcutR,double *fwcut,
-                 double *bfdcutL, double *bfdcutR,
                  double *fcnorm,double *fcflux,double *xcut, int *iptrc,
                  int necut, int* cut2e, int *cut2face, int* cut2neigh)
+
+
 {
 
   FILL_FACES(x, fnorm, fflux, elem2face, iptr, iptrf, 
@@ -594,8 +592,8 @@ void COMPUTE_RHS(double *R,double *mass,double *bv, double *bvd, double *JinvV, 
 		   pc,pf,pccut,
 		   pde,d, e, p, nelem,
                    detJcut, fcflux, 
-                   bvcut, bvdcut, bfcutL, bfdcutL, 
-		   bfcutR, bfdcutR,
+                   bvcut, bvdcut, bfcutL,  
+		   bfcutR, 
                    iptrc, necut, cut2e, cut2neigh); 
 
 

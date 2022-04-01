@@ -209,8 +209,8 @@ printf("\telem neigh(%i, %i, %i) = %i %i %i\n",3*n,3*n+1,3*n+2,cut2neigh[3*n],cu
         forig[1] = fid; 
         neigh[1] = faces[6*fid+2] == i ? faces[6*fid+4] : faces[6*fid+2]; 
 
-	neigh[2] = -1;  // this face's fluxes cancel out
 	forig[2] = -1; 
+	neigh[2] = i;  // this face's fluxes cancel out
 
         // double check for positive jacobian 
         JacP1Tri(jac,xtmp,det); 
@@ -266,7 +266,7 @@ printf("\telem neigh(%i, %i, %i) = %i %i %i\n",3*n,3*n+1,3*n+2,cut2neigh[3*n],cu
 	neigh[0] = i; // this is the overset boundary
         fid = abs(elem2face[i*3+jp2])-1;
         neigh[1] = faces[6*fid+2] == i ? faces[6*fid+4] : faces[6*fid+2]; 
-	neigh[2] = -1; // this edge's fluxes cancel out 
+	neigh[2] = i; // this edge's fluxes cancel out 
 	
         // double check for positive jacobian 
         JacP1Tri(jac,xtmp,det); 

@@ -215,7 +215,6 @@ void main(void)
                         iptrc,necut,cut2e,cut2neigh);
     CUT_MASS_MATRIX(mass,x,JinvV,iptr,xcut,detJcut,iptrc,d,etype,p,nelem,pc,pccut,necut,cut2e);
 
-
   }
 
 
@@ -244,7 +243,7 @@ void main(void)
   ndof=nfields*nbasis*nelem;
 
   /* basic 3rd order RK time stepping */
-  /*
+  
   for(n=1;n<=nsteps;n++)
     {
 
@@ -253,7 +252,7 @@ void main(void)
 		  x,q,elem2face,iptr,iptf,faces,
 		  pc,pf,pccut,pde,d,etype,p,nfaces,nelem,
                   bvcut,bvdcut,detJcut,
-                  bfcut,bfdcut,fwcut,fcnorm,fcflux,
+                  bfcutL,bfcutR,fwcut,fcnorm,fcflux,
                   xcut,iptrc,necut,cut2e,cut2face,cut2neigh);
       
       UPDATE_DOFS(qstar,rk[1]*dt,q,R,ndof);
@@ -264,7 +263,7 @@ void main(void)
 		  x,qstar,elem2face,iptr,iptf,faces,
 		  pc,pf,pccut,pde,d,etype,p,nfaces,nelem,
                   bvcut,bvdcut,detJcut,
-                  bfcut,bfdcut,fwcut,fcnorm,fcflux,
+                  bfcutL,bfcutR,fwcut,fcnorm,fcflux,
                   xcut,iptrc,necut,cut2e,cut2face,cut2neigh);
       
       UPDATE_DOFS(qstar,rk[2]*dt,q,R,ndof);
@@ -274,7 +273,7 @@ void main(void)
 		  x,qstar,elem2face,iptr,iptf,faces,
 		  pc,pf,pccut,pde,d,etype,p,nfaces,nelem,
                   bvcut,bvdcut,detJcut,
-                  bfcut,bfdcut,fwcut,fcnorm,fcflux,
+                  bfcutL,bfcutR,fwcut,fcnorm,fcflux,
                   xcut,iptrc,necut,cut2e,cut2face,cut2neigh);
 
 
@@ -294,5 +293,4 @@ void main(void)
       printf("%d\t%18.16f\t%d\t%18.16f\n",n,rnorm,imax,rmax);
       if (n%nsave==0) OUTPUT_TECPLOT(n,x,q,pc,iptr,pde,d,etype,p,nelem);
     }
-*/
 }
