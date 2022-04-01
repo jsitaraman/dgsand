@@ -29,7 +29,8 @@ void main(void)
   double *x,*bv,*bvd,*JinvV,*detJ;  // volumetric quantities
   double *xcut,*bvcut,*bvdcut,*JinvVcut,*detJcut;  // volumetric quantities
   double *bf,*bfd,*JinvF,*faceWeight;        // face quantities
-  double *bfcut,*bfdcut,*JinvFcut,*fwcut;        // face quantities
+  double *bfcutL,*bfdcutL,*JinvFcut,*fwcut;        // face quantities
+  double *bfcutR,*bfdcutR;        // face quantities
   double *mass;                              // mass matrix
   double *fnorm,*fflux;                      // face normals and face flux
   double *fcnorm,*fcflux;                      // face normals and face flux
@@ -60,12 +61,12 @@ void main(void)
   int *elem2node;             // element to node connectivity
   int *faces,*elem2face;     // face to cell connectivity and element to face information
   int *iptr,*iptf;                  // pointer into data arrays
-  int *iptrc,*iptrcf;                  // pointer into data arrays
-  int *cutfaces,*cut2neigh;
+  int *iptrc;                  // pointer into data arrays
+  int *cut2face,*cut2neigh;
 
 
   /* local variables */
-  int a,i,j,m,b,ix, pc,pf,fpe,imax,ndof,n,nsteps,nsave;
+  int a,i,j,m,b,ix, pc,pf,pccut,fpe,imax,ndof,n,nsteps,nsave;
   double wgt,totalArea,rnorm,rmax,dt;
   /* rk3 coefficients */
   double rk[4]={0.25,8./15,5./12,3./4};
@@ -149,31 +150,34 @@ void main(void)
   int ncfaces=3*necut; 
   xcut       =dgsand_alloc(double,(d*(nbasisx))*necut);  
   cut2e      =dgsand_alloc(int,necut);  
-  cut2neigh   =dgsand_alloc(int,necut*3);   // map between cut face and R side neighbor
+  cut2face   =dgsand_alloc(int,necut*3);   // map between cut face and orig face id
+  cut2neigh  =dgsand_alloc(int,necut*3);   // map between cut face and R side neighbor
   //create all the cut cell pointers
   bvcut      =dgsand_alloc(double,(necut*nbasis*ngElem[etype][p]));        // basis value at volume QP
   bvdcut     =dgsand_alloc(double,(necut*d*nbasis*ngElem[etype][p]));// basis derivative value at volume QP
   JinvVcut   =dgsand_alloc(double,(necut*d*d*ngElem[etype][p]));     // J^{-1} at volume QP
+  JinvFcut   =dgsand_alloc(double,(necut*d*d*ngElem[etype][p]));     // J^{-1} at volume QP
   detJcut    =dgsand_calloc(double,(necut*ngElem[etype][p]));        // |J| at volume QP
   
   // Need to think more on these
   // Are they the right size? XXX
   fpe = facePerElem[etype];
-  bfcut     =dgsand_alloc(double,(nbasis*ngGL[etype][p]*fpe*necut));  // basis value at face QP
-  bfdcut    =dgsand_alloc(double,(d*nbasis*ngGL[etype][p]*fpe*necut));// basis der. value at face QP
-  JinvFcut  =dgsand_alloc(double,(d*d*ngGL[etype][p]*fpe*necut));     // J^{-1} at face QP
+  bfcutL     =dgsand_alloc(double,(nbasis*ngGL[etype][p]*fpe*necut));  // basis value at face QP
+  bfdcutL    =dgsand_alloc(double,(d*nbasis*ngGL[etype][p]*fpe*necut));// basis der. value at face QP
+  bfcutR     =dgsand_alloc(double,(nbasis*ngGL[etype][p]*fpe*necut));  // basis value at face QP
+  bfdcutR    =dgsand_alloc(double,(d*nbasis*ngGL[etype][p]*fpe*necut));// basis der. value at face QP
   fwcut     =dgsand_alloc(double,(d*ngGL[etype][p]*fpe*necut));       // faceNormals at face QP
 
   fcnorm     =dgsand_alloc(double,(d*ngGL[etype][p]*ncfaces));          // face normals
   fcflux     =dgsand_alloc(double,(3*nfields*ngGL[etype][p]*ncfaces));  // face fields and flux        
 
-  /* pointer array into each data array above */
-  iptrc=dgsand_calloc(int,(pc*necut));
-  iptrcf=dgsand_calloc(int,(pf*ncfaces));
   
   // Assume for now all cuts are triangles
+  /* pointer array into each data array above */
+  pccut = 13; 
+  iptrc=dgsand_calloc(int,(pccut*necut));
   for(i=0;i<necut;i++){
-      ix=pc*i;
+      ix=pccut*i;
       iptrc[ix]+=i*(nfields*nbasis);               // q, Q, R
       iptrc[ix+1]+=i*(d*(nbasisx));                // x
       iptrc[ix+2]+=i*(nbasis*ngElem[etype][p]);   // bv (this is NOT same per element type)
@@ -184,17 +188,18 @@ void main(void)
       iptrc[ix+6]+=i*(nbasis*ngGL[etype][p]*fpe); // bf (this is NOT same per element type)
       iptrc[ix+7]+=i*(d*nbasis*ngGL[etype][p]*fpe);// bfd
       iptrc[ix+8]+=i*(d*d*ngGL[etype][p]*fpe);     // JinvF
-      iptrc[ix+9]+=i*(d*ngGL[etype][p]*fpe);       // faceWeight
+      iptrc[ix+9]+=i*(d*ngGL[etype][p]*fpe);       // faceWeight & faceNormal
       iptrc[ix+10]+=i*(nbasis*nbasis);             // mass 
+
+      iptrc[ix+11]+=i*(fpe*3*nfields*ngGL[etype][p]);  //faceFlux
+      iptrc[ix+12]+=i*fpe; 			   // cut2neigh & cut2face
   }
-  for(i=0;i<ncfaces;i++){
-      ix=pf*i;
-      iptrcf[ix]+=(i*d*ngGL[etype][p]);            //faceNormal
-      iptrcf[ix+1]+=(i*3*nfields*ngGL[etype][p]);  //faceFlux
-  }
+
   // XXX Hack together cut cell info 
   printf("Entering CUT Cells\n" ); 
-  CUT_CELLS(x, xcut, iptr, iptrc, cut2e, &necut, d, etype, nelem, ncfaces, pc, cut2neigh, elem2face, faces);
+  CUT_CELLS(x, xcut, iptr, iptrc, cut2e, &necut, d, etype, nelem, ncfaces, pc, cut2face,cut2neigh, elem2face, faces);
+  for(i=0;i<necut;i++)
+    printf("cut elem %i: neigh = %i %i %i\n",i,cut2neigh[3*i+0],cut2neigh[3*i+1],cut2neigh[3*i+2]);
  
   /* compute the mass matrix for each element */
   MASS_MATRIX(mass,x,iptr,d,etype,p,nelem,pc);
@@ -204,11 +209,11 @@ void main(void)
 
   if(necut>0){
     COMPUTE_CUT_METRICS(x,JinvV,detJ,
-                        JinvF,iptr,d,etype,p,pc,
-                        xcut,bvcut,bvdcut,JinvVcut,detJcut,
-                        bfcut,bfdcut,JinvFcut,fwcut,
-                        iptrc,necut,cut2e);
-    CUT_MASS_MATRIX(mass,x,JinvV,iptr,xcut,detJcut,iptrc,d,etype,p,nelem,pc,necut,cut2e);
+                        JinvF,iptr,d,etype,p,pc,pccut,
+                        xcut,bvcut,bvdcut,JinvVcut,JinvFcut,detJcut,
+                        bfcutL,bfdcutL,bfcutR, bfdcutR,fwcut,
+                        iptrc,necut,cut2e,cut2neigh);
+    CUT_MASS_MATRIX(mass,x,JinvV,iptr,xcut,detJcut,iptrc,d,etype,p,nelem,pc,pccut,necut,cut2e);
 
 
   }
@@ -246,10 +251,10 @@ void main(void)
       COMPUTE_RHS(R,mass,bv,bvd,JinvV,detJ,
 		  bf,bfd,JinvF,faceWeight,fnorm,fflux,
 		  x,q,elem2face,iptr,iptf,faces,
-		  pc,pf,pde,d,etype,p,nfaces,nelem,
+		  pc,pf,pccut,pde,d,etype,p,nfaces,nelem,
                   bvcut,bvdcut,detJcut,
                   bfcut,bfdcut,fwcut,fcnorm,fcflux,
-                  xcut,iptrc,iptrcf,necut,cut2e,cut2neigh);
+                  xcut,iptrc,necut,cut2e,cut2face,cut2neigh);
       
       UPDATE_DOFS(qstar,rk[1]*dt,q,R,ndof);
       UPDATE_DOFS(q,rk[0]*dt,q,R,ndof);
@@ -257,20 +262,20 @@ void main(void)
       COMPUTE_RHS(R,mass,bv,bvd,JinvV,detJ,
 		  bf,bfd,JinvF,faceWeight,fnorm,fflux,
 		  x,qstar,elem2face,iptr,iptf,faces,
-		  pc,pf,pde,d,etype,p,nfaces,nelem,
+		  pc,pf,pccut,pde,d,etype,p,nfaces,nelem,
                   bvcut,bvdcut,detJcut,
                   bfcut,bfdcut,fwcut,fcnorm,fcflux,
-                  xcut,iptrc,iptrcf,necut,cut2e,cut2neigh);
+                  xcut,iptrc,necut,cut2e,cut2face,cut2neigh);
       
       UPDATE_DOFS(qstar,rk[2]*dt,q,R,ndof);
 
       COMPUTE_RHS(R,mass,bv,bvd,JinvV,detJ,
 		  bf,bfd,JinvF,faceWeight,fnorm,fflux,
 		  x,qstar,elem2face,iptr,iptf,faces,
-		  pc,pf,pde,d,etype,p,nfaces,nelem,
+		  pc,pf,pccut,pde,d,etype,p,nfaces,nelem,
                   bvcut,bvdcut,detJcut,
                   bfcut,bfdcut,fwcut,fcnorm,fcflux,
-                  xcut,iptrc,iptrcf,necut,cut2e,cut2neigh);
+                  xcut,iptrc,necut,cut2e,cut2face,cut2neigh);
 
 
       UPDATE_DOFS(q,rk[3]*dt,q,R,ndof);

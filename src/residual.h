@@ -158,93 +158,46 @@ void cutVol(double *residual, double *bv, double *bvd, double *q, double *detJ,
 }
 
 
-/*
-  void cutFace(double *residual, double *fflux, double *bf, double *bfd, int *elem2face,
-	     int *iptrf,double *q, int pf, int pde, int d, int e, int p, int ielem)
+//XXX Debug here
+  void cutFace(double *residual, double *fflux, double *bfL, double *bfdL, 
+  	       double *q, int pf, int pde, int d, int e, int p, int ielem)
 {
-  int b,w,i,j,l,ld,m,f,fid,fst,fsgn;
+  int b,w,i,j,l,ld,m,f,floc;
   int nbasis=order2basis[e][p];
   double wgt,v;
   double *bvv,*bvvd;
   int nfields=get_nfields[pde](d);
-  double flux[nfields];
+  double flux;
   int g=p2gf[e][p];
   int nfp=facePerElem[e];
-  double resf[nfields*nbasis];
 
   l=ld=m=0;
-
+  floc = 0; 
   for(i=0;i<nfp;i++)
     {
-      fsgn=elem2face[i]/abs(elem2face[i]);
-      fid=abs(elem2face[i])-1;
-      // make sure to get the right place to take the flux
-      fst=iptrf[pf*(fid+(1-fsgn)/2)+1]-(1-fsgn)*nfields/2+(1+fsgn)*nfields;
       for(w=0;w<ngGL[e][p];w++)
 	{
-	  //v=gaussgl[e][g][(d)*w];
-	  wgt=gaussgl[e][g][(d)*w+1]*fsgn;
+	  wgt=gaussgl[e][g][(d)*w+1]; // Need to scale by cut lenght!!! XXX
           // get the basis and basis derivative for this gauss point
-          bvv=bf+l;
-          bvvd=bf+ld;
+          bvv=bfL+l;
           l+=nbasis;
-          ld+=(nbasis*d);
 
 	  m=0;
 	  for(f=0;f<nfields;f++)
 	    {
-              flux[f]=fflux[fst+f]*wgt;
+              flux=fflux[floc+f]*wgt;
 	      for(b=0;b<nbasis;b++)
 		{
  	          //notice the sign change from the faceIntegral routine
-                  resf[m]+=(flux[f]*bvv[b]);
-		  residual[m]+=(flux[f]*bvv[b]);
+		  residual[m]+=(flux*bvv[b]);
 		  m++;
 		}
 	    }
-	  fst+=(3*fsgn*nfields);
+	  floc+=(3*nfields); // increment through flux array, 3 is where the completed fluxes are computed
 	}
     }
 }
 
-void setCutFaceQuantities(double *fcnorm,double *fcflux,int *cut2neigh, int *iptrcf,
-		       double *fwcut, double *bfcut,double *bfdcut, double *q, 
-		       int nfields, int pfc, int pde, int d , int e, int p)
-{
-  int b,w,i,j,k,l,f,n,fid,floc,fst,fsgn,nst;
-  int nbasis=order2basis[e][p];
-  double qv[nfields];
-  double *bvv;
-  int nfp=facePerElem[e];
-  l=k=0;
-  for(i=0;i<nfp;i++)
-    {
-      fsgn=cut2neigh[i]/abs(cut2neigh[i]);
-      fid=abs(cut2neigh[i])-1;
-      // pick out the right location for inserting fields for this face
-      // the cell with negative sign for the edge fills in backward order
-      nst=iptrcf[pf*fid];
-      fst=iptrcf[pf*(fid+(1-fsgn)/2)+1]-(1-fsgn)*nfields;
-      n=0;
-      for(w=0;w<ngGL[e][p];w++)
-	{
-          bvv=bfcut+l;
-          l+=nbasis;
-	  for(f=0;f<nfields;f++)
-	    {
-	      floc=fst+f;
-	      fcflux[floc]=bvv[0]*q[f*nbasis];
-	      for(b=1;b<nbasis;b++)	    
-		fcflux[floc]+=(bvv[b]*q[f*nbasis+b]);
-	    }	  
-	  for(j=0;j<d*fsgn;j++)
-	    fcnorm[nst+(n++)]=fwcut[k+j];
-          k+=d;
-	  fst+=(3*fsgn*nfields);
-	}
-    }
-}
-*/
 void setFaceQuantities(double *fnorm,double *fflux,int *elem2face, int *iptrf,
 		       double *faceWeight, double *bf,double *bfd, double *q, 
 		       int nfields, int pf, int pde, int d , int e, int p)
@@ -273,7 +226,7 @@ void setFaceQuantities(double *fnorm,double *fflux,int *elem2face, int *iptrf,
           l+=nbasis;
 	  for(f=0;f<nfields;f++)
 	    {
-	      floc=fst+f;
+	      floc=fst+f; // increments through fields and gauss pts
 	      fflux[floc]=bvv[0]*q[f*nbasis];
 	      for(b=1;b<nbasis;b++)	    
 		fflux[floc]+=(bvv[b]*q[f*nbasis+b]); 
@@ -286,14 +239,59 @@ void setFaceQuantities(double *fnorm,double *fflux,int *elem2face, int *iptrf,
     }
 }
 
+
+void setCutFacesQuantities(double *x, double *q, int *iptr, int pc,
+			   double *fcnorm, double *fcflux, 
+			   int *cut2face, int *cut2neigh, double *fwcut, 
+			   double *bfcutL, double *bfcutR,
+			   int nfields, int pde, int d, int e, int p, int eid)
+// this routine accumulates L and R q values to subtract cut face fluxes 
+{
+  int i,j,f,w,b,fid;
+  int nfp = facePerElem[e];
+  int nbasis=order2basis[e][p];
+  int floc = 0; 
+  for(j=0;f<nfp;f++){
+    //need faceid of current uncut face
+    fid=cut2face[j]; 
+    for(w=0;w<ngGL[e][p];w++){
+
+      // L side quantities
+      for(f=0;f<nfields;f++){ 
+        fcflux[floc]=bfcutL[0]*q[iptr[eid*pc]+f*nbasis];
+        for(b=1;b<nbasis;b++)
+          fcflux[floc]+=bfcutL[b]*q[iptr[eid*pc]+f*nbasis+b];
+        floc++; 
+      }// loop over nfields
+ 
+      // R side quantities
+      // XXX need to reset floc!!! XXX
+      for(f=0;f<nfields;f++){ 
+        if(fid!=-1){ // if it's an internal cut face
+          fcflux[floc]=bfcutR[0]*q[iptr[eid*pc]+f*nbasis];
+          for(b=1;b<nbasis;b++)
+            fcflux[floc]+=bfcutR[b]*q[iptr[eid*pc]+f*nbasis+b];    
+	}
+	else{ // force overset fluxes to be inflow (will replace later)
+	  far_field[pde](fcflux[floc]);    
+        } // end of r side
+	floc++; 
+      }// loop over nfields
+
+      floc+=nfields; // third set of values to be computed later, skip ahead to next quad pt
+
+    } // loop over quad pts
+  } // loop over faces
+}
+
 void FILL_FACES(double *x, double *fnorm, double *fflux, int *elem2face,int *iptr, int *iptrf,
 		double *faceWeight, double *bf, double *bfd, double *q, 
 		int pc, int pf, int pde, int d, int e, int p, int nelem, int nfaces,
-		double* fcnorm, double *fcflux, int *cut2neigh, int *iptrc, int * iptrcf, 
-                double *fwcut, double *bfcut, double *bfdcut, int* cut2e, int necut)
+		double* fcnorm, double *fcflux, int *cut2face, int *cut2neigh, int *iptrc,  
+                double *fwcut, double *bfcutL, double *bfcutR, int* cut2e, int necut, int pccut)
 {
-  int i,ix,eid;
-  int ifw,ibf,ibfd,iq;
+  int i,ix,eid,ic2n;
+  int ifw,ibf,ibfd,iq,iflx;
   int nfields=get_nfields[pde](d);
   int nfp=facePerElem[e];
   for(i=0;i<nelem;i++)
@@ -303,31 +301,32 @@ void FILL_FACES(double *x, double *fnorm, double *fflux, int *elem2face,int *ipt
       ibf=iptr[ix+6];
       ibfd=iptr[ix+7];
       ifw=iptr[ix+9];
-      
+
+      // have every elem fill in it's L state
+      // do q = sum(N*q)      
       setFaceQuantities(fnorm,fflux,elem2face+nfp*i, iptrf, 
 			faceWeight+ifw, bf+ibf, bfd+ibfd, q+iq,
 			nfields, pf, pde, d, e, p);
     }
-/*  if(necut>0){
+  if(necut>0){
     for(i=0;i<necut;i++){
       eid=cut2e[i]; 
-      ix=pc*eid;
-      iq=iptr[ix]; 
+
+      // cut cell quantities
+      ix=pccut*i;
       ibf=iptrc[ix+6]; 
       ibfd=iptrc[ix+7]; 
       ifw=iptrc[ix+9]; 
+      iflx=iptrc[ix+11];
+      ic2n=iptrc[ix+12]; 
 
-      //reuse setFaceQ but pass in cut cell quantities instead
-      setFaceQuantities(fcnorm,fflux,elem2face+nfp*eid, iptrf, 
-			faceWeight+ifw, bf+ibf, bfd+ibfd, q+iq,
-			nfields, pf, pde, d, e, p);
-
-      setCutFacesQuantities(x+ix, fcnorm, fcflux,cut2neigh+npf*i, iptrcf, // XXX double check these pointers
-                            fwcut+ifw,bfcut+ibf, bfdcut+ibfd, q+iq, 
-			     nfields, pfc, pde, d, e, p); 
+      // grab both L and R fluxes for cut cells
+      setCutFacesQuantities(x, q, iptr,pc,fcnorm, fcflux+iflx,
+			    cut2face+ic2n,cut2neigh+ic2n,  
+                            fwcut+ifw,bfcutL+ibf, bfcutR+ibfd, 
+			    nfields, pde, d, e, p,eid); 
     }
   }
-*/
 }
 
 void FILL_BC(double *fnorm,double *fflux, int *faces,
@@ -505,14 +504,16 @@ void COMPUTE_RESIDUAL(double *R, double *mass, double *q, double *detJ, double *
 		      double *bv, double *bvd,
 		      double *bf, double *bfd,
 		      int *iptr,int *iptrf,int *elem2face,
-		      int pc, int pf,
+		      int pc, int pf, int pccut,
 		      int pde, int d, int e, int p, int nelem,
                       double *detJcut, double *fcflux,
-                      double *bvcut, double *bvdcut, double *bfcut, double *bfdcut,
-                      int *iptrc, int *iptrcf, int necut, int* cut2e)
+                      double *bvcut, double *bvdcut, 
+		      double *bfcutL, double *bfdcutL,
+		      double *bfcutR, double *bfdcutR,
+                      int *iptrc, int necut, int* cut2e, int* cut2neigh)
 
 {
-  int i,ix,idet,im,iR,iq,ibv,ibvd,ibf,ibfd;
+  int i,ix,idet,im,iR,iq,ibv,ibvd,ibf,ibfd,eid,iflx,ic2n;
   int nfp=facePerElem[e];
 
   //Accumulate residual on all elements
@@ -533,24 +534,24 @@ void COMPUTE_RESIDUAL(double *R, double *mass, double *q, double *detJ, double *
     }
 
   //Modify residual for cut cells
-  /*
   for(i=0;i<necut;i++)
     {
       // get original element quantities
       eid = cut2e[i]; 
       ix=pc*eid;
-      iR=iq=iptrc[ix];
+      iR=iq=iptr[ix];
 
       //cut cell quantities
-      ix=pc*i; 
+      ix=pccut*i; 
       ibv=iptrc[ix+2];
       ibvd=iptrc[ix+3];
       idet=iptrc[ix+5];
       ibf=iptrc[ix+6];
       ibfd=iptrc[ix+7];
-            
+      iflx=iptrc[ix+11];
+      
       cutVol(R+iR,bvcut+ibv,bvdcut+ibvd,q+iq,detJcut+idet,pde,d,e,p);
-      cutFace(R+iR,fcflux,bfcut+ibf,bfdcut+ibfd,cut2neigh+nfp*i,iptrcf,q,pf,pde,d,e,p,i);
+      cutFace(R+iR,fcflux+iflx,bfcutL+ibf,bfdcutL+ibfd,q,pf,pde,d,e,p,i);
     }
 
   //Solve each element
@@ -561,25 +562,25 @@ void COMPUTE_RESIDUAL(double *R, double *mass, double *q, double *detJ, double *
       im=iptr[ix+10];
       invertMass(mass+im,R+iR,pde,d,e,p,i);
     }
-*/
 }
 
 void COMPUTE_RHS(double *R,double *mass,double *bv, double *bvd, double *JinvV, double *detJ,
 		 double *bf, double *bfd, double *JinvF,
 		 double *faceWeight, double *fnorm, double *fflux,
 		 double *x, double *q, int *elem2face, int *iptr, int *iptrf, int *faces,
-		 int pc, int pf, int pde, int d , int e, int p, int nfaces, int nelem,
+		 int pc, int pf, int pccut, int pde, int d , int e, int p, int nfaces, int nelem,
                  double *bvcut, double *bvdcut,double *detJcut,
-                 double *bfcut, double *bfdcut,double *fwcut,
+                 double *bfcutL, double *bfcutR,double *fwcut,
+                 double *bfdcutL, double *bfdcutR,
                  double *fcnorm,double *fcflux,double *xcut, int *iptrc,
-                 int *iptrcf, int necut, int* cut2e, int* cut2neigh)
+                 int necut, int* cut2e, int *cut2face, int* cut2neigh)
 {
 
   FILL_FACES(x, fnorm, fflux, elem2face, iptr, iptrf, 
 	     faceWeight, bf, bfd, q, 
 	     pc, pf, pde, d, e, p, nelem,nfaces, 
-	     fcnorm, fcflux, cut2neigh, iptrc, iptrcf, 
-             fwcut, bfcut, bfdcut, cut2e, necut);
+	     fcnorm, fcflux, cut2face, cut2neigh, iptrc,  
+             fwcut, bfcutL, bfcutR, cut2e, necut,pccut);
 
   FILL_BC(fnorm,fflux,faces,pde,d,e,p,nfaces);
 
@@ -590,11 +591,12 @@ void COMPUTE_RHS(double *R,double *mass,double *bv, double *bvd, double *JinvV, 
   COMPUTE_RESIDUAL(R,mass,q,detJ,fflux,
 		   bv,bvd,bf,bfd,
 		   iptr,iptrf,elem2face,
-		   pc,pf,
+		   pc,pf,pccut,
 		   pde,d, e, p, nelem,
                    detJcut, fcflux, 
-                   bvcut, bvdcut, bfcut, bfdcut, 
-                   iptrc, iptrcf, necut, cut2e); 
+                   bvcut, bvdcut, bfcutL, bfdcutL, 
+		   bfcutR, bfdcutR,
+                   iptrc, necut, cut2e, cut2neigh); 
 
 
 }
