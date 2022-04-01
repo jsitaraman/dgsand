@@ -359,7 +359,7 @@ void cut_mass_matrix(double *M, double *x, double *Jinv, double *xcut, double *d
 	      // revaluate this if mesh is deforming 
 
               // subtract cut region from original mass matrix
-              CutCellInterp(x,d,e,p+1,Jinv,ijk,xcut,u); //,invJcut,detJcut); 
+              CutCellInterp(x,d,e,p,Jinv,ijk,xcut,u); //,invJcut,detJcut); 
 //              printf("ijk = %f %f, u = %f %f\n",ijk[0],ijk[1],u[0],u[1]);
 //              printf("wgt = %f, basis[%i] = %f, basis[%i] = %f\n",wgt,i,basis[e][i](u),j,basis[e][j](u));
 	      M[ij]-=(wgt*basis[e][i](u)*basis[e][j](u));
