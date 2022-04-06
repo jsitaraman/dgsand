@@ -74,6 +74,7 @@ void main(void)
   /* parse inputs */
   parseInputs("input.dgsand",&pde,&itype,&nsteps,&dt,&nsave);
   nfields=get_nfields[pde](d);
+printf("NFIELDS = %i\n",nfields); 
 
   /* read a 2D grid */
   readgrid2D(&xcoord,&elem2node,&ibc,&p,&nnodes,&nelem,&nbnodes);
@@ -246,7 +247,7 @@ void main(void)
   
   for(n=1;n<=nsteps;n++)
     {
-
+printf("***************************\nCOMPUTE_RHS 1\n***************************\n");
       COMPUTE_RHS(R,mass,bv,bvd,JinvV,detJ,
 		  bf,bfd,JinvF,faceWeight,fnorm,fflux,
 		  x,q,elem2face,iptr,iptf,faces,
@@ -257,6 +258,7 @@ void main(void)
       
       UPDATE_DOFS(qstar,rk[1]*dt,q,R,ndof);
       UPDATE_DOFS(q,rk[0]*dt,q,R,ndof);
+printf("***************************\nCOMPUTE_RHS 2\n***************************\n");
       
       COMPUTE_RHS(R,mass,bv,bvd,JinvV,detJ,
 		  bf,bfd,JinvF,faceWeight,fnorm,fflux,
@@ -267,6 +269,7 @@ void main(void)
                   xcut,iptrc,necut,cut2e,cut2face,cut2neigh);
       
       UPDATE_DOFS(qstar,rk[2]*dt,q,R,ndof);
+printf("***************************\nCOMPUTE_RHS 3\n***************************\n");
 
       COMPUTE_RHS(R,mass,bv,bvd,JinvV,detJ,
 		  bf,bfd,JinvF,faceWeight,fnorm,fflux,
@@ -293,4 +296,5 @@ void main(void)
       printf("%d\t%18.16f\t%d\t%18.16f\n",n,rnorm,imax,rmax);
       if (n%nsave==0) OUTPUT_TECPLOT(n,x,q,pc,iptr,pde,d,etype,p,nelem);
     }
+
 }

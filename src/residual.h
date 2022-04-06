@@ -177,7 +177,7 @@ void cutVol(double *residual, double *bv, double *bvd, double *q, double *detJ,
     {
       for(w=0;w<ngGL[e][p];w++)
 	{
-	  wgt=gaussgl[e][g][(d)*w+1]; // Need to scale by cut lenght!!! XXX
+	  wgt=gaussgl[e][g][(d)*w+1]; 
           // get the basis and basis derivative for this gauss point
           bvv=bfL+l;
           l+=nbasis;
@@ -208,6 +208,13 @@ void setFaceQuantities(double *fnorm,double *fflux,int *elem2face, int *iptrf,
   double *bvv;
   int nfp=facePerElem[e];
   l=k=0;
+for(i=0;i<nbasis;i++){
+  printf("\tq = ");
+  for(f=0;f<nfields;f++)
+    printf("%f\t",q[f*nbasis+i]);
+}
+printf("\n");
+
   for(i=0;i<nfp;i++)
     {
       fsgn=elem2face[i]/abs(elem2face[i]);
@@ -244,42 +251,60 @@ void setCutFacesQuantities(double *x, double *q, int *iptr, int pc,
 			   double *fcnorm, double *fcflux, 
 			   int *cut2face, int *cut2neigh, double *fwcut, 
 			   double *bfcutL, double *bfcutR,
-			   int nfields, int pde, int d, int e, int p, int eid)
+			   int nfields, int pde, int d, int e, int p, int icut, int iorig)
 // this routine accumulates L and R q values to subtract cut face fluxes 
 {
-  int i,j,f,w,b,fid;
+  int i,j,f,w,b,fid,eid;
   int nfp = facePerElem[e];
   int nbasis=order2basis[e][p];
   int floc = 0; 
-  for(j=0;f<nfp;f++){
+  for(j=0;j<nfp;j++){
     //need faceid of current uncut face
     fid=cut2face[j]; 
     for(w=0;w<ngGL[e][p];w++){
+      printf("\n\tface %i, gauss %i\n",j,w);
+      printf("\t\tqL[%i-%i] = ",floc,floc+nfields-1);
 
       // L side quantities
+      eid = iorig;
       for(f=0;f<nfields;f++){ 
         fcflux[floc+f]=bfcutL[0]*q[iptr[eid*pc]+f*nbasis];
         for(b=1;b<nbasis;b++)
           fcflux[floc+f]+=bfcutL[b]*q[iptr[eid*pc]+f*nbasis+b];
+printf("%f\t",fcflux[floc+f]);
       }// loop over nfields
+printf("\n");
  
+    
       // R side quantities
-      // XXX need to reset floc!!! XXX
-      for(f=0;f<nfields;f++){ 
-        if(fid!=-1){ // if it's an internal cut face
-          fcflux[floc+f]=bfcutR[0]*q[iptr[eid*pc]+f*nbasis];
-          for(b=1;b<nbasis;b++)
-            fcflux[floc+f]+=bfcutR[b]*q[iptr[eid*pc]+f*nbasis+b];    
-	}
-	else{ // force overset fluxes to be inflow (will replace later)
-	  far_field[pde](fcflux[floc+f]);    
-        } // end of r side
-      }// loop over nfields
+      eid = cut2neigh[j];
+printf("R neigh = orig elem %i\n",eid);
+for(b=0;b<nbasis;b++)
+printf("bR[%i] = %f\n",b,bfcutR[b]);
 
-      floc+=nfields; // third set of values to be computed later, skip ahead to next quad pt
+      printf("\t\tqR[%i-%i] = ",floc+nfields,floc+2*nfields);
+      if(eid!=-1 && fid!=-1){ // if it's an internal cut face
+        for(f=0;f<nfields;f++){ 
+          fcflux[floc+f+nfields]=bfcutR[0]*q[iptr[eid*pc]+f*nbasis];
+          for(b=1;b<nbasis;b++)
+            fcflux[floc+f+nfields]+=bfcutR[b]*q[iptr[eid*pc]+f*nbasis+b];    
+printf("%f\t",fcflux[floc+f+nfields]);
+        }// loop over nfields
+      }
+      else{ // force overset fluxes to be inflow (will replace later)
+	  far_field[pde](fcflux+floc+nfields);    
+for(f=0;f<nfields;f++)
+  printf("%f\t",fcflux[floc+f+nfields]);
+      } // end of r side
+printf("\n");
+
+      floc+=3*nfields; // third set of values to be computed later, skip ahead to next quad pt
 
     } // loop over quad pts
   } // loop over faces
+
+
+
 }
 
 void FILL_FACES(double *x, double *fnorm, double *fflux, int *elem2face,int *iptr, int *iptrf,
@@ -302,6 +327,7 @@ void FILL_FACES(double *x, double *fnorm, double *fflux, int *elem2face,int *ipt
 
       // have every elem fill in it's L state
       // do q = sum(N*q)      
+      printf("\tOrig elem %i\n",i);
       setFaceQuantities(fnorm,fflux,elem2face+nfp*i, iptrf, 
 			faceWeight+ifw, bf+ibf, bfd+ibfd, q+iq,
 			nfields, pf, pde, d, e, p);
@@ -313,16 +339,16 @@ void FILL_FACES(double *x, double *fnorm, double *fflux, int *elem2face,int *ipt
       // cut cell quantities
       ix=pccut*i;
       ibf=iptrc[ix+6]; 
-      ibfd=iptrc[ix+7]; 
       ifw=iptrc[ix+9]; 
       iflx=iptrc[ix+11];
       ic2n=iptrc[ix+12]; 
 
       // grab both L and R fluxes for cut cells
+      printf("\tCut elem %i\n",i);
       setCutFacesQuantities(x, q, iptr,pc,fcnorm, fcflux+iflx,
 			    cut2face+ic2n,cut2neigh+ic2n,  
-                            fwcut+ifw,bfcutL+ibf, bfcutR+ibfd, 
-			    nfields, pde, d, e, p,eid); 
+                            fwcut+ifw,bfcutL+ibf, bfcutR+ibf, 
+			    nfields, pde, d, e, p, i, eid); 
     }
   }
 }
