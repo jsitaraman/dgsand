@@ -257,7 +257,10 @@ void setCutFacesQuantities(double *x, double *q, int *iptr, int pc,
   int i,j,f,w,b,fid,eid;
   int nfp = facePerElem[e];
   int nbasis=order2basis[e][p];
-  int floc = 0; 
+  int floc = 0;
+  int bloc = 0; 
+
+ 
   for(j=0;j<nfp;j++){
     //need faceid of current uncut face
     fid=cut2face[j]; 
@@ -268,9 +271,9 @@ void setCutFacesQuantities(double *x, double *q, int *iptr, int pc,
       // L side quantities
       eid = iorig;
       for(f=0;f<nfields;f++){ 
-        fcflux[floc+f]=bfcutL[0]*q[iptr[eid*pc]+f*nbasis];
+        fcflux[floc+f]=bfcutL[bloc]*q[iptr[eid*pc]+f*nbasis];
         for(b=1;b<nbasis;b++)
-          fcflux[floc+f]+=bfcutL[b]*q[iptr[eid*pc]+f*nbasis+b];
+          fcflux[floc+f]+=bfcutL[bloc+b]*q[iptr[eid*pc]+f*nbasis+b];
 printf("%f\t",fcflux[floc+f]);
       }// loop over nfields
 printf("\n");
@@ -280,15 +283,16 @@ printf("\n");
       eid = cut2neigh[j];
 printf("R neigh = orig elem %i\n",eid);
 for(b=0;b<nbasis;b++)
-printf("bR[%i] = %f\n",b,bfcutR[b]);
+printf("bR[%i] = %f\n",b,bfcutR[bloc+b]);
 
       printf("\t\tqR[%i-%i] = ",floc+nfields,floc+2*nfields);
       if(eid!=-1 && fid!=-1){ // if it's an internal cut face
         for(f=0;f<nfields;f++){ 
-          fcflux[floc+f+nfields]=bfcutR[0]*q[iptr[eid*pc]+f*nbasis];
+          fcflux[floc+f+nfields]=bfcutR[bloc]*q[iptr[eid*pc]+f*nbasis];
           for(b=1;b<nbasis;b++)
-            fcflux[floc+f+nfields]+=bfcutR[b]*q[iptr[eid*pc]+f*nbasis+b];    
+            fcflux[floc+f+nfields]+=bfcutR[bloc+b]*q[iptr[eid*pc]+f*nbasis+b];    
 printf("%f\t",fcflux[floc+f+nfields]);
+
         }// loop over nfields
       }
       else{ // force overset fluxes to be inflow (will replace later)
@@ -297,7 +301,7 @@ for(f=0;f<nfields;f++)
   printf("%f\t",fcflux[floc+f+nfields]);
       } // end of r side
 printf("\n");
-
+      bloc+=nbasis;
       floc+=3*nfields; // third set of values to be computed later, skip ahead to next quad pt
 
     } // loop over quad pts
