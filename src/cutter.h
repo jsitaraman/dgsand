@@ -11,7 +11,7 @@ void JacP1Tri( double *jac, double *xtmp, double* det){
   *det = jac[0]*jac[3]-jac[1]*jac[2];
 }
 
-void CUT_CELLS(double *x, double* xcut, int* iptr, int* iptrc, int* cut2e, int *necut, int d, int e, int nelem, int ncfaces, int pc, int *cut2face, int* cut2neigh, int* elem2face, int* faces)
+void CUT_CELLS(double *x, double* xcut, int* iptr, int* iptrc, int* cut2e, int *necut, int d, int e, int nelem, int pc, int *cut2face, int* cut2neigh, int* elem2face, int* faces)
 // This routine cuts the cells according to some arbitrary vertical line. 
 // This is for testing purposes and will eventually be replaced with 
 // an actual cutting routine.
@@ -20,12 +20,8 @@ void CUT_CELLS(double *x, double* xcut, int* iptr, int* iptrc, int* cut2e, int *
 //  xcut - global node coords of the cut cells
 //  cut2e - map between cut cell id and original elem id
 //  necut - number of cut regions
-//  ncfaces - number of faces of cut cells
 //  /cut2neigh - map between cut face and R side element neighbor
 {
-
-// XXX I don't yet understand what ncfaces is supposed to mean.
-// Need to verify this!
 
   // Define the cutting boundary as x = x0 (cutting away x < x0)
   double x0 = -0.5; // x coord where cut done
@@ -176,7 +172,6 @@ printf("\tvtx coords: (%f, %f), (%f, %f), (%f, %f)\n",xcut[n*3*2], xcut[n*3*2+3]
 printf("\telem neigh(%i, %i, %i) = %i %i %i\n",3*n,3*n+1,3*n+2,cut2neigh[3*n],cut2neigh[3*n+1],cut2neigh[3*n+2]);
         n++; 
         (*necut)++;
-        ncfaces = ncfaces+3; 
       }
 
       // quad cut region (2 cut nodes, 2 intersect pts)
@@ -264,7 +259,6 @@ printf("\tvtx coords: (%f, %f), (%f, %f), (%f, %f)\n",xcut[n*3*2], xcut[n*3*2+3]
 printf("\telem neigh(%i, %i, %i) = %i %i %i\n",3*n,3*n+1,3*n+2,cut2neigh[3*n],cut2neigh[3*n+1],cut2neigh[3*n+2]);
         n++; 
         (*necut)++;
-        ncfaces = ncfaces+3; 
 
 	//Second triangle (cut node 1, both intersect nodes)
         xtmp[0] = x0; 
@@ -315,7 +309,6 @@ printf("\tvtx coords: (%f, %f), (%f, %f), (%f, %f)\n",xcut[n*3*2], xcut[n*3*2+3]
 printf("\telem neigh(%i, %i, %i) = %i %i %i\n",3*n,3*n+1,3*n+2,cut2neigh[3*n],cut2neigh[3*n+1],cut2neigh[3*n+2]);
         n++; 
         (*necut)++;
-        ncfaces = ncfaces+3; 
       }
   }
 

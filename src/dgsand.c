@@ -33,7 +33,7 @@ void main(void)
   double *bfcutR,*bfdcutR;        // face quantities
   double *mass;                              // mass matrix
   double *fnorm,*fflux;                      // face normals and face flux
-  double *fcnorm,*fcflux;                      // face normals and face flux
+  double *fcflux;                      // face normals and face flux
   double xsum;
   int *cut2e;
 
@@ -148,7 +148,6 @@ printf("NFIELDS = %i\n",nfields);
 
   // Arbitrarily cut the cells  along some straight line
   int necut=6; // XXX HACKING THESE IN. NEEDS TO MATCH GRIDS
-  int ncfaces=3*necut; 
   xcut       =dgsand_alloc(double,(d*(nbasisx))*necut);  
   cut2e      =dgsand_alloc(int,necut);  
   cut2face   =dgsand_alloc(int,necut*3);   // map between cut face and orig face id
@@ -169,8 +168,7 @@ printf("NFIELDS = %i\n",nfields);
   bfdcutR    =dgsand_alloc(double,(d*nbasis*ngGL[etype][p]*fpe*necut));// basis der. value at face QP
   fwcut     =dgsand_alloc(double,(d*ngGL[etype][p]*fpe*necut));       // faceNormals at face QP
 
-  fcnorm     =dgsand_alloc(double,(d*ngGL[etype][p]*ncfaces));          // face normals
-  fcflux     =dgsand_alloc(double,(3*nfields*ngGL[etype][p]*ncfaces));  // face fields and flux        
+  fcflux     =dgsand_alloc(double,(3*nfields*ngGL[etype][p]*fpe*necut));  // face fields and flux        
 
   
   // Assume for now all cuts are triangles
@@ -189,7 +187,7 @@ printf("NFIELDS = %i\n",nfields);
       iptrc[ix+6]+=i*(nbasis*ngGL[etype][p]*fpe); // bf (this is NOT same per element type)
       iptrc[ix+7]+=i*(d*nbasis*ngGL[etype][p]*fpe);// bfd
       iptrc[ix+8]+=i*(d*d*ngGL[etype][p]*fpe);     // JinvF
-      iptrc[ix+9]+=i*(d*ngGL[etype][p]*fpe);       // faceWeight & faceNormal
+      iptrc[ix+9]+=i*(d*ngGL[etype][p]*fpe);       // faceWeight
       iptrc[ix+10]+=i*(nbasis*nbasis);             // mass 
 
       iptrc[ix+11]+=i*(fpe*3*nfields*ngGL[etype][p]);  //faceFlux
@@ -198,13 +196,15 @@ printf("NFIELDS = %i\n",nfields);
 
   // XXX Hack together cut cell info 
   printf("Entering CUT Cells\n" ); 
-  CUT_CELLS(x, xcut, iptr, iptrc, cut2e, &necut, d, etype, nelem, ncfaces, pc, cut2face,cut2neigh, elem2face, faces);
+  CUT_CELLS(x, xcut, iptr, iptrc, cut2e, &necut, d, etype, nelem, pc, cut2face,cut2neigh, elem2face, faces);
   for(i=0;i<necut;i++)
     printf("cut elem %i: neigh = %i %i %i\n",i,cut2neigh[3*i+0],cut2neigh[3*i+1],cut2neigh[3*i+2]);
  
   /* compute the mass matrix for each element */
   MASS_MATRIX(mass,x,iptr,d,etype,p,nelem,pc);
 
+
+printf("\nDEBUG: Elem 0 Orig Mass: [%f %f %f; %f %f %f; %f %f %f]\n",mass[0],mass[1],mass[2],mass[3],mass[4],mass[5],mass[6],mass[7],mass[8]);
 
   /* Handle cut cells */
 
@@ -217,6 +217,7 @@ printf("NFIELDS = %i\n",nfields);
     CUT_MASS_MATRIX(mass,x,JinvV,iptr,xcut,detJcut,iptrc,d,etype,p,nelem,pc,pccut,necut,cut2e);
 
   }
+printf("\nDEBUG: Elem 0 Cut Mass: [%f %f %f; %f %f %f; %f %f %f]\n",mass[0],mass[1],mass[2],mass[3],mass[4],mass[5],mass[6],mass[7],mass[8]);
 
 
 
@@ -253,7 +254,7 @@ printf("***************************\nCOMPUTE_RHS 1\n***************************\
 		  x,q,elem2face,iptr,iptf,faces,
 		  pc,pf,pccut,pde,d,etype,p,nfaces,nelem,
                   bvcut,bvdcut,detJcut,
-                  bfcutL,bfcutR,fwcut,fcnorm,fcflux,
+                  bfcutL,bfcutR,fwcut,fcflux,
                   xcut,iptrc,necut,cut2e,cut2face,cut2neigh);
       
       UPDATE_DOFS(qstar,rk[1]*dt,q,R,ndof);
@@ -265,7 +266,7 @@ printf("***************************\nCOMPUTE_RHS 2\n***************************\
 		  x,qstar,elem2face,iptr,iptf,faces,
 		  pc,pf,pccut,pde,d,etype,p,nfaces,nelem,
                   bvcut,bvdcut,detJcut,
-                  bfcutL,bfcutR,fwcut,fcnorm,fcflux,
+                  bfcutL,bfcutR,fwcut,fcflux,
                   xcut,iptrc,necut,cut2e,cut2face,cut2neigh);
       
       UPDATE_DOFS(qstar,rk[2]*dt,q,R,ndof);
@@ -276,7 +277,7 @@ printf("***************************\nCOMPUTE_RHS 3\n***************************\
 		  x,qstar,elem2face,iptr,iptf,faces,
 		  pc,pf,pccut,pde,d,etype,p,nfaces,nelem,
                   bvcut,bvdcut,detJcut,
-                  bfcutL,bfcutR,fwcut,fcnorm,fcflux,
+                  bfcutL,bfcutR,fwcut,fcflux,
                   xcut,iptrc,necut,cut2e,cut2face,cut2neigh);
 
 
