@@ -102,6 +102,10 @@ void BasesVCut(double *x, double *Jinv,double *detJ,
   //Loop over vol quad pts  
   double ijk[d]; 
   l=n=m=ld=ii=0;
+//  printf("  orig tri = %f %f; %f %f; %f %f\n",x[iptr[iorig*pc+1]],x[iptr[iorig*pc+1]+3],x[iptr[iorig*pc+1]+1],x[iptr[iorig*pc+1]+4],x[iptr[iorig*pc+1]+2],x[iptr[iorig*pc+1]+5]);
+//  printf("  cut tri = %f %f; %f %f; %f %f\n",xcut[0],xcut[3],xcut[1],xcut[4],xcut[2],xcut[5]);
+
+  printf("orig invJ = [%f %f; %f %f]\n",Jinv[0],Jinv[1],Jinv[2],Jinv[3]); 
   for(w=0; w<ngElem[e][p]; w++){
 
     // get local coord of quad pt
@@ -114,7 +118,6 @@ if(icut==2){
 printf("w = %i, uOrig = %f %f\n",w,u[0],u[1]);
 }
     //store bvcut at each quad pt
-    // This needs to be reordered according to original quad pts
     for(b=0;b<nbasis;b++){ // loop over bases
       for(j=0;j<d;j++){
 	    bd[b][j]=basis_d[e][b*d+j](u); // accumulate bases derivs at quad pt
@@ -141,16 +144,21 @@ printf("b = %i, bvcut = %f %f\n",b,bvcut[l-1]);
     //invert jacobian (stored in jac) and get detJ
     if (d==2) invmat2x2(mat,jac,det);
     for(i=0;i<d;i++)
-      for(j=0;j<d;j++) 
+      for(j=0;j<d;j++){ 
         Jinvcut[ii++]=jac[i][j];
+if(icut==2) printf("cut e2 Jinvcut[%i,%i] = %f\n",jac[i][j]); 
+      }
 
     // get basis derivs dN/dx = dN/dr*(dx/dr)^-1
+    // Use full cell inv Jacobiain b/c we're using full cell shape functions
     if (p > 0) {
       for(b=0;b<nbasis;b++)
 	for(i=0;i<d;i++){
-	   bvdcut[ld]=jac[0][i]*bd[b][0];
+//	   bvdcut[ld]=jac[0][i]*bd[b][0];
+	   bvdcut[ld]=Jinv[i]*bd[b][0];
 	   for(j=1;j<d;j++)
-	     bvdcut[ld]+=jac[j][i]*bd[b][j]; 
+//	     bvdcut[ld]+=jac[j][i]*bd[b][j]; 
+	     bvdcut[ld]+=Jinv[j*d+i]*bd[b][j]; 
 	   ld++;
         }
     }
@@ -179,8 +187,6 @@ void CutFaceWeights(double *x, double *Jinv, int pc, int* iptr, double *xcut, do
 
   // for every face
   double ijk[2];
-  printf("  orig tri = %f %f; %f %f; %f %f\n",x[iptr[iorig*pc+1]],x[iptr[iorig*pc+1]+3],x[iptr[iorig*pc+1]+1],x[iptr[iorig*pc+1]+4],x[iptr[iorig*pc+1]+2],x[iptr[iorig*pc+1]+5]);
-  printf("  cut tri = %f %f; %f %f; %f %f\n",xcut[0],xcut[3],xcut[1],xcut[4],xcut[2],xcut[5]);
 
   ////printf("---------------\n");
   m=l=0;
@@ -207,7 +213,7 @@ void CutFaceWeights(double *x, double *Jinv, int pc, int* iptr, double *xcut, do
             eid = iorig; 
             CutCellInterp(x+iptr[pc*eid+1],d,e,p,Jinv+iptr[pc*eid+8],ijk,xcut,uL); //,Jinvcut,detJcut);  
 //            printf("\tijk = %f %f\n",ijk[0],ijk[1]); 	 
-//            printf("\tuL = %f %f\n",uL[0],uL[1]); 	 
+            printf("\tuL = %f %f\n",uL[0],uL[1]); 	 
 
 	    eid = cut2neigh[f];
   	    printf("  neig tri = %f %f; %f %f; %f %f\n",x[iptr[eid*pc+1]],x[iptr[eid*pc+1]+3],x[iptr[eid*pc+1]+1],x[iptr[eid*pc+1]+4],x[iptr[eid*pc+1]+2],x[iptr[eid*pc+1]+5]);
@@ -263,6 +269,7 @@ void CutFaceWeights(double *x, double *Jinv, int pc, int* iptr, double *xcut, do
 	    // do faceWeight = Ja x zhat
 	    // This gives me the normal vector
 	    cross(&(faceWeight[2*m]),Ja,Jb,d); 
+            printf("debug: fw = %f %f\n",faceWeight[2*m],faceWeight[2*m+1]);
 
 
             // get [dx/dr]^-1
@@ -466,6 +473,14 @@ void Jacobian(double *x,double *bv, double *bvd, double *Jinv,
 	  if (p > 0) bv[l++]=basis[e][b](u); // filled in as bv[nGL][nbasis]
 	}
       if (p==0) bv[l++]=1;
+
+      for(b=0;b<nbasis;b++)
+        for(i=0;i<d;i++)
+	  printf("\tbd[%i][%i] = %f\n",b,i,bd[b][i]);
+
+      for(b=0;b<nbasis;b++){
+printf("\t x[%i] = %f, y[%i] = %f\n",b,x[b],x[nbasis+b]);
+}
       //build jacobian dx/dr
       for(i=0;i<d;i++)
 	{
@@ -476,11 +491,18 @@ void Jacobian(double *x,double *bv, double *bvd, double *Jinv,
 		mat[i][j]+=x[i*nbasis+b]*bd[b][j];
 	    }
 	}
+
+      for(i=0;i<d;i++)
+	  for(j=0;j<d;j++)
+		printf("\tJac[%i][%i] = %f\n",i,j,mat[i][j]);
+
       //invert jacobian (stored in jac) and get detJ
       if (d==2) invmat2x2(mat,jac,det);
       for(i=0;i<d;i++)
-	for(j=0;j<d;j++) 
+	for(j=0;j<d;j++) {
 	  Jinv[ij++]=jac[i][j];
+	  printf("\tJinv[%i][%i] = %f \n",i,j,jac[i][j]);
+        }
 
       // get basis derivs dN/dx = dN/dr*(dx/dr)^-1
       if (p > 0) {
@@ -498,6 +520,16 @@ void Jacobian(double *x,double *bv, double *bvd, double *Jinv,
       }
       detJ[n++]=det;
     }
+
+ld = 0; 
+      for(b=0;b<nbasis;b++)
+        for(i=0;i<d;i++){
+printf("\tdebug: b = %i, i = %i,  bvd[%i] = %f\n",b,i,ld,bvd[ld]);
+ld++; 
+	}
+printf("\n"); 
+
+
 }
 
 void FaceWeights(double *x, double *bf, double *bfd, double *Jinv, double *faceWeight, 
@@ -625,6 +657,7 @@ void COMPUTE_GRID_METRICS(double *x, double *bv, double *bvd,double *JinvV,
       ijf  =iptr[ip+8];
       ifw  =iptr[ip+9];
 
+printf("ComputeGrid Metrics Elem %i\n", i); 
       Jacobian(x+ix, bv+ibv, bvd+ibvd, JinvV+ij,detJ+idetj,d,e,p); // basis on vol
       FaceWeights(x+ix,bf+ibf,bfd+ibfd,JinvF+ijf,faceWeight+ifw,d,e,p); // basis on face
     }

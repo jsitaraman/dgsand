@@ -248,7 +248,7 @@ printf("\nDEBUG: Elem 0 Cut Mass: [%f %f %f; %f %f %f; %f %f %f]\n",mass[0],mass
   
   for(n=1;n<=nsteps;n++)
     {
-printf("***************************\nCOMPUTE_RHS 1\n***************************\n");
+//printf("***************************\nCOMPUTE_RHS 1\n***************************\n");
       COMPUTE_RHS(R,mass,bv,bvd,JinvV,detJ,
 		  bf,bfd,JinvF,faceWeight,fnorm,fflux,
 		  x,q,elem2face,iptr,iptf,faces,
@@ -259,7 +259,7 @@ printf("***************************\nCOMPUTE_RHS 1\n***************************\
       
       UPDATE_DOFS(qstar,rk[1]*dt,q,R,ndof);
       UPDATE_DOFS(q,rk[0]*dt,q,R,ndof);
-printf("***************************\nCOMPUTE_RHS 2\n***************************\n");
+//printf("***************************\nCOMPUTE_RHS 2\n***************************\n");
       
       COMPUTE_RHS(R,mass,bv,bvd,JinvV,detJ,
 		  bf,bfd,JinvF,faceWeight,fnorm,fflux,
@@ -270,7 +270,7 @@ printf("***************************\nCOMPUTE_RHS 2\n***************************\
                   xcut,iptrc,necut,cut2e,cut2face,cut2neigh);
       
       UPDATE_DOFS(qstar,rk[2]*dt,q,R,ndof);
-printf("***************************\nCOMPUTE_RHS 3\n***************************\n");
+//printf("***************************\nCOMPUTE_RHS 3\n***************************\n");
 
       COMPUTE_RHS(R,mass,bv,bvd,JinvV,detJ,
 		  bf,bfd,JinvF,faceWeight,fnorm,fflux,
