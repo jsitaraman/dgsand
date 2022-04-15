@@ -11,23 +11,16 @@ void JacP1Tri( double *jac, double *xtmp, double* det){
   *det = jac[0]*jac[3]-jac[1]*jac[2];
 }
 
-void CUT_CELLS(double *x, double* xcut, int* iptr, int* iptrc, int* cut2e, int *necut, int d, int e, int nelem, int pc, int *cut2face, int* cut2neigh, int* elem2face, int* faces)
-// This routine cuts the cells according to some arbitrary vertical line. 
-// This is for testing purposes and will eventually be replaced with 
-// an actual cutting routine.
-//
-//OUTPUTS: 
-//  xcut - global node coords of the cut cells
-//  cut2e - map between cut cell id and original elem id
-//  necut - number of cut regions
-//  /cut2neigh - map between cut face and R side element neighbor
+int FIND_NECUT(double x0, double *x,int* iptr, int d, int e, int p, int nelem, int pc)
 {
-
+//Hack just to find ne cut. Only need this for debugging cases, 
+//we'll actually get this from PUNDIT later, we just need necut 
+//so we can allocate all the other matrices
+//
   // Define the cutting boundary as x = x0 (cutting away x < x0)
-  double x0 = -0.5; // x coord where cut done
 
   int nfp=facePerElem[e];
-  int i,j,k,l,m,n,tally[nfp],sum,ix,jp1,jp2,j0,fid;
+  int i,f,j,k,l,m,n,tally[nfp],sum,ix,jp1,jp2,j0,fid;
 
   double jac[4],det=-1000; 
   double u[2],a,b,ycut1,ycut2;
@@ -35,9 +28,9 @@ void CUT_CELLS(double *x, double* xcut, int* iptr, int* iptrc, int* cut2e, int *
   double xtmp[6];
   int vcut[2],vorig[2],neigh[3],forig[3];
 
-  int nbasis=order2basis[e][1]; // first order bases are interpolative at nodes so it's ok to do this?
+  int nbasis=order2basis[e][p]; // first order bases are interpolative at nodes so it's ok to do this?
   double bv[nbasis*nfp];
-  (*necut) = 0;
+  int necut = 0;
   n = 0; 
   for(i=0;i<nelem;i++){
       ix=iptr[pc*i+1];
@@ -79,6 +72,77 @@ void CUT_CELLS(double *x, double* xcut, int* iptr, int* iptrc, int* cut2e, int *
         }
       }
 
+      //increment necut by 1 or 2 depending on how it was cut
+      if(sum<nfp) necut+=sum; 
+  }
+  return necut; 
+}
+
+void CUT_CELLS(double x0, double *x, double* xcut, int* iptr, int* cut2e, int d, int e, int p, int nelem, int pc, int *cut2face, int* cut2neigh, int* elem2face, int* faces)
+// This routine cuts the cells according to some arbitrary vertical line. 
+// This is for testing purposes and will eventually be replaced with 
+// an actual cutting routine.
+//
+//OUTPUTS: 
+//  xcut - global node coords of the cut cells
+//  cut2e - map between cut cell id and original elem id
+//  cut2neigh - map between cut face and R side element neighbor
+{
+
+  // Define the cutting boundary as x = x0 (cutting away x < x0)
+
+  int nfp=facePerElem[e];
+  int i,f,j,k,l,m,n,tally[nfp],sum,ix,jp1,jp2,j0,fid;
+
+  double jac[4],det=-1000; 
+  double u[2],a,b,ycut1,ycut2;
+  double xvert[6]; // x1 y1 x2 y2 x3 y3
+  double xtmp[6];
+  int vcut[2],vorig[2],neigh[3],forig[3];
+
+  int nbasis=order2basis[e][p]; // first order bases are interpolative at nodes so it's ok to do this?
+  double bv[nbasis*nfp];
+  n = 0; 
+  for(i=0;i<nelem;i++){
+      ix=iptr[pc*i+1];
+      // get bases at rst = [0 0 ; 1 0; 0 1]
+      for(j=0;j<nfp;j++){ // loop over vertices
+        tally[j]=0;
+        u[0]=eloc[e][1][d*j];
+        u[1]=eloc[e][1][d*j+1];
+
+        // get the vertex global coordinates of the original trying
+        // by doing x = sum(Ni * xi)
+	xvert[2*j] = 0;
+	xvert[2*j+1] = 0;
+        for(k=0;k<nbasis;k++){ // accumulate bases and vertex coords
+          bv[j*nbasis+k] = basis[e][k](u);
+          xvert[2*j]   += bv[j*nbasis+k]*x[ix+k];
+          xvert[2*j+1] += bv[j*nbasis+k]*x[ix+k+nbasis];
+        }         
+
+	//keep track of how many vertices are on cut side of cut boundary
+        if(xvert[2*j]<x0) tally[j]=1;
+      }
+
+      // check if element has vertices on both sides of x=x0 then 
+      // track which vertices will be cut and which kept
+      sum=0;
+      for(j=0;j<nfp;j++) {
+        sum+=tally[j];
+        vcut[j]=-1;
+        vorig[j]=-1;
+      }
+      if(sum>0 && sum<nfp){
+        for(j=0;j<nfp;j++){ 
+          if(tally[j]==1){
+            vcut[j] = j;
+          } else{
+            vorig[j] = j;
+          }
+        }
+      }
+
       // based on vorig and vcut, I can figure out which faces were cut 
       // and then fill out cut2neigh
 
@@ -89,7 +153,7 @@ void CUT_CELLS(double *x, double* xcut, int* iptr, int* iptrc, int* cut2e, int *
       if(sum==1){ 
 	for(j=0;j<nfp;j++){
 	  neigh[j]=-1; 
-          if(vcut[j] > 0){
+          if(vcut[j] >= 0){
             j0 = j;	// this is the cut node index
           }
         }
@@ -167,11 +231,17 @@ void CUT_CELLS(double *x, double* xcut, int* iptr, int* iptrc, int* cut2e, int *
 printf("\norig elem %i, cut cell %i, det %f:\n",i,n,det);
 if(fabs(det)<1e-13){
 printf("\nERROR: det %f %f \n jac = %f %f %f %f\nxtmp = %f %f %f %f %f %f\n",det,fabs(det),jac[0],jac[1],jac[2],jac[3],xtmp[0],xtmp[1],xtmp[2],xtmp[3],xtmp[4],xtmp[5]);
+for(f=0;f<nfp;f++){
+for(j=0;j<nbasis;j++){
+printf("f = %i,  bv[%i] = %f\n",f,j,bv[f*nbasis+j]);
 }
-printf("\tvtx coords: (%f, %f), (%f, %f), (%f, %f)\n",xcut[n*3*2], xcut[n*3*2+3], xcut[n*3*2+1], xcut[n*3*2+4], xcut[n*3*2+2], xcut[n*3*2+5]);
+}
+}
+
+printf("\tfull vtxcoords: (%f, %f), (%f, %f), (%f, %f)\n", xvert[0],xvert[1],xvert[2],xvert[3],xvert[4],xvert[5]);
+printf("\tcut vtx coords: (%f, %f), (%f, %f), (%f, %f)\n",xcut[n*3*2], xcut[n*3*2+3], xcut[n*3*2+1], xcut[n*3*2+4], xcut[n*3*2+2], xcut[n*3*2+5]);
 printf("\telem neigh(%i, %i, %i) = %i %i %i\n",3*n,3*n+1,3*n+2,cut2neigh[3*n],cut2neigh[3*n+1],cut2neigh[3*n+2]);
         n++; 
-        (*necut)++;
       }
 
       // quad cut region (2 cut nodes, 2 intersect pts)
@@ -254,11 +324,16 @@ printf("\telem neigh(%i, %i, %i) = %i %i %i\n",3*n,3*n+1,3*n+2,cut2neigh[3*n],cu
 printf("\norig elem %i, cut cell %i, det %f:\n",i,n,det);
 if(fabs(det)<1e-13){
 printf("\nERROR: det %f %f \n jac = %f %f %f %f\nxtmp = %f %f %f %f %f %f\n",det,fabs(det),jac[0],jac[1],jac[2],jac[3],xtmp[0],xtmp[1],xtmp[2],xtmp[3],xtmp[4],xtmp[5]);
+for(f=0;f<nfp;f++){
+for(j=0;j<nbasis;j++){
+printf("f = %i,  bv[%i] = %f\n",f,j,bv[f*nbasis+j]);
 }
-printf("\tvtx coords: (%f, %f), (%f, %f), (%f, %f)\n",xcut[n*3*2], xcut[n*3*2+3], xcut[n*3*2+1], xcut[n*3*2+4], xcut[n*3*2+2], xcut[n*3*2+5]);
+}
+}
+printf("\tfull vtxcoords: (%f, %f), (%f, %f), (%f, %f)\n", xvert[0],xvert[1],xvert[2],xvert[3],xvert[4],xvert[5]);
+printf("\tcut vtx coords: (%f, %f), (%f, %f), (%f, %f)\n",xcut[n*3*2], xcut[n*3*2+3], xcut[n*3*2+1], xcut[n*3*2+4], xcut[n*3*2+2], xcut[n*3*2+5]);
 printf("\telem neigh(%i, %i, %i) = %i %i %i\n",3*n,3*n+1,3*n+2,cut2neigh[3*n],cut2neigh[3*n+1],cut2neigh[3*n+2]);
         n++; 
-        (*necut)++;
 
 	//Second triangle (cut node 1, both intersect nodes)
         xtmp[0] = x0; 
@@ -304,17 +379,16 @@ printf("\telem neigh(%i, %i, %i) = %i %i %i\n",3*n,3*n+1,3*n+2,cut2neigh[3*n],cu
 printf("\norig elem %i, cut cell %i, det %f:\n",i,n,det);
 if(fabs(det)<1e-13){
 printf("\nERROR: det %f %f \n jac = %f %f %f %f\nxtmp = %f %f %f %f %f %f\n",det,fabs(det),jac[0],jac[1],jac[2],jac[3],xtmp[0],xtmp[1],xtmp[2],xtmp[3],xtmp[4],xtmp[5]);
+for(f=0;f<nfp;f++){
+for(j=0;j<nbasis;j++){
+printf("f = %i,  bv[%i] = %f\n",f,j,bv[f*nbasis+j]);
 }
-printf("\tvtx coords: (%f, %f), (%f, %f), (%f, %f)\n",xcut[n*3*2], xcut[n*3*2+3], xcut[n*3*2+1], xcut[n*3*2+4], xcut[n*3*2+2], xcut[n*3*2+5]);
+}
+}
+printf("\tfull vtxcoords: (%f, %f), (%f, %f), (%f, %f)\n", xvert[0],xvert[1],xvert[2],xvert[3],xvert[4],xvert[5]);
+printf("\tcut vtx coords: (%f, %f), (%f, %f), (%f, %f)\n",xcut[n*3*2], xcut[n*3*2+3], xcut[n*3*2+1], xcut[n*3*2+4], xcut[n*3*2+2], xcut[n*3*2+5]);
 printf("\telem neigh(%i, %i, %i) = %i %i %i\n",3*n,3*n+1,3*n+2,cut2neigh[3*n],cut2neigh[3*n+1],cut2neigh[3*n+2]);
         n++; 
-        (*necut)++;
       }
   }
-
-//store the xcut variables correctly using iptrc
-  for(i=0;i<(*necut);i++){
-    ix = iptrc[i*pc];
-  }
-
 }

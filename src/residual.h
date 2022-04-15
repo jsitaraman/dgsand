@@ -852,7 +852,7 @@ void COMPUTE_RHS(double *R,double *mass,double *bv, double *bvd, double *JinvV, 
 		 int pc, int pf, int pccut, int pde, int d , int e, int p, int nfaces, int nelem,
                  double *bvcut, double *bvdcut,double *detJcut,
                  double *bfcutL, double *bfcutR,double *fwcut,
-                 double *fcflux,double *xcut, int *iptrc,
+                 double *fcflux,int *iptrc,
                  int necut, int* cut2e, int *cut2face, int* cut2neigh)
 
 

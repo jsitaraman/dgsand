@@ -44,8 +44,8 @@ void CutCellInterp(double *x, int d, int e, int p, double* Jinv,
   //   ijk = local coord sys of cut cell
 
   int b,w,i,j,l,ld,ij,m,n;
-  int nbasis=order2basis[e][1]; // XXX double check last argument, should be p=1 for cut cell
-  int nbasis2=order2basis[e][p]; // XXX double check last argument, should be p=1 for cut cell
+  int nbasisx=order2basis[e][1]; // XXX double check last argument, should be p=1 for cut cell
+  int nbasis=order2basis[e][p]; // XXX double check last argument, should be p=1 for cut cell
   double jcut[d*d],mat[d][d],ijac[d][d],det;
   double xycut[d];
   double bd[nbasis][d]; 
@@ -59,13 +59,13 @@ void CutCellInterp(double *x, int d, int e, int p, double* Jinv,
   double x0[2] = {0.0, 0.0}; 
   double x0cut[2] = {0.0, 0.0}; 
   double u[2] = {0,0};
-  for(i=0;i<nbasis;i++){
+  for(i=0;i<nbasisx;i++){
     x0cut[0] = x0cut[0] + xcut[i]*basis[e][i](u);
-    x0cut[1] = x0cut[1] + xcut[i+nbasis]*basis[e][i](u);
+    x0cut[1] = x0cut[1] + xcut[i+nbasisx]*basis[e][i](u);
   }
-  for(i=0;i<nbasis2;i++){
+  for(i=0;i<nbasis;i++){
     x0[0] = x0[0] + x[i]*basis[e][i](u);
-    x0[1] = x0[1] + x[i+nbasis2]*basis[e][i](u);
+    x0[1] = x0[1] + x[i+nbasis]*basis[e][i](u);
   }
 
   // Compute p=1 jacobian for subcell element, dx/di
@@ -81,8 +81,48 @@ void CutCellInterp(double *x, int d, int e, int p, double* Jinv,
   // [rs] = [Jinv_orig][xycut - x0_orig]
   axb(Jinv,xycut,rst,d);
 
-  if(rst[0]<-1e-14 || rst[1]<-1e-14){
+  if(rst[0]<-1e-14 || rst[1]<-1e-14 || rst[0] > 1+1e-10 || rst[1] > 1+1e-10){
     printf("ERROR: rst = %f %f\n",rst[0],rst[1]);
+
+    printf("\tx0 = (%f %f),",x0[0],x0[1]); 
+    u[0] = 1; 
+    u[1] = 0;
+    x0[0]=x0[1] = 0.0;  
+    for(i=0;i<nbasis;i++){
+      x0[0] = x0[0] + x[i]*basis[e][i](u);
+      x0[1] = x0[1] + x[i+nbasis]*basis[e][i](u);
+    }
+    printf("\t(%f %f)",x0[0],x0[1]); 
+    u[0] = 0; 
+    u[1] = 1;
+    x0[0]=x0[1] = 0.0;  
+    for(i=0;i<nbasis;i++){
+      x0[0] = x0[0] + x[i]*basis[e][i](u);
+      x0[1] = x0[1] + x[i+nbasis]*basis[e][i](u);
+    }
+    printf("\t(%f %f)\n",x0[0],x0[1]); 
+
+
+    printf("\tx0cut = (%f %f),",x0cut[0],x0cut[1]); 
+    u[0] = 1; 
+    u[1] = 0;
+    x0cut[0]=x0cut[1] = 0.0;  
+    for(i=0;i<nbasisx;i++){
+      x0cut[0] = x0cut[0] + xcut[i]*basis[e][i](u);
+      x0cut[1] = x0cut[1] + xcut[i+nbasisx]*basis[e][i](u);
+    }
+    printf("\t(%f %f),",x0cut[0],x0cut[1]); 
+    u[0] = 1; 
+    u[1] = 0;
+    x0cut[0]=x0cut[1] = 0.0;  
+    for(i=0;i<nbasisx;i++){
+      x0cut[0] = x0cut[0] + xcut[i]*basis[e][i](u);
+      x0cut[1] = x0cut[1] + xcut[i+nbasisx]*basis[e][i](u);
+    }
+    printf("\t(%f %f)\n",x0cut[0],x0cut[1]); 
+    printf("\torig Jinv = %f %f ; %f %f\n",Jinv[0],Jinv[1],Jinv[2],Jinv[3]);
+     
+     
   }
 }
 
@@ -114,18 +154,12 @@ void BasesVCut(double *x, double *Jinv,double *detJ,
     // get bases and derivs at quad pt
     CutCellInterp(x,d,e,p,Jinv,ijk,xcut,u); 
 
-if(icut==2){
-printf("w = %i, uOrig = %f %f\n",w,u[0],u[1]);
-}
     //store bvcut at each quad pt
     for(b=0;b<nbasis;b++){ // loop over bases
       for(j=0;j<d;j++){
 	    bd[b][j]=basis_d[e][b*d+j](u); // accumulate bases derivs at quad pt
       }
       if (p > 0) bvcut[l++]=basis[e][b](u); // filled in as bv[nGL][nbasis]
-if(icut==2){
-printf("b = %i, bvcut = %f %f\n",b,bvcut[l-1]);
-}
     }
     if (p==0) bvcut[l++]=1;
 
@@ -146,7 +180,6 @@ printf("b = %i, bvcut = %f %f\n",b,bvcut[l-1]);
     for(i=0;i<d;i++)
       for(j=0;j<d;j++){ 
         Jinvcut[ii++]=jac[i][j];
-if(icut==2) printf("cut e2 Jinvcut[%i,%i] = %f\n",jac[i][j]); 
       }
 
     // get basis derivs dN/dx = dN/dr*(dx/dr)^-1
@@ -250,6 +283,7 @@ void CutFaceWeights(double *x, double *Jinv, int pc, int* iptr, double *xcut, do
 	    }
 
   	    // build the jacobians of the cut cell
+  	    // XXX nbasis doesn't match xcut here
 	    for(i=0;i<d;i++){	    
               faceWeight[d*m+i]=0;
 	      Ja[i]=0;
@@ -269,8 +303,6 @@ void CutFaceWeights(double *x, double *Jinv, int pc, int* iptr, double *xcut, do
 	    // do faceWeight = Ja x zhat
 	    // This gives me the normal vector
 	    cross(&(faceWeight[2*m]),Ja,Jb,d); 
-            printf("debug: fw = %f %f\n",faceWeight[2*m],faceWeight[2*m+1]);
-
 
             // get [dx/dr]^-1
             if (d==2) invmat2x2(mat,jacL,det);
@@ -476,10 +508,10 @@ void Jacobian(double *x,double *bv, double *bvd, double *Jinv,
 
       for(b=0;b<nbasis;b++)
         for(i=0;i<d;i++)
-	  printf("\tbd[%i][%i] = %f\n",b,i,bd[b][i]);
+//	  printf("\tbd[%i][%i] = %f\n",b,i,bd[b][i]);
 
       for(b=0;b<nbasis;b++){
-printf("\t x[%i] = %f, y[%i] = %f\n",b,x[b],x[nbasis+b]);
+//printf("\t x[%i] = %f, y[%i] = %f\n",b,x[b],x[nbasis+b]);
 }
       //build jacobian dx/dr
       for(i=0;i<d;i++)
@@ -494,14 +526,14 @@ printf("\t x[%i] = %f, y[%i] = %f\n",b,x[b],x[nbasis+b]);
 
       for(i=0;i<d;i++)
 	  for(j=0;j<d;j++)
-		printf("\tJac[%i][%i] = %f\n",i,j,mat[i][j]);
+//		printf("\tJac[%i][%i] = %f\n",i,j,mat[i][j]);
 
       //invert jacobian (stored in jac) and get detJ
       if (d==2) invmat2x2(mat,jac,det);
       for(i=0;i<d;i++)
 	for(j=0;j<d;j++) {
 	  Jinv[ij++]=jac[i][j];
-	  printf("\tJinv[%i][%i] = %f \n",i,j,jac[i][j]);
+//	  printf("\tJinv[%i][%i] = %f \n",i,j,jac[i][j]);
         }
 
       // get basis derivs dN/dx = dN/dr*(dx/dr)^-1
@@ -524,10 +556,10 @@ printf("\t x[%i] = %f, y[%i] = %f\n",b,x[b],x[nbasis+b]);
 ld = 0; 
       for(b=0;b<nbasis;b++)
         for(i=0;i<d;i++){
-printf("\tdebug: b = %i, i = %i,  bvd[%i] = %f\n",b,i,ld,bvd[ld]);
+//printf("\tdebug: b = %i, i = %i,  bvd[%i] = %f\n",b,i,ld,bvd[ld]);
 ld++; 
 	}
-printf("\n"); 
+//printf("\n"); 
 
 
 }
@@ -657,7 +689,7 @@ void COMPUTE_GRID_METRICS(double *x, double *bv, double *bvd,double *JinvV,
       ijf  =iptr[ip+8];
       ifw  =iptr[ip+9];
 
-printf("ComputeGrid Metrics Elem %i\n", i); 
+//printf("ComputeGrid Metrics Elem %i\n", i); 
       Jacobian(x+ix, bv+ibv, bvd+ibvd, JinvV+ij,detJ+idetj,d,e,p); // basis on vol
       FaceWeights(x+ix,bf+ibf,bfd+ibfd,JinvF+ijf,faceWeight+ifw,d,e,p); // basis on face
     }
@@ -705,7 +737,7 @@ void COMPUTE_CUT_METRICS(double *x, double *JinvV,
     cifw  =iptrc[cip+9]; // faceWeight
     cc2n  =iptrc[cip+12]; // cut2neigh  
 
-    printf("\n==================================\nElem %i: Entering BasesVCut\n==================================\n",i); 
+    printf("\n==================================\nCut Elem %i (cix = %i), Orig Elem %i: Entering BasesVCut\n==================================\n",i,cix,eid); 
     // get bases at cut vol quad pts
     BasesVCut(x+ix, JinvV+ij, detJ+idetj, 
               xcut+cix, bvcut+cibv, bvdcut+cibvd,
@@ -714,7 +746,7 @@ void COMPUTE_CUT_METRICS(double *x, double *JinvV,
 
 
     // basis on face
-    printf("\n==================================\nElem %i: Entering CutFaceWeights\n==================================\n",i); 
+    printf("\n==================================\nCut Elem %i, Orig Elem %i: Entering CutFaceWeights\n==================================\n",i,eid); 
     CutFaceWeights(x, JinvF,pc,iptr,xcut+cix,
   		   bfcutL+cibf,bfdcutL+cibfd,
   		   bfcutR+cibf,bfdcutR+cibfd,

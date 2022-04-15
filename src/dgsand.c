@@ -80,6 +80,7 @@ printf("NFIELDS = %i\n",nfields);
   readgrid2D(&xcoord,&elem2node,&ibc,&p,&nnodes,&nelem,&nbnodes);
   nbasis=order2basis[etype][p];         // basis for solution
   nbasisx=order2basis[etype][p+(p==0)]; // basis for grid
+printf("nbasis = %i\n",nbasis); 
 
   /* find element to face connectivity */
   find_faces(elem2node,&elem2face,&faces,&nfaces,ibc,nelem,nbnodes,3,nbasisx);
@@ -147,8 +148,11 @@ printf("NFIELDS = %i\n",nfields);
   		       bf,bfd,JinvF,faceWeight,iptr,d,etype,p,nelem,pc);
 
   // Arbitrarily cut the cells  along some straight line
-  int necut=6; // XXX HACKING THESE IN. NEEDS TO MATCH GRIDS
-  xcut       =dgsand_alloc(double,(d*(nbasisx))*necut);  
+//  int necut=6; // XXX HACKING THESE IN. NEEDS TO MATCH GRIDS
+  double x0 = 0.5; 
+  int necut = FIND_NECUT(x0,x,iptr,d,etype,p,nelem,pc);
+printf("\nnecut = %i\n",necut);
+  xcut       =dgsand_alloc(double,(d*3*necut));  
   cut2e      =dgsand_alloc(int,necut);  
   cut2face   =dgsand_alloc(int,necut*3);   // map between cut face and orig face id
   cut2neigh  =dgsand_alloc(int,necut*3);   // map between cut face and R side neighbor
@@ -174,11 +178,12 @@ printf("NFIELDS = %i\n",nfields);
   // Assume for now all cuts are triangles
   /* pointer array into each data array above */
   pccut = 13; 
+printf("nbasisx = %i\n",nbasisx); 
   iptrc=dgsand_calloc(int,(pccut*necut));
   for(i=0;i<necut;i++){
       ix=pccut*i;
       iptrc[ix]+=i*(nfields*nbasis);               // q, Q, R
-      iptrc[ix+1]+=i*(d*(nbasisx));                // x
+      iptrc[ix+1]+=i*(d*3);                // x
       iptrc[ix+2]+=i*(nbasis*ngElem[etype][p]);   // bv (this is NOT same per element type)
       iptrc[ix+3]+=i*(d*nbasis*ngElem[etype][p]);  // bvd
       iptrc[ix+4]+=i*(d*d*ngElem[etype][p]);       // JinvV
@@ -195,8 +200,9 @@ printf("NFIELDS = %i\n",nfields);
   }
 
   // XXX Hack together cut cell info 
-  printf("Entering CUT Cells\n" ); 
-  CUT_CELLS(x, xcut, iptr, iptrc, cut2e, &necut, d, etype, nelem, pc, cut2face,cut2neigh, elem2face, faces);
+  printf("Entering CUT Cells\n" );
+ 
+  CUT_CELLS(x0, x, xcut, iptr, cut2e, d, etype, p, nelem, pc, cut2face,cut2neigh, elem2face, faces);
   for(i=0;i<necut;i++)
     printf("cut elem %i: neigh = %i %i %i\n",i,cut2neigh[3*i+0],cut2neigh[3*i+1],cut2neigh[3*i+2]);
  
@@ -255,7 +261,7 @@ printf("\nDEBUG: Elem 0 Cut Mass: [%f %f %f; %f %f %f; %f %f %f]\n",mass[0],mass
 		  pc,pf,pccut,pde,d,etype,p,nfaces,nelem,
                   bvcut,bvdcut,detJcut,
                   bfcutL,bfcutR,fwcut,fcflux,
-                  xcut,iptrc,necut,cut2e,cut2face,cut2neigh);
+                  iptrc,necut,cut2e,cut2face,cut2neigh);
       
       UPDATE_DOFS(qstar,rk[1]*dt,q,R,ndof);
       UPDATE_DOFS(q,rk[0]*dt,q,R,ndof);
@@ -267,7 +273,7 @@ printf("\nDEBUG: Elem 0 Cut Mass: [%f %f %f; %f %f %f; %f %f %f]\n",mass[0],mass
 		  pc,pf,pccut,pde,d,etype,p,nfaces,nelem,
                   bvcut,bvdcut,detJcut,
                   bfcutL,bfcutR,fwcut,fcflux,
-                  xcut,iptrc,necut,cut2e,cut2face,cut2neigh);
+                  iptrc,necut,cut2e,cut2face,cut2neigh);
       
       UPDATE_DOFS(qstar,rk[2]*dt,q,R,ndof);
 //printf("***************************\nCOMPUTE_RHS 3\n***************************\n");
@@ -278,7 +284,7 @@ printf("\nDEBUG: Elem 0 Cut Mass: [%f %f %f; %f %f %f; %f %f %f]\n",mass[0],mass
 		  pc,pf,pccut,pde,d,etype,p,nfaces,nelem,
                   bvcut,bvdcut,detJcut,
                   bfcutL,bfcutR,fwcut,fcflux,
-                  xcut,iptrc,necut,cut2e,cut2face,cut2neigh);
+                  iptrc,necut,cut2e,cut2face,cut2neigh);
 
 
       UPDATE_DOFS(q,rk[3]*dt,q,R,ndof);
