@@ -35,7 +35,7 @@ void main(void)
   double *fnorm,*fflux;                      // face normals and face flux
   double *fcflux;                      // face normals and face flux
   double xsum;
-  int *cut2e;
+  int *cut2e,*iblank;
 
   /* inputs */
   int pde;                          // pde type, only Euler eqns are implemented now
@@ -90,7 +90,7 @@ printf("nbasis = %i\n",nbasis);
   q=dgsand_alloc(double,(nfields*nbasis*nelem));     // modal coefficients
   qstar=dgsand_alloc(double,(nfields*nbasis*nelem)); // modal coefficients
   Q=dgsand_alloc(double,(nfields*nbasis*nelem));     // values at physical locations
-  R=dgsand_alloc(double,(nfields*nbasis*nelem));     //solution residual 
+  R=dgsand_calloc(double,(nfields*nbasis*nelem));     //solution residual 
 
   /* geometrical parameters per volume QP of each element */
   /* TODO: some of these such as bv and JinvV can be optimized or omitted */
@@ -99,6 +99,7 @@ printf("nbasis = %i\n",nbasis);
   bvd     =dgsand_alloc(double,(d*nbasis*ngElem[etype][p]*nelem));// basis derivative value at volume QP
   JinvV   =dgsand_alloc(double,(d*d*ngElem[etype][p]*nelem));     // J^{-1} at volume QP
   detJ    =dgsand_calloc(double,(ngElem[etype][p]*nelem));        // |J| at volume QP
+  iblank  =dgsand_calloc(int,nelem);				  // iblank array 
 
   /* geometrical parameters per face QP of each element */
   /* TODO : some these such as bf and JinvF can optimized/omitted */
@@ -148,7 +149,6 @@ printf("nbasis = %i\n",nbasis);
   		       bf,bfd,JinvF,faceWeight,iptr,d,etype,p,nelem,pc);
 
   // Arbitrarily cut the cells  along some straight line
-//  int necut=6; // XXX HACKING THESE IN. NEEDS TO MATCH GRIDS
   double x0 = 0.5; 
   int necut = FIND_NECUT(x0,x,iptr,d,etype,p,nelem,pc);
 printf("\nnecut = %i\n",necut);
@@ -163,8 +163,6 @@ printf("\nnecut = %i\n",necut);
   JinvFcut   =dgsand_alloc(double,(necut*d*d*ngElem[etype][p]));     // J^{-1} at volume QP
   detJcut    =dgsand_calloc(double,(necut*ngElem[etype][p]));        // |J| at volume QP
   
-  // Need to think more on these
-  // Are they the right size? XXX
   fpe = facePerElem[etype];
   bfcutL     =dgsand_alloc(double,(nbasis*ngGL[etype][p]*fpe*necut));  // basis value at face QP
   bfdcutL    =dgsand_alloc(double,(d*nbasis*ngGL[etype][p]*fpe*necut));// basis der. value at face QP
@@ -174,7 +172,6 @@ printf("\nnecut = %i\n",necut);
 
   fcflux     =dgsand_alloc(double,(3*nfields*ngGL[etype][p]*fpe*necut));  // face fields and flux        
 
-  
   // Assume for now all cuts are triangles
   /* pointer array into each data array above */
   pccut = 13; 
@@ -201,14 +198,15 @@ printf("nbasisx = %i\n",nbasisx);
 
   // XXX Hack together cut cell info 
   printf("Entering CUT Cells\n" );
- 
-  CUT_CELLS(x0, x, xcut, iptr, cut2e, d, etype, p, nelem, pc, cut2face,cut2neigh, elem2face, faces);
+
+  if(necut>0) 
+    CUT_CELLS(x0, x, xcut, iptr, cut2e, d, etype, p, nelem, pc, cut2face,cut2neigh, elem2face, faces, iblank);
+
   for(i=0;i<necut;i++)
     printf("cut elem %i: neigh = %i %i %i\n",i,cut2neigh[3*i+0],cut2neigh[3*i+1],cut2neigh[3*i+2]);
  
   /* compute the mass matrix for each element */
   MASS_MATRIX(mass,x,iptr,d,etype,p,nelem,pc);
-
 
 printf("\nDEBUG: Elem 0 Orig Mass: [%f %f %f; %f %f %f; %f %f %f]\n",mass[0],mass[1],mass[2],mass[3],mass[4],mass[5],mass[6],mass[7],mass[8]);
 
@@ -261,10 +259,11 @@ printf("\nDEBUG: Elem 0 Cut Mass: [%f %f %f; %f %f %f; %f %f %f]\n",mass[0],mass
 		  pc,pf,pccut,pde,d,etype,p,nfaces,nelem,
                   bvcut,bvdcut,detJcut,
                   bfcutL,bfcutR,fwcut,fcflux,
-                  iptrc,necut,cut2e,cut2face,cut2neigh);
+                  iptrc,necut,cut2e,cut2face,cut2neigh,iblank);
       
       UPDATE_DOFS(qstar,rk[1]*dt,q,R,ndof);
       UPDATE_DOFS(q,rk[0]*dt,q,R,ndof);
+
 //printf("***************************\nCOMPUTE_RHS 2\n***************************\n");
       
       COMPUTE_RHS(R,mass,bv,bvd,JinvV,detJ,
@@ -273,7 +272,7 @@ printf("\nDEBUG: Elem 0 Cut Mass: [%f %f %f; %f %f %f; %f %f %f]\n",mass[0],mass
 		  pc,pf,pccut,pde,d,etype,p,nfaces,nelem,
                   bvcut,bvdcut,detJcut,
                   bfcutL,bfcutR,fwcut,fcflux,
-                  iptrc,necut,cut2e,cut2face,cut2neigh);
+                  iptrc,necut,cut2e,cut2face,cut2neigh,iblank);
       
       UPDATE_DOFS(qstar,rk[2]*dt,q,R,ndof);
 //printf("***************************\nCOMPUTE_RHS 3\n***************************\n");
@@ -284,7 +283,7 @@ printf("\nDEBUG: Elem 0 Cut Mass: [%f %f %f; %f %f %f; %f %f %f]\n",mass[0],mass
 		  pc,pf,pccut,pde,d,etype,p,nfaces,nelem,
                   bvcut,bvdcut,detJcut,
                   bfcutL,bfcutR,fwcut,fcflux,
-                  iptrc,necut,cut2e,cut2face,cut2neigh);
+                  iptrc,necut,cut2e,cut2face,cut2neigh,iblank);
 
 
       UPDATE_DOFS(q,rk[3]*dt,q,R,ndof);
@@ -300,7 +299,7 @@ printf("\nDEBUG: Elem 0 Cut Mass: [%f %f %f; %f %f %f; %f %f %f]\n",mass[0],mass
       }
       rnorm=sqrt(rnorm/ndof);
       rmax*=(rk[3]*dt);
-      printf("%d\t%18.16f\t%d\t%18.16f\n",n,rnorm,imax,rmax);
+      printf("step %d\t%18.16f\t%d\t%18.16f\n",n,rnorm,imax,rmax);
       if (n%nsave==0) OUTPUT_TECPLOT(n,x,q,pc,iptr,pde,d,etype,p,nelem);
     }
 

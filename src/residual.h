@@ -679,12 +679,13 @@ void COMPUTE_RESIDUAL(double *R, double *mass, double *q, double *detJ, double *
                       double *detJcut, double *fcflux,
                       double *bvcut, double *bvdcut, 
 		      double *bfcutL, double *bfcutR,
-                      int *iptrc, int necut, int* cut2e, int* cut2neigh)
+                      int *iptrc, int necut, int* cut2e, int* cut2neigh, int* iblank)
 
 {
   int i,j,k,ix,idet,im,iR,iq,ibv,ibvd,ibf,ibfd,eid,iflx,ic2n;
   int nfp=facePerElem[e];
-  int f,w,ld;
+  int f,w,ld,stop;
+  double max;
 
 int nfields=get_nfields[pde](d);
 int nbasis=order2basis[e][p];
@@ -700,47 +701,11 @@ int nbasis=order2basis[e][p];
       ibf=iptr[ix+6];
       ibfd=iptr[ix+7];
       im=iptr[ix+10];
-/*
-if(i==2){
-for(k=0;k<nfields;k++)
-for(j=0;j<nbasis;j++)
-printf("Elem Q = q[%i] = %f\n",k*nbasis+j,q[iq+k*nbasis+j]);
-printf("\n");
-ld=0;
-for(w=0;w<ngElem[e][p];w++)
-for(j=0;j<nbasis;j++)
-printf("b[%i] = %f\n",ld,bv[ibv+ld++]);
-printf("\n");
 
-ld=0;
-for(w=0;w<ngElem[e][p];w++)
-for(j=0;j<nbasis;j++)
-for(k=0;k<2;k++)
-printf("bd[%i] = %f\n",ld,bvd[ibvd+ld++]);
-printf("\n");
-
-}
-*/
-      volIntegral(R+iR,bv+ibv,bvd+ibvd,q+iq,detJ+idet, pde,d,e,p,i);
-
-/*if(i==2){
-for(k=0;k<nfields;k++)
-for(j=0;j<nbasis;j++)
-printf("Vol Int = R[%i] = %f\n",k*nbasis+j,R[iR + k*nbasis+j]);
-printf("\n");
-}
-*/
-
-      faceIntegral(R+iR,fflux,bf+ibf,bfd+ibfd,elem2face+nfp*i,iptrf,q,pf,pde,d,e,p,i);
-
-/*if(i==2){
-printf("\n"); 
-for(k=0;k<nfields;k++)
-for(j=0;j<nbasis;j++)
-printf("Orig Full R[%i] = %f\n",k*nbasis+j,R[iR + k*nbasis+j]);
-printf("\n");
-}*/
-     // invertMass(mass+im,R+iR,pde,d,e,p,i);
+      if(iblank[i]==0){
+        volIntegral(R+iR,bv+ibv,bvd+ibvd,q+iq,detJ+idet, pde,d,e,p,i);
+        faceIntegral(R+iR,fflux,bf+ibf,bfd+ibfd,elem2face+nfp*i,iptrf,q,pf,pde,d,e,p,i);
+      }
     }
 
   //Modify residual for cut cells
@@ -760,89 +725,41 @@ printf("\n");
       ibfd=iptrc[ix+7];
       iflx=iptrc[ix+11];
       
-/*
-if(eid==2){
-ld=0;
-for(w=0;w<ngElem[e][p];w++)
-for(j=0;j<nbasis;j++)
-printf("bvcut[%i] = %f\n",ld,bvcut[ibv+ld++]);
-printf("\n");
-
-ld=0;
-for(w=0;w<ngElem[e][p];w++)
-for(j=0;j<nbasis;j++)
-for(k=0;k<2;k++)
-printf("bdcut[%i] = %f\n",ld,bvd[ibvd+ld++]);
-printf("\n");
-
-ld=0;
-for(f=0;f<3;f++){
-printf("E%i\n",f);
-for(w=0;w<ngGL[e][p];w++)
-for(j=0;j<nbasis;j++){
-printf("w %i, bfcutL[%i] = %f\n",w, ld,bfcutL[ibf+ld]);
-ld++;
-}
-}
-printf("\n");
-ld=0;
-for(f=0;f<3;f++){
-printf("E%i\n",f);
-for(w=0;w<ngGL[e][p];w++)
-for(j=0;j<nbasis;j++){
-printf("w %i, bfcutR[%i] = %f\n",w, ld,bfcutR[ibf+ld]);
-ld++;
-}
-}
-printf("\n");
-ld = 0; 
-for(j=0;j<3;j++){
-for(w=0;w<ngGL[e][p];w++){
-for(k=0;k<3;k++){
-for(f=0;f<nfields;f++){
-printf("j=%i, w=%i, f=%i, k = %i, fcflux=%f\n",j,w,f,k,fcflux[iflx + ld]);
-ld++; 
-}
-}
-printf("\n");
-}
-printf("\n");
-}
-printf("\n");
-
-}
-*/
-
       cutVol(R+iR,bvcut+ibv,bvdcut+ibvd,q+iq,detJcut+idet,pde,d,e,p,eid);
-
-/*if(eid==2){
-printf("\n");
-for(k=0;k<nfields;k++)
-for(j=0;j<nbasis;j++)
-printf("Vol Cut R[%i] = %f\n",k*nbasis+j,R[iR + k*nbasis+j]);
-printf("\n");
-}
-*/
       cutFace(R+iR,fcflux+iflx,bfcutL+ibf,bfcutR+ibf,q,pf,pde,d,e,p,eid);
-
-/*if(eid==2){
-printf("\n");
-for(k=0;k<nfields;k++)
-for(j=0;j<nbasis;j++)
-printf("Face Cut R[%i] = %f\n",k*nbasis+j,R[iR + k*nbasis+j]);
-printf("\n");
-}
-*/
     }
 
   //Solve each element
+max = 0; 
   for(i=0;i<nelem;i++)
     {
       ix=pc*i;
       iR=iq=iptr[ix];
       im=iptr[ix+10];
+stop = 0; 
+for(j=0;j<nbasis;j++)
+if(fabs(R[iR+j])>1e-10){
+stop = 1;
+if(fabs(R[iR+j]) > max) max = fabs(R[iR+j]);  
+}
+if(stop){
+printf("===============\n");
+printf("Debug elem %i\n",i);
+for(j=0;j<nbasis;j++) printf("R(%i) = %16.12e;\n",j+1,R[iR+j]); 
+printf("\n");
+ld = 0; 
+for(j=0;j<nbasis;j++) 
+for(k=0;k<nbasis;k++){
+printf("M(%i,%i) = %16.12e;\n",j+1,k+1, mass[im+ld]); 
+ld++;
+}
+
+printf("===============\n");
+}
       invertMass(mass+im,R+iR,pde,d,e,p,i);
     }
+
+//printf("MAX RES = %16.12e\n",max);
 }
 
 void COMPUTE_RHS(double *R,double *mass,double *bv, double *bvd, double *JinvV, double *detJ,
@@ -853,7 +770,7 @@ void COMPUTE_RHS(double *R,double *mass,double *bv, double *bvd, double *JinvV, 
                  double *bvcut, double *bvdcut,double *detJcut,
                  double *bfcutL, double *bfcutR,double *fwcut,
                  double *fcflux,int *iptrc,
-                 int necut, int* cut2e, int *cut2face, int* cut2neigh)
+                 int necut, int* cut2e, int *cut2face, int* cut2neigh, int* iblank)
 
 
 {
@@ -878,7 +795,7 @@ void COMPUTE_RHS(double *R,double *mass,double *bv, double *bvd, double *JinvV, 
                    detJcut, fcflux, 
                    bvcut, bvdcut, bfcutL,  
 		   bfcutR, 
-                   iptrc, necut, cut2e, cut2neigh); 
+                   iptrc, necut, cut2e, cut2neigh,iblank); 
 
 
 }

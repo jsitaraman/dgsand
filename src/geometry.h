@@ -771,9 +771,10 @@ void MASS_MATRIX(double *mass,double *x, int *iptr, int d, int e, int p, int nel
 
 void CUT_MASS_MATRIX(double *mass,double *x, double *Jinv, int *iptr, double *xcut, double *detJcut, int *iptrc, int d, int e, int p, int nelem, int pc, int pccut, int necut, int* cut2e)
 {
-  int i,eid;
+  int i,j,k,ld,eid;
   int ix,im,ij,ixc,id;
 
+  int nbasis=order2basis[e][p]; // XXX double check last argument, should be p=1 for cut cell
   //subtract out cut portion
   for(i=0;i<necut;i++){
       eid = cut2e[i]; // find original element id 
@@ -781,10 +782,28 @@ void CUT_MASS_MATRIX(double *mass,double *x, double *Jinv, int *iptr, double *xc
       ij=iptr[pc*eid+4];
       im=iptr[pc*eid+10];
 
+printf("==========================\n");
+printf("Uncut Mass Matrix %i\n",eid);
+ld = 0;
+for(j=0;j<nbasis;j++)
+for(k=0;k<nbasis;k++){
+printf("M(%i,%i) = %16.12e;\n",j+1,k+1, mass[im+ld]);
+ld++;
+}
+printf("\n");
+
+
       ixc=iptrc[pccut*i+1];
       id=iptrc[pccut*i+5]; 
       cut_mass_matrix(&(mass[im]),&(x[ix]),&(Jinv[ij]),&(xcut[ixc]),&(detJcut[id]),d,e,p);
 
+printf("Cut Mass Matrix %i\n",eid);
+ld = 0;
+for(j=0;j<nbasis;j++)
+for(k=0;k<nbasis;k++){
+printf("M(%i,%i) = %16.12e;\n",j+1,k+1, mass[im+ld]);
+ld++;
+}
   }
 }
 

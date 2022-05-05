@@ -78,7 +78,7 @@ int FIND_NECUT(double x0, double *x,int* iptr, int d, int e, int p, int nelem, i
   return necut; 
 }
 
-void CUT_CELLS(double x0, double *x, double* xcut, int* iptr, int* cut2e, int d, int e, int p, int nelem, int pc, int *cut2face, int* cut2neigh, int* elem2face, int* faces)
+void CUT_CELLS(double x0, double *x, double* xcut, int* iptr, int* cut2e, int d, int e, int p, int nelem, int pc, int *cut2face, int* cut2neigh, int* elem2face, int* faces, int* iblank)
 // This routine cuts the cells according to some arbitrary vertical line. 
 // This is for testing purposes and will eventually be replaced with 
 // an actual cutting routine.
@@ -141,6 +141,10 @@ void CUT_CELLS(double x0, double *x, double* xcut, int* iptr, int* cut2e, int d,
             vorig[j] = j;
           }
         }
+      }
+      else if(sum==nfp){
+        iblank[i] = 1;
+        printf("\nelem %i is blanked\n",i+1);
       }
 
       // based on vorig and vcut, I can figure out which faces were cut 
