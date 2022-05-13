@@ -44,8 +44,8 @@ void CutCellInterp(double *x, int d, int e, int p, double* Jinv,
   //   ijk = local coord sys of cut cell
 
   int b,w,i,j,l,ld,ij,m,n;
-  int nbasisx=order2basis[e][1]; // XXX double check last argument, should be p=1 for cut cell
-  int nbasis=order2basis[e][p]; // XXX double check last argument, should be p=1 for cut cell
+  int nbasisx=order2basis[e][1]; 
+  int nbasis=order2basis[e][p]; 
   double jcut[d*d],mat[d][d],ijac[d][d],det;
   double xycut[d];
   double bd[nbasis][d]; 

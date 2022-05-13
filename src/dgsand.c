@@ -47,6 +47,7 @@ void main(void)
   int nbasis;                // number of bases for solution
   int nbasisx;                      // number of bases for grid
   int itype;                        // initialization type
+  int ireg; 			    // 1: use Tikhonov reg. on cut cells, 0: don't
   
   /* overset inputs */
   int nmesh = 2; 
@@ -72,7 +73,7 @@ void main(void)
   double rk[4]={0.25,8./15,5./12,3./4};
 
   /* parse inputs */
-  parseInputs("input.dgsand",&pde,&itype,&nsteps,&dt,&nsave);
+  parseInputs("input.dgsand",&pde,&itype,&nsteps,&dt,&nsave,&ireg);
   nfields=get_nfields[pde](d);
 printf("NFIELDS = %i\n",nfields); 
 
@@ -240,6 +241,8 @@ printf("\nDEBUG: Elem 0 Cut Mass: [%f %f %f; %f %f %f; %f %f %f]\n",mass[0],mass
   printf("#nfaces=%d\n",nfaces);
   printf("#totalArea=%f\n",totalArea);
   printf("#necut=%d\n",necut);
+  printf("#ireg=%d\n",ireg);
+  printf("#nsteps=%d\n",nsteps);
   printf("#Input parameters = ");
   for(i=0;i<6;i++) printf("%f ",param[i]);
   printf("\n#--------------------------\n");
@@ -259,7 +262,7 @@ printf("\nDEBUG: Elem 0 Cut Mass: [%f %f %f; %f %f %f; %f %f %f]\n",mass[0],mass
 		  pc,pf,pccut,pde,d,etype,p,nfaces,nelem,
                   bvcut,bvdcut,detJcut,
                   bfcutL,bfcutR,fwcut,fcflux,
-                  iptrc,necut,cut2e,cut2face,cut2neigh,iblank);
+                  iptrc,necut,cut2e,cut2face,cut2neigh,iblank,ireg);
       
       UPDATE_DOFS(qstar,rk[1]*dt,q,R,ndof);
       UPDATE_DOFS(q,rk[0]*dt,q,R,ndof);
@@ -272,7 +275,7 @@ printf("\nDEBUG: Elem 0 Cut Mass: [%f %f %f; %f %f %f; %f %f %f]\n",mass[0],mass
 		  pc,pf,pccut,pde,d,etype,p,nfaces,nelem,
                   bvcut,bvdcut,detJcut,
                   bfcutL,bfcutR,fwcut,fcflux,
-                  iptrc,necut,cut2e,cut2face,cut2neigh,iblank);
+                  iptrc,necut,cut2e,cut2face,cut2neigh,iblank,ireg);
       
       UPDATE_DOFS(qstar,rk[2]*dt,q,R,ndof);
 //printf("***************************\nCOMPUTE_RHS 3\n***************************\n");
@@ -283,7 +286,7 @@ printf("\nDEBUG: Elem 0 Cut Mass: [%f %f %f; %f %f %f; %f %f %f]\n",mass[0],mass
 		  pc,pf,pccut,pde,d,etype,p,nfaces,nelem,
                   bvcut,bvdcut,detJcut,
                   bfcutL,bfcutR,fwcut,fcflux,
-                  iptrc,necut,cut2e,cut2face,cut2neigh,iblank);
+                  iptrc,necut,cut2e,cut2face,cut2neigh,iblank,ireg);
 
 
       UPDATE_DOFS(q,rk[3]*dt,q,R,ndof);

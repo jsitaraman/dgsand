@@ -1,6 +1,6 @@
 #include<stdio.h>
 double param[6];
-void parseInputs(char *inputfile,int *pde, int *itype, int *nsteps, double *dt, int *nsave)
+void parseInputs(char *inputfile,int *pde, int *itype, int *nsteps, double *dt, int *nsave, int *ireg)
 {
   FILE *fp;
   char line[256];
@@ -9,6 +9,7 @@ void parseInputs(char *inputfile,int *pde, int *itype, int *nsteps, double *dt, 
   fgets(line,256,fp);  sscanf(line,"pde=%d",pde);
   fgets(line,256,fp);  sscanf(line,"itype=%d",itype);
   fgets(line,256,fp);  sscanf(line,"nsteps=%d",nsteps);
+  fgets(line,256,fp);  sscanf(line,"ireg=%d",ireg);
   fgets(line,256,fp);  sscanf(line,"dt=%lf",dt);
   fgets(line,256,fp);  sscanf(line,"nsave=%d",nsave);
   fgets(line,256,fp);  sscanf(line,"param[0]=%lf",&param[0]);

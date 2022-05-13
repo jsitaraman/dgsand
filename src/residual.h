@@ -553,14 +553,24 @@ printf("\txNorm = %f %f \n",xnorm[0],xnorm[1]);
 
 }
 
-void invertMass(double *mass, double *R, int pde, int d , int e, int p,int ielem)
+void invertMass(double *mass, double *R, int pde, int d , int e, int p,int iscut,int ireg)
 {
-  int i,j,f,b;
+  int i,j,f;
   int nbasis=order2basis[e][p];
   int iflag;
   int nfields=get_nfields[pde](d);
 
-  solvec_copy_reshape(mass,R,&iflag,nbasis,nfields);
+  if(iscut){
+    if(ireg){
+      solvec_copy_reshape_reg(mass,R,&iflag,nbasis,nfields);  
+    }
+    else{
+      solvec_copy_reshape(mass,R,&iflag,nbasis,nfields);  
+    }
+  }
+  else{
+    solvec_copy_reshape(mass,R,&iflag,nbasis,nfields);
+  }
 }
 
 
@@ -679,7 +689,7 @@ void COMPUTE_RESIDUAL(double *R, double *mass, double *q, double *detJ, double *
                       double *detJcut, double *fcflux,
                       double *bvcut, double *bvdcut, 
 		      double *bfcutL, double *bfcutR,
-                      int *iptrc, int necut, int* cut2e, int* cut2neigh, int* iblank)
+                      int *iptrc, int necut, int* cut2e, int* cut2neigh, int* iblank, int ireg)
 
 {
   int i,j,k,ix,idet,im,iR,iq,ibv,ibvd,ibf,ibfd,eid,iflx,ic2n;
@@ -756,10 +766,16 @@ ld++;
 
 printf("===============\n");
 }
-      invertMass(mass+im,R+iR,pde,d,e,p,i);
-    }
 
-//printf("MAX RES = %16.12e\n",max);
+      int iscut = 0; 
+      for(j=0;j<necut;j++)
+        if(abs(i-cut2e[j])==0){
+          iscut=1;
+	  break;    
+        }
+
+      invertMass(mass+im,R+iR,pde,d,e,p,iscut,ireg);
+    }
 }
 
 void COMPUTE_RHS(double *R,double *mass,double *bv, double *bvd, double *JinvV, double *detJ,
@@ -770,9 +786,7 @@ void COMPUTE_RHS(double *R,double *mass,double *bv, double *bvd, double *JinvV, 
                  double *bvcut, double *bvdcut,double *detJcut,
                  double *bfcutL, double *bfcutR,double *fwcut,
                  double *fcflux,int *iptrc,
-                 int necut, int* cut2e, int *cut2face, int* cut2neigh, int* iblank)
-
-
+                 int necut, int* cut2e, int *cut2face, int* cut2neigh, int* iblank, int ireg)
 {
 
   FILL_FACES(x, fnorm, fflux, elem2face, iptr, iptrf, 
@@ -795,7 +809,7 @@ void COMPUTE_RHS(double *R,double *mass,double *bv, double *bvd, double *JinvV, 
                    detJcut, fcflux, 
                    bvcut, bvdcut, bfcutL,  
 		   bfcutR, 
-                   iptrc, necut, cut2e, cut2neigh,iblank); 
+                   iptrc, necut, cut2e, cut2neigh,iblank,ireg); 
 
 
 }
