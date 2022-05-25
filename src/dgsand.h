@@ -10,10 +10,10 @@
 #include<stdlib.h>
 #include<math.h>
 extern "C" {
-  void parseInputs(char *inputfile,int *pde, int *itype, int *nsteps, double *dt, int *nsave,
+  void parseInputs(char *inputfile,char *gridfile,int *pde, int *itype, int *nsteps, double *dt, int *nsave,
 		   int *ireg);
   void output_params();
-  void readgrid2D(double **xcoord, int **elem2node,int **ibc,
+  void readgrid2D(char *gridfile, double **xcoord, int **elem2node,int **ibc,
 		  int *p,  int *nnodes, int *nelem, int *nbnodes);
   void find_faces(int *bface,
 		  int **elem2face,
@@ -120,7 +120,7 @@ class dgsand
   /// overset inputs
   int nmesh = 2;
   
-  ///*** Mesh geometry inputs **/
+  /// Mesh geometry inputs
   /// number of nodes in grid
   int nnodes;
   /// number of elements
@@ -155,17 +155,21 @@ class dgsand
  public:
   /// field quantities
   std::vector<double> q,qstar,Q,R;
-
+  /// generic constructor
   dgsand(): p(1),ndof(0),nfields(4),pde(1),necut(0),etype(0){};
+  /// generic destructor
+  ~dgsand() { free(xcoord); free(elem2node); free(ibc); free(elem2face); free(faces);}
+  /// setup the case using input file
   void setup(char *input_file)
     {
         /* parse inputs */
-	parseInputs(input_file,&pde,&itype,&nsteps,&dt,&nsave,&ireg);
+	char grid_file[20];
+	parseInputs(input_file,grid_file, &pde,&itype,&nsteps,&dt,&nsave,&ireg);
 	nfields=number_of_fields(pde,d);
 	printf("NFIELDS = %i\n",nfields); 
 	
 	/* read a 2D grid */
-	readgrid2D(&xcoord,&elem2node,&ibc,&p,&nnodes,&nelem,&nbnodes);
+	readgrid2D(grid_file,&xcoord,&elem2node,&ibc,&p,&nnodes,&nelem,&nbnodes);
 	nbasis=order_to_basis(etype,p);        // basis for solution
 	nbasisx=order_to_basis(etype,p+(p==0));// basis for grid
 	printf("nbasis = %i\n",nbasis); 
@@ -376,7 +380,7 @@ class dgsand
 	ndof=nfields*nbasis*nelem;
     };
 
-    void computeRHS(const std::vector<double>& qsrc) {
+    void computeRHS(std::vector<double>& qsrc) {
       COMPUTE_RHS(R.data(),
 		  mass.data(),
 		  bv.data(),
@@ -390,7 +394,7 @@ class dgsand
 		  fnorm.data(),
 		  fflux.data(),
 		  x.data(),
-		  q.data(),
+		  qsrc.data(),
 		  elem2face,
 		  iptr.data(),
 		  iptf.data(),

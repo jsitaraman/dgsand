@@ -57,16 +57,17 @@ void main(void)
   /* local variables */
   int a,i,j,m,b,ix, pc,pf,pccut,fpe,imax,ndof,n,nsteps,nsave;
   double wgt,totalArea,rnorm,rmax,dt;
+  char grid_file[20];
   /* rk3 coefficients */
   double rk[4]={0.25,8./15,5./12,3./4};
 
   /* parse inputs */
-  parseInputs("input.dgsand",&pde,&itype,&nsteps,&dt,&nsave,&ireg);
+  parseInputs("input.dgsand",grid_file, &pde,&itype,&nsteps,&dt,&nsave,&ireg);
   nfields=get_nfields[pde](d);
-printf("NFIELDS = %i\n",nfields); 
+  printf("NFIELDS = %i\n",nfields); 
 
   /* read a 2D grid */
-  readgrid2D(&xcoord,&elem2node,&ibc,&p,&nnodes,&nelem,&nbnodes);
+  readgrid2D(grid_file,&xcoord,&elem2node,&ibc,&p,&nnodes,&nelem,&nbnodes);
   nbasis=order2basis[etype][p];         // basis for solution
   nbasisx=order2basis[etype][p+(p==0)]; // basis for grid
 printf("nbasis = %i\n",nbasis); 

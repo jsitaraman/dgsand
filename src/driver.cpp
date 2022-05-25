@@ -1,14 +1,19 @@
 #include "dgsand.h"
 
-int main(void)
+int main(int argc, char *argv[])
 {
-  const int nmesh=1;
+  const int nmesh=argc-1;
+  if (nmesh == 0) {
+   printf("dgsand: Need at least one input file as argument\n");
+   printf("e.g. for a two mesh case\n");
+   printf("$../src/dgsand input.dgsand1 input.dgsand2 \n");
+   exit(0);
+  }
   dgsand *sol=new dgsand[nmesh];
-  char inputfile[nmesh][15]={"input.dgsand"};
   
   double x0=0.5;  
   for(int i=0;i<nmesh;i++) {
-    sol[i].setup(inputfile[i]);
+    sol[i].setup(argv[i+1]);
     sol[i].init();
     //sol[i].cut(x0);
     sol[i].mass_matrix();

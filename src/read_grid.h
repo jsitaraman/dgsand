@@ -1,12 +1,12 @@
 /* read a 2-D ascii grid of triangles of a given format
    make this adapt to various formats later, perhaps VTK */
-void readgrid2D(double **xcoord, int **elem2node,int **ibc,
+void readgrid2D(char *gridfile, double **xcoord, int **elem2node,int **ibc,
 		int *p,  int *nnodes, int *nelem, int *nbnodes)
 {
   int i,j,pg,m,total_n,n;
   int bcnode,bctype;
   char line[256];
-  FILE *fp=fopen("grid.dat", "r");
+  FILE *fp=fopen(gridfile, "r");
   
   fgets(line,256,fp);  
   sscanf(line,"%d %d %d",nnodes,nelem,p);
