@@ -5,6 +5,7 @@ ALL: default
 SHELL       = /bin/sh
 ARCH        = LINUX
 CC          = gcc
+CPP         = g++
 F90         = gfortran
 CLINKER     = $(CC)
 CP          = cp
@@ -25,12 +26,15 @@ EXECS = dgsand
 ALL: $(EXECS)
 
 default: $(EXECS)
-OBJS =  dgsand.o
+OBJS =  sources.o driver.o 
 dgsand:  $(OBJS) 
-	$(CC) $(CFLAGS) $(OBJS) $(LIBS) -o dgsand
+	$(CPP) $(CFLAGS) $(OBJS) $(LIBS) -o dgsand
 
 %.o:%.c *.h
 	$(CC) -c $(CFLAGS) $< -o $*.o
+
+%.o:%.cpp *.h
+	$(CPP) -c $(CFLAGS) $< -o $*.o
 
 %.o:%.f90
 	$(F90) -c $(FFLAGS) $< -o $*.o

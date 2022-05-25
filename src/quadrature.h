@@ -66,3 +66,6 @@ int ngGL[1][5]={1,2,3,3,3};
 int p2g[1][5]={0,1,2,2,2};
 /* map of polynomial order to gauss-quadrature type for face integration */
 int p2gf[1][5]={0,1,2,2,2};
+/* accessor functions for c++ */
+int get_ngElem(int etype, int p) { return ngElem[etype][p];};
+int get_ngGL(int etype, int p) {return ngGL[etype][p];};

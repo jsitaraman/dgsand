@@ -20,6 +20,10 @@ void parseInputs(char *inputfile,int *pde, int *itype, int *nsteps, double *dt, 
   fgets(line,256,fp);  sscanf(line,"param[5]=%lf",&param[5]);
   fclose(fp);
 }
+void output_params()
+{
+  for(int i=0;i<6;i++) printf("%f ",param[i]);
+}
 /*
 void main(void)
 {

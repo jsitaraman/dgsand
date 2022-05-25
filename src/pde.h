@@ -131,3 +131,5 @@ FLUX_function flux_function[1]={&newtonian_fluid_flux2D};
 INTERFACE_flux gradient_indep_flux[1]={&roeflx};
 INIT_fields far_field[1]={&newtonian_fluid_farfield_values};
 INIT_fields  wall_bc[1]={&newtonian_fluid_inviscid_wall_bc};
+
+int number_of_fields(int pde, int d) { return get_nfields[pde](d);}

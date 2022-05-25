@@ -23,3 +23,6 @@ int facePerElem[1]={3};
 
 /* face transforms per element */
 double *face2elem[1]={face2tri};
+
+int face_per_elem(int etype) {return facePerElem[etype];}
+int order_to_basis(int etype, int p) {return order2basis[etype][p];}

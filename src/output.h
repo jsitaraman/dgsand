@@ -45,7 +45,7 @@ void output_connectivity(FILE *fp,int offset,int p)
     fprintf(fp,"%d %d %d\n",subtri[p][3*i+0]+offset,subtri[p][3*i+1]+offset,subtri[p][3*i+2]+offset);
 }
 
-void OUTPUT_TECPLOT(int step,double *x, double *q,
+void OUTPUT_TECPLOT(int meshid, int step,double *x, double *q,
 		    int pc, int *iptr, int pde, int d, int e, int p, int nelem)
 {
 
@@ -60,7 +60,7 @@ void OUTPUT_TECPLOT(int step,double *x, double *q,
   int ix,iq,i,j,k;
   //
   sprintf(intstring,"%d",100000+step);
-  sprintf(fname,"flow%s.dat",&(intstring[1]));
+  sprintf(fname,"flow_%d_%s.dat",meshid,&(intstring[1]));
   fp=fopen(fname,"w");
   fprintf(fp,"TITLE =\"DGSAND output\"\n");
   fprintf(fp,"VARIABLES=\"X\",\"Y\", ");

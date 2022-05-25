@@ -1,3 +1,5 @@
+
+
 void cross(double *a,double *b,double *c,int d)
 {
    a[0]=b[1]*c[2]-b[2]*c[1];
@@ -19,6 +21,22 @@ void axb(double* a, double* x, double* b, int d)
     }
   }
 }
+
+double total_area(double *detJ, int etype, int p, int d, int nelem)
+{
+  int i,j,m;
+  double totalArea=0;
+  double wgt;  
+  m=0;
+  for(i=0;i<nelem;i++) 
+    for(j=0;j<ngElem[etype][p];j++)
+      {
+	wgt=0.5*gauss[etype][p2g[etype][p]][(d+1)*j+2];
+	totalArea+=(wgt*detJ[m]);
+	m++;
+      }
+}
+
 void CutCellInterp(double *x, int d, int e, int p, double* Jinv, 
    		   double *ijk, double *xcut, 
 		   double* rst) //, double *invJcut, double *detJcut)

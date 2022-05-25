@@ -9,19 +9,7 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<math.h>
-#include "inputParser.h"
-#include "solvec.h"
-#include "basislib_u.h"
-#include "cutter.h"
-#include "quadrature.h"
-#include "memutil.h"
-#include "pde.h"
-#include "find_faces.h"
-#include "geometry.h"
-#include "init.h"
-#include "residual.h"
-#include "read_grid.h"
-#include "output.h"
+#include "sources.c"
 
 void main(void)
 {
@@ -247,7 +235,7 @@ printf("\nDEBUG: Elem 0 Cut Mass: [%f %f %f; %f %f %f; %f %f %f]\n",mass[0],mass
   for(i=0;i<6;i++) printf("%f ",param[i]);
   printf("\n#--------------------------\n");
   printf("#%s\t%10s\t%14s\t%10s\n","step","l2","linf-loc","linf"); 
-  OUTPUT_TECPLOT(0,x,q,pc,iptr,pde,d,etype,p,nelem);
+  OUTPUT_TECPLOT(0,0,x,q,pc,iptr,pde,d,etype,p,nelem);
 
   ndof=nfields*nbasis*nelem;
 
@@ -303,7 +291,7 @@ printf("\nDEBUG: Elem 0 Cut Mass: [%f %f %f; %f %f %f; %f %f %f]\n",mass[0],mass
       rnorm=sqrt(rnorm/ndof);
       rmax*=(rk[3]*dt);
       printf("step %d\t%18.16f\t%d\t%18.16f\n",n,rnorm,imax,rmax);
-      if (n%nsave==0) OUTPUT_TECPLOT(n,x,q,pc,iptr,pde,d,etype,p,nelem);
+      if (n%nsave==0) OUTPUT_TECPLOT(0,n,x,q,pc,iptr,pde,d,etype,p,nelem);
     }
 
 }
