@@ -139,8 +139,9 @@ printf("nbasis = %i\n",nbasis);
 
   // Arbitrarily cut the cells  along some straight line
   double x0 = 0.5; 
-  int necut = FIND_NECUT(x0,x,iptr,d,etype,p,nelem,pc);
-printf("\nnecut = %i\n",necut);
+  //int necut = FIND_NECUT(x0,x,iptr,d,etype,p,nelem,pc);
+  int necut = 0;
+  printf("\nnecut = %i\n",necut);
   xcut       =dgsand_alloc(double,(d*3*necut));  
   cut2e      =dgsand_alloc(int,necut);  
   cut2face   =dgsand_alloc(int,necut*3);   // map between cut face and orig face id
@@ -188,16 +189,17 @@ printf("nbasisx = %i\n",nbasisx);
   // XXX Hack together cut cell info 
   printf("Entering CUT Cells\n" );
 
-  if(necut>0) 
+  if(necut>0)  {
     CUT_CELLS(x0, x, xcut, iptr, cut2e, d, etype, p, nelem, pc, cut2face,cut2neigh, elem2face, faces, iblank);
 
-  for(i=0;i<necut;i++)
-    printf("cut elem %i: neigh = %i %i %i\n",i,cut2neigh[3*i+0],cut2neigh[3*i+1],cut2neigh[3*i+2]);
+    for(i=0;i<necut;i++)
+      printf("cut elem %i: neigh = %i %i %i\n",i,cut2neigh[3*i+0],cut2neigh[3*i+1],cut2neigh[3*i+2]);
+  }
  
   /* compute the mass matrix for each element */
   MASS_MATRIX(mass,x,iptr,d,etype,p,nelem,pc);
 
-printf("\nDEBUG: Elem 0 Orig Mass: [%f %f %f; %f %f %f; %f %f %f]\n",mass[0],mass[1],mass[2],mass[3],mass[4],mass[5],mass[6],mass[7],mass[8]);
+  //printf("\nDEBUG: Elem 0 Orig Mass: [%f %f %f; %f %f %f; %f %f %f]\n",mass[0],mass[1],mass[2],mass[3],mass[4],mass[5],mass[6],mass[7],mass[8]);
 
   /* Handle cut cells */
 
@@ -210,12 +212,13 @@ printf("\nDEBUG: Elem 0 Orig Mass: [%f %f %f; %f %f %f; %f %f %f]\n",mass[0],mas
     CUT_MASS_MATRIX(mass,x,JinvV,iptr,xcut,detJcut,iptrc,d,etype,p,nelem,pc,pccut,necut,cut2e);
 
   }
-printf("\nDEBUG: Elem 0 Cut Mass: [%f %f %f; %f %f %f; %f %f %f]\n",mass[0],mass[1],mass[2],mass[3],mass[4],mass[5],mass[6],mass[7],mass[8]);
+  //printf("\nDEBUG: Elem 0 Cut Mass: [%f %f %f; %f %f %f; %f %f %f]\n",mass[0],mass[1],mass[2],mass[3],mass[4],mass[5],mass[6],mass[7],mass[8]);
 
 
 
   /* compute some statistics of the mesh and report them */
   totalArea=0.0;
+  m=0;
   for(i=0;i<nelem;i++) 
     for(j=0;j<ngElem[etype][p];j++)
       {

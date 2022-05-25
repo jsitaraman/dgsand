@@ -746,34 +746,35 @@ max = 0;
       ix=pc*i;
       iR=iq=iptr[ix];
       im=iptr[ix+10];
-stop = 0; 
-for(j=0;j<nbasis;j++)
-if(fabs(R[iR+j])>1e-10){
-stop = 1;
-if(fabs(R[iR+j]) > max) max = fabs(R[iR+j]);  
-}
-if(stop){
-printf("===============\n");
-printf("Debug elem %i\n",i);
-for(j=0;j<nbasis;j++) printf("R(%i) = %16.12e;\n",j+1,R[iR+j]); 
-printf("\n");
-ld = 0; 
-for(j=0;j<nbasis;j++) 
-for(k=0;k<nbasis;k++){
-printf("M(%i,%i) = %16.12e;\n",j+1,k+1, mass[im+ld]); 
-ld++;
-}
 
-printf("===============\n");
-}
-
+      stop = 0; 
+      for(j=0;j<nbasis;j++)
+	if(fabs(R[iR+j])>1e-10){
+	  stop = 1;
+	  if(fabs(R[iR+j]) > max) max = fabs(R[iR+j]);  
+	}
+#if 0      
+      if(stop){
+	printf("===============\n");
+	printf("Debug elem %i\n",i);
+	for(j=0;j<nbasis;j++) printf("R(%i) = %16.12e;\n",j+1,R[iR+j]); 
+	printf("\n");
+	ld = 0; 
+	for(j=0;j<nbasis;j++) 
+	  for(k=0;k<nbasis;k++){
+	    printf("M(%i,%i) = %16.12e;\n",j+1,k+1, mass[im+ld]); 
+	    ld++;
+	  }
+	
+	printf("===============\n");
+      }
+#endif      
       int iscut = 0; 
       for(j=0;j<necut;j++)
         if(abs(i-cut2e[j])==0){
           iscut=1;
 	  break;    
         }
-
       invertMass(mass+im,R+iR,pde,d,e,p,iscut,ireg);
     }
 }
