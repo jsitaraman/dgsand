@@ -235,7 +235,6 @@ void CutFaceWeights(double *x, double *Jinv, int pc, int* iptr, double *xcut, do
   // for every face
   double ijk[2];
 
-  ////printf("---------------\n");
   m=l=0;
   ld=ij=0;
   for(f=0;f<nfaces;f++){    
@@ -273,12 +272,9 @@ void CutFaceWeights(double *x, double *Jinv, int pc, int* iptr, double *xcut, do
 	      // basis[][](u) computes basis function at u
 	      if (p > 0){
 		bfcutL[l]=basis[e][b](uL);  // filled as bf[nfaces][nGL][nbasis]
-		if(eid!=-1){
+		if(eid>-1){
 		  bfcutR[l]=basis[e][b](uR);  // filled as bf[nfaces][nGL][nbasis]
                 }
-		else{
-		  bfcutR[l] = -1.0;  // should never be used
-		}
 		l++;
 	      }
 	    }

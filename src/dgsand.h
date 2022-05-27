@@ -76,8 +76,8 @@ extern "C" {
   void OUTPUT_TECPLOT(int meshid, int step,double *x, double *q,
 		    int pc, int *iptr, int pde, int d, int e, int p, int nelem);
 
-  void SETUP_OVERSET(int* cut2neighA, int* iptrA, int* iptrB, int* iptrcA, int* iptrcB, 
-		     double* xA, double* xB, double* xcutA, 
+  void SETUP_OVERSET(int* cut2e, int* cut2neighA, int* iptrA, int* iptrB, int* iptrcA, int* iptrcB, 
+		     double* xA, double* xB, 
                      double* bfcutLA, double* bfcutRA, double* JinvB,
 		     int d, int e, int p, int pc, int pccut, int necutA, int nelemB); 
 
@@ -402,14 +402,14 @@ class dgsand
 		      std::vector<double>& JinvB,
 		      int nelemB)
     {
-    SETUP_OVERSET(cutoverset.data(),
+    SETUP_OVERSET(cut2e.data(),
+		  cutoverset.data(),
                   iptr.data(),
                   iptrB.data(),
                   iptrc.data(),
                   iptrcB.data(),
                   x.data(),
                   xB.data(),
-                  xcut.data(),
                   bfcutL.data(),
                   bfcutR.data(),
 		  JinvB.data(),
