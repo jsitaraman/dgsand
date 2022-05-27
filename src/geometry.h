@@ -160,10 +160,6 @@ void BasesVCut(double *x, double *Jinv,double *detJ,
   //Loop over vol quad pts  
   double ijk[d]; 
   l=n=m=ld=ii=0;
-//  printf("  orig tri = %f %f; %f %f; %f %f\n",x[iptr[iorig*pc+1]],x[iptr[iorig*pc+1]+3],x[iptr[iorig*pc+1]+1],x[iptr[iorig*pc+1]+4],x[iptr[iorig*pc+1]+2],x[iptr[iorig*pc+1]+5]);
-//  printf("  cut tri = %f %f; %f %f; %f %f\n",xcut[0],xcut[3],xcut[1],xcut[4],xcut[2],xcut[5]);
-
-  printf("orig invJ = [%f %f; %f %f]\n",Jinv[0],Jinv[1],Jinv[2],Jinv[3]); 
   for(w=0; w<ngElem[e][p]; w++){
 
     // get local coord of quad pt
@@ -242,11 +238,9 @@ void CutFaceWeights(double *x, double *Jinv, int pc, int* iptr, double *xcut, do
   ////printf("---------------\n");
   m=l=0;
   ld=ij=0;
-  printf("Orig Elem %i, Cut Elem %i\n",iorig,icut);
   for(f=0;f<nfaces;f++){    
       // for every Gauss-point on this sub face
       for(w=0;w<ngGL[e][p];w++){
-	    printf("\nface %i, gauss %i\n",f,w); 	
 
   	    v=gaussgl[e][g][(d)*w];  // gauss location from 0 to 1
 	    wgt=gaussgl[e][g][(d)*w+1];	 // gauss weight
@@ -263,15 +257,10 @@ void CutFaceWeights(double *x, double *Jinv, int pc, int* iptr, double *xcut, do
             // now convert ijk coord on sub elem to rst coord on full L side elem
             eid = iorig; 
             CutCellInterp(x+iptr[pc*eid+1],d,e,p,Jinv+iptr[pc*eid+8],ijk,xcut,uL); //,Jinvcut,detJcut);  
-//            printf("\tijk = %f %f\n",ijk[0],ijk[1]); 	 
-            printf("\tuL = %f %f\n",uL[0],uL[1]); 	 
 
 	    eid = cut2neigh[f];
-  	    printf("  neig tri = %f %f; %f %f; %f %f\n",x[iptr[eid*pc+1]],x[iptr[eid*pc+1]+3],x[iptr[eid*pc+1]+1],x[iptr[eid*pc+1]+4],x[iptr[eid*pc+1]+2],x[iptr[eid*pc+1]+5]);
- 	    printf("neigh el = %i\n",eid); 
-            if(eid!=-1){
+            if(eid>-1){
               CutCellInterp(x+iptr[pc*eid+1],d,e,p,Jinv+iptr[pc*eid+8],ijk,xcut,uR); //,Jinvcut,detJcut);  
-//              printf("\tuR = %f %f\n",uR[0],uR[1]); 	 
 	    }
 
 	    // get the bases and derivs at gauss legendre pts
@@ -292,7 +281,6 @@ void CutFaceWeights(double *x, double *Jinv, int pc, int* iptr, double *xcut, do
 		}
 		l++;
 	      }
-              printf("\t\tl = %i, b = %i, bfcutL = %f, bfcutR = %f\n",l-1,b,bfcutL[l-1],bfcutR[l-1]); 
 	    }
 	    if (p==0){
 	      bfcutL[l]=1.0;
@@ -344,7 +332,6 @@ void CutFaceWeights(double *x, double *Jinv, int pc, int* iptr, double *xcut, do
 
               // get [dx/dr]^-1
               if (d==2) invmat2x2(mat,jacR,det);
-              printf("\tJacR = %f %f; %f %f, det = %f\n",mat[0][0],mat[0][1],mat[1][0],mat[1][1],det);
 	    }
 
             // compute [dr/dx][dN/dr]
@@ -367,7 +354,6 @@ void CutFaceWeights(double *x, double *Jinv, int pc, int* iptr, double *xcut, do
 
 		  ld++;
 		}
-              printf("\t\tb= %i, bfdcutL = %f, bfdcutR = %f\n",b,bfdcutL[ld-1],bfdcutR[ld-1]); 
 	      }
 	    }
 	    else {
@@ -488,16 +474,6 @@ void mass_matrix(double *M, double *x, int d, int e, int p)
       if (d==2) invmat2x2(mat,jac,det);
       M[0]=0.5*det;
   }
-/*
-printf("------------------\n");
-for(i=0;i<order2basis[e][p];i++)
-{
-for(j=0;j<order2basis[e][p];j++)
-  printf("%16.12f ",M[i*nbasis+j]);
-printf("\n");
-}
-printf("------------------\n");
-*/
 }
 
 void Jacobian(double *x,double *bv, double *bvd, double *Jinv, 
@@ -526,10 +502,8 @@ void Jacobian(double *x,double *bv, double *bvd, double *Jinv,
 
       for(b=0;b<nbasis;b++)
         for(i=0;i<d;i++)
-//	  printf("\tbd[%i][%i] = %f\n",b,i,bd[b][i]);
 
       for(b=0;b<nbasis;b++){
-//printf("\t x[%i] = %f, y[%i] = %f\n",b,x[b],x[nbasis+b]);
 }
       //build jacobian dx/dr
       for(i=0;i<d;i++)
@@ -544,14 +518,12 @@ void Jacobian(double *x,double *bv, double *bvd, double *Jinv,
 
       for(i=0;i<d;i++)
 	  for(j=0;j<d;j++)
-//		printf("\tJac[%i][%i] = %f\n",i,j,mat[i][j]);
 
       //invert jacobian (stored in jac) and get detJ
       if (d==2) invmat2x2(mat,jac,det);
       for(i=0;i<d;i++)
 	for(j=0;j<d;j++) {
 	  Jinv[ij++]=jac[i][j];
-//	  printf("\tJinv[%i][%i] = %f \n",i,j,jac[i][j]);
         }
 
       // get basis derivs dN/dx = dN/dr*(dx/dr)^-1
@@ -570,16 +542,6 @@ void Jacobian(double *x,double *bv, double *bvd, double *Jinv,
       }
       detJ[n++]=det;
     }
-
-ld = 0; 
-      for(b=0;b<nbasis;b++)
-        for(i=0;i<d;i++){
-//printf("\tdebug: b = %i, i = %i,  bvd[%i] = %f\n",b,i,ld,bvd[ld]);
-ld++; 
-	}
-//printf("\n"); 
-
-
 }
 
 void FaceWeights(double *x, double *bf, double *bfd, double *Jinv, double *faceWeight, 
@@ -755,7 +717,6 @@ void COMPUTE_CUT_METRICS(double *x, double *JinvV,
     cifw  =iptrc[cip+9]; // faceWeight
     cc2n  =iptrc[cip+12]; // cut2neigh  
 
-    printf("\n==================================\nCut Elem %i (cix = %i), Orig Elem %i: Entering BasesVCut\n==================================\n",i,cix,eid); 
     // get bases at cut vol quad pts
     BasesVCut(x+ix, JinvV+ij, detJ+idetj, 
               xcut+cix, bvcut+cibv, bvdcut+cibvd,
@@ -764,7 +725,6 @@ void COMPUTE_CUT_METRICS(double *x, double *JinvV,
 
 
     // basis on face
-    printf("\n==================================\nCut Elem %i, Orig Elem %i: Entering CutFaceWeights\n==================================\n",i,eid); 
     CutFaceWeights(x, JinvF,pc,iptr,xcut+cix,
   		   bfcutL+cibf,bfdcutL+cibfd,
   		   bfcutR+cibf,bfdcutR+cibfd,
@@ -800,28 +760,10 @@ void CUT_MASS_MATRIX(double *mass,double *x, double *Jinv, int *iptr, double *xc
       ij=iptr[pc*eid+4];
       im=iptr[pc*eid+10];
 
-printf("==========================\n");
-printf("Uncut Mass Matrix %i\n",eid);
-ld = 0;
-for(j=0;j<nbasis;j++)
-for(k=0;k<nbasis;k++){
-printf("M(%i,%i) = %16.12e;\n",j+1,k+1, mass[im+ld]);
-ld++;
-}
-printf("\n");
-
-
       ixc=iptrc[pccut*i+1];
       id=iptrc[pccut*i+5]; 
       cut_mass_matrix(&(mass[im]),&(x[ix]),&(Jinv[ij]),&(xcut[ixc]),&(detJcut[id]),d,e,p);
 
-printf("Cut Mass Matrix %i\n",eid);
-ld = 0;
-for(j=0;j<nbasis;j++)
-for(k=0;k<nbasis;k++){
-printf("M(%i,%i) = %16.12e;\n",j+1,k+1, mass[im+ld]);
-ld++;
-}
   }
 }
 

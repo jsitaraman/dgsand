@@ -20,6 +20,7 @@ void parseInputs(char *inputfile, char *gridfile,int *pde, int *itype, int *nste
   fgets(line,256,fp);  sscanf(line,"param[5]=%lf",&param[5]);
   fgets(line,256,fp);  sscanf(line,"gridfile=%s",gridfile);
   fclose(fp);
+  printf("INIT PARAMS:\n"); 
   for(int i=0;i<6;i++) printf("%f ",param[i]);
 }
 void output_params()

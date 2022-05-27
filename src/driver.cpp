@@ -15,26 +15,29 @@ int main(int argc, char *argv[])
   }
   dgsand *sol=new dgsand[nmesh];
   
-  double x0=0.5;  
+  double x0=1.5;  
   for(int i=0;i<nmesh;i++) {
     sol[i].setup(argv[i+1]);
     sol[i].init();
     sol[i].mass_matrix();
-    sol[i].initTimeStepping();
+    sol[i].initTimeStepping(i);
   }
 
   int B; 
   if(nmesh>1){
     for(int i=0;i<nmesh;i++) {
+printf("\n=================\nCUTTING MESH %i\n=================\n",i);
       sol[i].cut(x0,i);
       sol[i].cut_metrics(x0);
-      
+
+printf("\n ENTERING OVERSET SETUP\n");      
       B = 1-i; 
       sol[i].setupOverset(sol[B].iptr,
 		          sol[B].iptrc,
 		   	  sol[B].x,
 			  sol[B].JinvV,
 		          sol[B].nelem);
+
     }
   }	  
 
@@ -49,7 +52,7 @@ int main(int argc, char *argv[])
       // exchange overset flux information	    
       if(nmesh>1){
         B = 1-i; 
-        sol[i].exchangeOverset(sol[B].q, sol[B].iptrc); 
+ //       sol[i].exchangeOverset(sol[B].q, sol[B].iptrc); 
       }
       sol[i].computeRHS(sol[i].q);
     }

@@ -42,7 +42,7 @@ extern "C" {
   double total_area(double *detJ, int etype, int p, int d, int nelem);
   void CUT_CELLS(double x0, double *x, double* xcut, int* iptr, int* cut2e, int d, int e, int p,
 		 int nelem, int pc, int *cut2face, int* cut2neigh, int* elem2face, int* faces,
-		 int* iblank, int imesh);
+		 int* iblank, int* cutoverset, int imesh);
   void MASS_MATRIX(double *mass,double *x, int *iptr, int d, int e, int p, int nelem, int pc);
   void CUT_MASS_MATRIX(double *mass,double *x, double *Jinv, int *iptr, double *xcut,
 		       double *detJcut, int *iptrc, int d, int e, int p, int nelem,
@@ -154,7 +154,7 @@ class dgsand
   /// cut face quantities
   std::vector<double> bfcutL,bfdcutL,JinvFcut,fwcut,bfcutR,bfdcutR;
   /// cutface connecitivity and iblanking
-  std::vector<int> cut2e,iblank;  
+  std::vector<int> cut2e,iblank, cutoverset;  
   /// pointer in to data arrays for cut cells
   std::vector<int> iptrc;
   int pccut;
@@ -182,13 +182,11 @@ class dgsand
 	char grid_file[20];
 	parseInputs(input_file,grid_file, &pde,&itype,&nsteps,&dt,&nsave,&ireg);
 	nfields=number_of_fields(pde,d);
-	printf("NFIELDS = %i\n",nfields); 
 	
 	/* read a 2D grid */
 	readgrid2D(grid_file,&xcoord,&elem2node,&ibc,&p,&nnodes,&nelem,&nbnodes);
 	nbasis=order_to_basis(etype,p);        // basis for solution
 	nbasisx=order_to_basis(etype,p+(p==0));// basis for grid
-	printf("nbasis = %i\n",nbasis); 
 	
 	/* find element to face connectivity */
 	find_faces(elem2node,&elem2face,&faces,&nfaces,ibc,nelem,nbnodes,3,nbasisx);
@@ -285,6 +283,8 @@ class dgsand
 	cut2e.resize(necut);       
 	cut2face.resize(necut*3);  // map between cut face and orig face id                       
 	cut2neigh.resize(necut*3); // map between cut face and R side neighbor
+	cutoverset.resize(necut*3);        // cutoverset array                    
+
 	//create all the cut cell pointers
 	bvcut.resize(necut*nbasis*ngElem);         // basis value at volume QP	   
 	bvdcut.resize(necut*d*nbasis*ngElem);// basis derivative value at volume QP
@@ -329,7 +329,7 @@ class dgsand
 		  cut2e.data(),
 		  d, etype, p, nelem, pc,
 		  cut2face.data(),cut2neigh.data(),
-		  elem2face, faces, iblank.data(),imesh);
+		  elem2face, faces, iblank.data(),cutoverset.data(),imesh);
 	
 	for(int i=0;i<necut;i++)
 	  printf("cut elem %i: neigh = %i %i %i\n",
@@ -379,9 +379,9 @@ class dgsand
       }
     };
 
-    void initTimeStepping() {
+    void initTimeStepping(int imesh) {
       /* compute some statistics of the mesh and report them */
-        printf("#---------dgsand------------\n");
+        printf("\n#---------MESH %i------------\n",imesh);
 	printf("#(nnodes, nelem, p)=(%d, %d, %d)\n",nnodes,nelem,p);
 	printf("#ndof=%d\n",nelem*nbasis);
 	printf("#nfaces=%d\n",nfaces);
@@ -402,7 +402,7 @@ class dgsand
 		      std::vector<double>& JinvB,
 		      int nelemB)
     {
-    SETUP_OVERSET(cut2neigh.data(),
+    SETUP_OVERSET(cutoverset.data(),
                   iptr.data(),
                   iptrB.data(),
                   iptrc.data(),
@@ -425,7 +425,7 @@ class dgsand
 		       qB.data(), 
 		       iptrc.data(),
 		       iptrB.data(),
-		       cut2neigh.data(),
+		       cutoverset.data(),
 		       necut, pccut, d, etype, p, pc, pde); 
     } 
 

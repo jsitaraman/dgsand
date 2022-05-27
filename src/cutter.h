@@ -76,10 +76,11 @@ int FIND_NECUT(double x0, double *x,int* iptr, int d, int e, int p, int nelem, i
       //increment necut by 1 or 2 depending on how it was cut
       if(sum<nfp) necut+=sum; 
   }
+printf("NECUT = %i\n",necut); 
   return necut; 
 }
 
-void CUT_CELLS(double x0, double *x, double* xcut, int* iptr, int* cut2e, int d, int e, int p, int nelem, int pc, int *cut2face, int* cut2neigh, int* elem2face, int* faces, int* iblank, int imesh)
+void CUT_CELLS(double x0, double *x, double* xcut, int* iptr, int* cut2e, int d, int e, int p, int nelem, int pc, int *cut2face, int* cut2neigh, int* elem2face, int* faces, int* iblank, int* cutoverset, int imesh)
 // This routine cuts the cells according to some arbitrary vertical line. 
 // This is for testing purposes and will eventually be replaced with 
 // an actual cutting routine.
@@ -88,6 +89,7 @@ void CUT_CELLS(double x0, double *x, double* xcut, int* iptr, int* cut2e, int d,
 //  xcut - global node coords of the cut cells
 //  cut2e - map between cut cell id and original elem id
 //  cut2neigh - map between cut face and R side element neighbor
+//  cutoverset - tag list of cell faces that have overset boundaries
 {
 
   // Define the cutting boundary as x = x0 (cutting away x < x0)
@@ -190,7 +192,7 @@ void CUT_CELLS(double x0, double *x, double* xcut, int* iptr, int* cut2e, int d,
         neigh[0] = faces[6*fid+2] == i ? faces[6*fid+4] : faces[6*fid+2]; 
 
         forig[1] = -1; 
-	neigh[1] = i;
+	neigh[1] = -2; // overset boundary
 
         fid = abs(elem2face[i*3+jp2])-1;
         forig[2] = fid; 
@@ -215,6 +217,9 @@ void CUT_CELLS(double x0, double *x, double* xcut, int* iptr, int* cut2e, int d,
 	  cut2neigh[3*n] = neigh[0];
 	  cut2neigh[3*n+1] = neigh[1];
 	  cut2neigh[3*n+2] = neigh[2];
+          cutoverset[3*n+0] = -1; 
+          cutoverset[3*n+1] = 1; 
+          cutoverset[3*n+2] = -1; 
         }
         else{
           xcut[n*3*2]   = xtmp[0];
@@ -232,6 +237,9 @@ void CUT_CELLS(double x0, double *x, double* xcut, int* iptr, int* cut2e, int d,
 	  cut2neigh[3*n] = neigh[0];
 	  cut2neigh[3*n+1] = neigh[2];
 	  cut2neigh[3*n+2] = neigh[1];
+          cutoverset[3*n+0] = -1; 
+          cutoverset[3*n+1] = -1; 
+          cutoverset[3*n+2] = 1; 
         }
         cut2e[n]=i; //store id of orig elem
 
@@ -292,6 +300,10 @@ printf("\telem neigh(%i, %i, %i) = %i %i %i\n",3*n,3*n+1,3*n+2,cut2neigh[3*n],cu
 	forig[2] = -1; 
 	neigh[2] = i;  // this face's fluxes cancel out
 
+        cutoverset[3*n+0] = -1;        
+        cutoverset[3*n+1] = -1;        
+        cutoverset[3*n+2] = -1;        
+
         // double check for positive jacobian 
         JacP1Tri(jac,xtmp,&det); 
         if(det>0){
@@ -350,7 +362,7 @@ printf("\telem neigh(%i, %i, %i) = %i %i %i\n",3*n,3*n+1,3*n+2,cut2neigh[3*n],cu
         xtmp[2] = xvert[2*j0]; 
         xtmp[5] = xvert[2*j0+1]; 
 
-	neigh[0] = i; // this is the overset boundary
+	neigh[0] = -2; // this is the overset boundary
         fid = abs(elem2face[i*3+jp2])-1;
         neigh[1] = faces[6*fid+2] == i ? faces[6*fid+4] : faces[6*fid+2]; 
 	neigh[2] = i; // this edge's fluxes cancel out 
@@ -368,6 +380,10 @@ printf("\telem neigh(%i, %i, %i) = %i %i %i\n",3*n,3*n+1,3*n+2,cut2neigh[3*n],cu
 	  cut2neigh[3*n] = neigh[0];
 	  cut2neigh[3*n+1] = neigh[1];
 	  cut2neigh[3*n+2] = neigh[2];
+
+          cutoverset[3*n+0] = 1;        
+          cutoverset[3*n+1] = -1;        
+          cutoverset[3*n+2] = -1;        
         }
         else{
           xcut[n*3*2]   = xtmp[0];
@@ -380,6 +396,10 @@ printf("\telem neigh(%i, %i, %i) = %i %i %i\n",3*n,3*n+1,3*n+2,cut2neigh[3*n],cu
 	  cut2neigh[3*n] = neigh[0];
 	  cut2neigh[3*n+1] = neigh[2];
 	  cut2neigh[3*n+2] = neigh[1];
+
+          cutoverset[3*n+0] = 1;        
+          cutoverset[3*n+1] = -1;        
+          cutoverset[3*n+2] = -1;        
         }
  
         cut2e[n]=i; //store id of orig elem
@@ -398,4 +418,8 @@ printf("\telem neigh(%i, %i, %i) = %i %i %i\n",3*n,3*n+1,3*n+2,cut2neigh[3*n],cu
         n++; 
       }
   }
+
+for(int aa = 0;aa<n;aa++)
+for(int f = 0;f<nfp;f++)
+printf("el %i, side %i, cutoverset[%i] = %i\n",aa,f,aa*nfp+f,cutoverset[aa*nfp+f]);
 }
