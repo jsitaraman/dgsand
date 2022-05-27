@@ -75,6 +75,13 @@ extern "C" {
 
   void OUTPUT_TECPLOT(int meshid, int step,double *x, double *q,
 		    int pc, int *iptr, int pde, int d, int e, int p, int nelem);
+
+  void SETUP_OVERSET(int* cut2neighA, int* iptrA, int* iptrB, int* iptrcA, int* iptrcB, 
+		     double* xA, double* xB, double* xcutA, double* bfcutLA, double* bfcutRA, double* JinvB,
+		     int d, int e, int p, int pc, int pccut, int necutA, int nelemB); 
+  void EXCHANGE_OVERSET(double* qB, int* iptrcA, int* iptrB, int* cut2neighA, 
+		        int necutA, int pccut, int d, int e, int p, int pc);
+
 }
 
 #include<vector>
@@ -83,32 +90,16 @@ class dgsand
 {
  private:
 
-  /// volumetric basis quantities and grid
-  std::vector<double> x,bv,bvd,JinvV,detJ;
-  /// cut face information
-  std::vector<double> xcut,bvcut,bvdcut,JinvVcut,detJcut;
-  /// face basis quantities
-  std::vector<double> bf,bfd,JinvF,faceWeight;
-  /// cut face quantities
-  std::vector<double> bfcutL,bfdcutL,JinvFcut,fwcut,bfcutR,bfdcutR;
   /// Mass matrix
   std::vector<double> mass;
   /// face normals and face flux
   std::vector<double> fnorm,fflux;
   /// face cut flux
   std::vector<double> fcflux;
-  /// cutface connecitivity and iblanking
-  std::vector<int> cut2e,iblank;  
   /// pde type, only Euler eqns are implemented now
   int pde;
-  /// dimensions (only implemented for 2D now)
-  const int d=2;
   /// number of fields of this pde
   int nfields;
-  /// p order
-  int p;
-  /// element type
-  int etype=0;   
   /// number of bases for solution
   int nbasis;
   /// number of bases for grid
@@ -123,8 +114,6 @@ class dgsand
   /// Mesh geometry inputs
   /// number of nodes in grid
   int nnodes;
-  /// number of elements
-  int nelem;
   /// number of primal nodes in physical boundaries
   int nbnodes;
   /// number of faces
@@ -139,22 +128,47 @@ class dgsand
   int *elem2node;
   /// element to face connectivity
   int *elem2face;
-  /// pointer in to data arrays
-  std::vector<int> iptr,iptf;
-  /// pointer in to data arrays for cut cells
-  std::vector<int> iptrc;
-  /// cut face connectivity and neighbors
-  std::vector<int> cut2face,cut2neigh;    
-  /// number of edges cut
-  int necut;
   
   /* class local variables */
-  int pc,pf,pccut,ndof,nsteps,nsave;
+  int pf,ndof,nsteps,nsave;
   double dt;
 
  public:
   /// field quantities
   std::vector<double> q,qstar,Q,R;
+  /// volumetric basis quantities and grid
+  std::vector<double> x,bv,bvd,JinvV,detJ;
+  /// face basis quantities
+  std::vector<double> bf,bfd,JinvF,faceWeight;
+  /// number of elements
+  int nelem;
+  /// pointer in to data arrays
+  std::vector<int> iptr,iptf;
+  int pc; 
+
+  /// Cut quantities
+  /// cut face information
+  std::vector<double> xcut,bvcut,bvdcut,JinvVcut,detJcut;
+  /// cut face quantities
+  std::vector<double> bfcutL,bfdcutL,JinvFcut,fwcut,bfcutR,bfdcutR;
+  /// cutface connecitivity and iblanking
+  std::vector<int> cut2e,iblank;  
+  /// pointer in to data arrays for cut cells
+  std::vector<int> iptrc;
+  int pccut;
+  /// cut face connectivity and neighbors
+  std::vector<int> cut2face,cut2neigh;    
+  /// number of edges cut
+  int necut;
+  
+
+  /// dimensions (only implemented for 2D now)
+  const int d=2;
+  /// p order
+  int p;
+  /// element type
+  int etype=0;   
+
   /// generic constructor
   dgsand(): p(1),ndof(0),nfields(4),pde(1),necut(0),etype(0){};
   /// generic destructor
@@ -380,6 +394,37 @@ class dgsand
 	ndof=nfields*nbasis*nelem;
     };
 
+    void setupOverset(std::vector<int>& iptrB,
+		      std::vector<int>& iptrcB,
+		      std::vector<double>& xB,
+		      std::vector<double>& JinvB,
+		      int nelemB)
+    {
+    SETUP_OVERSET(cut2neigh.data(),
+                  iptr.data(),
+                  iptrB.data(),
+                  iptrc.data(),
+                  iptrcB.data(),
+                  x.data(),
+                  xB.data(),
+                  xcut.data(),
+                  bfcutL.data(),
+                  bfcutR.data(),
+		  JinvB.data(),
+                  d, etype, p, pc, pccut,
+                  necut, nelemB);
+    }
+    
+    void exchangeOverset(std::vector<double>& qB,
+		         std::vector<int>& iptrB)
+    {
+      EXCHANGE_OVERSET(qB.data(), 
+		       iptrc.data(),
+		       iptrB.data(),
+		       cut2neigh.data(),
+		       necut, pccut, d, etype, p, pc); 
+    } 
+
     void computeRHS(std::vector<double>& qsrc) {
       COMPUTE_RHS(R.data(),
 		  mass.data(),
@@ -442,5 +487,6 @@ class dgsand
     
     int getNsteps() { return nsteps; };
     int getNsave()  { return nsave;  };
+    int getNecut()  { return necut;  };
     double getDt()  { return dt;};
 };

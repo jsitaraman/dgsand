@@ -9,17 +9,36 @@ int main(int argc, char *argv[])
    printf("$../src/dgsand input.dgsand1 input.dgsand2 \n");
    exit(0);
   }
+  else if(nmesh>2){
+    printf("dgsand: Only a maximum of 2 grids are supported\n"); 
+    exit(0);
+  }
   dgsand *sol=new dgsand[nmesh];
   
   double x0=0.5;  
   for(int i=0;i<nmesh;i++) {
     sol[i].setup(argv[i+1]);
     sol[i].init();
-    //sol[i].cut(x0);
+    int necut = sol[i].getNecut(); 
+    printf("mesh %i, necut = %i\n",i,necut); 
     sol[i].mass_matrix();
-    //sol[i].cut_metrics(x0);
     sol[i].initTimeStepping();
   }
+
+  int B; 
+  if(nmesh>1){
+    for(int i=0;i<nmesh;i++) {
+      sol[i].cut(x0);
+      sol[i].cut_metrics(x0);
+      
+      B = 1-i; 
+      sol[i].setupOverset(sol[B].iptr,
+		          sol[B].iptrc,
+		   	  sol[B].x,
+			  sol[B].JinvV,
+		          sol[B].nelem);
+    }
+  }	  
 
   int nsteps=sol[0].getNsteps();
   int nsave=sol[0].getNsave();
@@ -28,8 +47,14 @@ int main(int argc, char *argv[])
   
   for(int n=1;n<=nsteps;n++) {
     // RK step 1
-    for(int i=0;i<nmesh;i++)      
+    for(int i=0;i<nmesh;i++){
+      // exchange overset flux information	    
+      if(nmesh>1){
+        B = 1-i; 
+        sol[i].exchangeOverset(sol[B].q, sol[B].iptrc); 
+      }
       sol[i].computeRHS(sol[i].q);
+    }
     for(int i=0;i<nmesh;i++)
       {
 	sol[i].update(sol[i].qstar,sol[i].q,rk[1]*dt);
