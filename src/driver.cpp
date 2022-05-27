@@ -19,8 +19,6 @@ int main(int argc, char *argv[])
   for(int i=0;i<nmesh;i++) {
     sol[i].setup(argv[i+1]);
     sol[i].init();
-    int necut = sol[i].getNecut(); 
-    printf("mesh %i, necut = %i\n",i,necut); 
     sol[i].mass_matrix();
     sol[i].initTimeStepping();
   }
@@ -28,7 +26,7 @@ int main(int argc, char *argv[])
   int B; 
   if(nmesh>1){
     for(int i=0;i<nmesh;i++) {
-      sol[i].cut(x0);
+      sol[i].cut(x0,i);
       sol[i].cut_metrics(x0);
       
       B = 1-i; 

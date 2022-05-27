@@ -393,16 +393,14 @@ void setCutFacesQuantities(double *x, double *q, int *iptr, int pc,
       // R side quantities
       eid = cut2neigh[j];
 
-      if(eid!=-1 && fid!=-1){ // if it's an internal cut face
+      // only do if it's face cut by cut boundary interface
+      // (overset boundaries already exchanged and internal cut faces cancel out)
+      if(eid!=-1 && fid!=-1){ 
         for(f=0;f<nfields;f++){ 
           fcflux[floc+f+nfields]=bfcutR[bloc]*q[iptr[eid*pc]+f*nbasis];
           for(b=1;b<nbasis;b++)
             fcflux[floc+f+nfields]+=bfcutR[bloc+b]*q[iptr[eid*pc]+f*nbasis+b];    
-
         }// loop over nfields
-      }
-      else{ // force overset fluxes to be inflow (will replace later)
-	  far_field[pde](fcflux+floc+nfields);    
       } // end of r side
       bloc+=nbasis;
       floc+=3*nfields; // third set of values to be computed later, skip ahead to next quad pt
@@ -712,7 +710,7 @@ int nbasis=order2basis[e][p];
       ibfd=iptr[ix+7];
       im=iptr[ix+10];
 
-      if(iblank[i]==0){
+      if(iblank[i]==1){
         volIntegral(R+iR,bv+ibv,bvd+ibvd,q+iq,detJ+idet, pde,d,e,p,i);
         faceIntegral(R+iR,fflux,bf+ibf,bfd+ibfd,elem2face+nfp*i,iptrf,q,pf,pde,d,e,p,i);
       }

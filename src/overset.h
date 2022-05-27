@@ -1,31 +1,66 @@
-void EXCHANGE_OVERSET(double* qB, int* iptrcA, int* iptrB, int* cut2neighA, int necutA, int pccut, int d, int e, int p, int pc)
+void setOversetFluxes(double *fcflux, double *bfcutR, double *qB, int* cut2neigh, int *iptrB, int d, int e, int p, int pc, int pde)
+// computes R q values at cut cell interface
+// using q from other mesh
 {
-  int ix, iq, ibf, ic2n;
   int nfp = facePerElem[e];
-  int eid; 
+  int nbasis = order2basis[e][p];
+  int ngauss = ngGL[e][p]; 
+  int nfields=get_nfields[pde](d);
+  int eid, qloc; 
+
+  int floc = 0;
+  int bloc = 0;  
+  for(int j = 0; j<nfp; j++){
+    // neg neigh id means it's on the other mesh
+    eid = cut2neigh[j]; 
+    for(int w=0; w<ngauss; w++){
+      // notice the sign switch on the fluxes
+      // compared to the other cut face fluxes. 
+      // this flux is getting added to the system, 
+      // not removed
+      if(eid<0){
+	qloc = iptrB[abs(eid)*pc]; 
+	for(int f = 0; f<nfields; f++){
+          fcflux[floc+f+nfields]=-bfcutR[bloc]*qB[qloc+f*nbasis];
+          for(int b=1;b<nbasis;b++)
+            fcflux[floc+f+nfields]-=bfcutR[bloc+b]*qB[qloc+f*nbasis+b];
+        } // nfields
+      } // eid
+      bloc+=nbasis;
+      floc+=3*nfields; // third set of values to be computed later, skip ahead to next quad pt
+    } // ngauss
+  } // nfp
+}
+
+void EXCHANGE_OVERSET(double* fcfluxA, double* bfcutRA, double* qB, int* iptrcA, int* iptrB, int* cut2neighA, int necutA, int pccut, int d, int e, int p, int pc, int pde)
+{
+  int ix, iq, ibf, ic2n, iflx;
+  int nfp = facePerElem[e];
+  int eid, flag; 
 
   // Loop over cut cells in mesh A
   for(int i = 0; i<necutA; i++){
     ix=pccut*i;
+    iflx=iptrcA[ix+11]; 
     ic2n=iptrcA[ix+12];
 
-    // loop over faces
-    for(int j = 0; j<nfp; j++)  
+    // does this cut cell have an overset boundary?
+    flag = 0; 
+    for(int j = 0; j<nfp; j++){
       // if neigh id<0, it's on mesh B
-      eid = cut2neighA[ic2n+j]; 
-      if(eid < 0){
+      eid = cut2neighA[ic2n+j];
+      if(eid < 0) flag = 1; 
+    } 
+    if(flag){
+      // cut cell quantities
+      ibf=iptrcA[ix+6];
 
-        // cut cell quantities
-        ibf=iptrcA[ix+6];
+      // mesh B quantities
+      iq=iptrB[pc*abs(eid)]; 
 
-	// mesh B quantities
-	iq=iptrB[pc*abs(eid)]; 
-
-	// interpolate q fluxes from mesh B
-//	for(int b=0;b<nbasis; b++)
-
-//	getOversetFlux(bfcutR,qB+iq);
-      }
+      // interpolate q fluxes from mesh B
+      setOversetFluxes(fcfluxA+iflx, bfcutRA+ibf, qB+iq, cut2neighA+ic2n, iptrB, d, e, p, pc, pde);
+    } // flag
   } // cut cells
 }
 
@@ -42,11 +77,12 @@ void interpOversetCutNodes(double *xA, double *xB, int *iptrB, int pc,
   int ngauss = ngGL[e][p]; 
   double xloc,yloc,dx[2],u[2],rs[2], x0[2]; 
 
+  int bloc = 0;
   for(j=0;j<nfp;j++){
     // find out if it's an overset boundary
     eid = cut2neighA[j];
-    if(eid<0){
-      for(w=0;w<ngauss;w++){
+    for(w=0;w<ngauss;w++){
+      if(eid<0){
 
         // Find x coordinates of the desired face quadrature points
         // have bfcutR, use this to get xyz coords
@@ -92,11 +128,13 @@ void interpOversetCutNodes(double *xA, double *xB, int *iptrB, int pc,
         } // while not inside
       
 	// get mesh B shape function values at quad pt and store in bfcutR
-	ind = j*(ngauss*nbasis) + w*(nbasis) ; // XXX double check
-	for(int b=0; b<nbasis;k++)  bfcutRA[ind] = basis[e][ind+b](rs);
+	for(int b=0; b<nbasis;k++)  bfcutRA[bloc+b] = basis[e][b](rs);
 
-      } // loop gauss
-    } // if overset edge
+      } // if overset edge
+
+      // move to next quad pt
+      bloc+=nbasis;
+    } // loop gauss
   } // loop edges
 }
 

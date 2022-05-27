@@ -36,13 +36,13 @@ extern "C" {
   int get_ngGL(int etype, int p);
   int face_per_elem(int etype);
   
-  int FIND_NECUT(double x0, double *x,int* iptr, int d, int e, int p, int nelem, int pc);
+  int FIND_NECUT(double x0, double *x,int* iptr, int d, int e, int p, int nelem, int pc, int imesh);
 
   
   double total_area(double *detJ, int etype, int p, int d, int nelem);
   void CUT_CELLS(double x0, double *x, double* xcut, int* iptr, int* cut2e, int d, int e, int p,
 		 int nelem, int pc, int *cut2face, int* cut2neigh, int* elem2face, int* faces,
-		 int* iblank);
+		 int* iblank, int imesh);
   void MASS_MATRIX(double *mass,double *x, int *iptr, int d, int e, int p, int nelem, int pc);
   void CUT_MASS_MATRIX(double *mass,double *x, double *Jinv, int *iptr, double *xcut,
 		       double *detJcut, int *iptrc, int d, int e, int p, int nelem,
@@ -77,11 +77,13 @@ extern "C" {
 		    int pc, int *iptr, int pde, int d, int e, int p, int nelem);
 
   void SETUP_OVERSET(int* cut2neighA, int* iptrA, int* iptrB, int* iptrcA, int* iptrcB, 
-		     double* xA, double* xB, double* xcutA, double* bfcutLA, double* bfcutRA, double* JinvB,
+		     double* xA, double* xB, double* xcutA, 
+                     double* bfcutLA, double* bfcutRA, double* JinvB,
 		     int d, int e, int p, int pc, int pccut, int necutA, int nelemB); 
-  void EXCHANGE_OVERSET(double* qB, int* iptrcA, int* iptrB, int* cut2neighA, 
-		        int necutA, int pccut, int d, int e, int p, int pc);
 
+  void EXCHANGE_OVERSET(double* fcfluxA, double* bfcutRA, double* qB, 
+                        int* iptrcA, int* iptrB, int* cut2neighA, 
+                        int necutA, int pccut, int d, int e, int p, int pc, int pde);
 }
 
 #include<vector>
@@ -273,11 +275,11 @@ class dgsand
 			   d,etype,p,nelem,pc);      
     }
 
-    void cut(double x0)
+    void cut(double x0,int imesh)
     {
       int ngElem=get_ngElem(etype,p);
       int ngGL=get_ngGL(etype,p);
-      necut = FIND_NECUT(x0,x.data(),iptr.data(),d,etype,p,nelem,pc);
+      necut = FIND_NECUT(x0,x.data(),iptr.data(),d,etype,p,nelem,pc,imesh);
       if (necut > 0)  {
 	xcut.resize(d*3*necut);
 	cut2e.resize(necut);       
@@ -327,7 +329,7 @@ class dgsand
 		  cut2e.data(),
 		  d, etype, p, nelem, pc,
 		  cut2face.data(),cut2neigh.data(),
-		  elem2face, faces, iblank.data());
+		  elem2face, faces, iblank.data(),imesh);
 	
 	for(int i=0;i<necut;i++)
 	  printf("cut elem %i: neigh = %i %i %i\n",
@@ -418,11 +420,13 @@ class dgsand
     void exchangeOverset(std::vector<double>& qB,
 		         std::vector<int>& iptrB)
     {
-      EXCHANGE_OVERSET(qB.data(), 
+      EXCHANGE_OVERSET(fcflux.data(),
+		       bfcutR.data(), 
+		       qB.data(), 
 		       iptrc.data(),
 		       iptrB.data(),
 		       cut2neigh.data(),
-		       necut, pccut, d, etype, p, pc); 
+		       necut, pccut, d, etype, p, pc, pde); 
     } 
 
     void computeRHS(std::vector<double>& qsrc) {

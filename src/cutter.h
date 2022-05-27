@@ -11,7 +11,7 @@ void JacP1Tri( double *jac, double *xtmp, double* det){
   *det = jac[0]*jac[3]-jac[1]*jac[2];
 }
 
-int FIND_NECUT(double x0, double *x,int* iptr, int d, int e, int p, int nelem, int pc)
+int FIND_NECUT(double x0, double *x,int* iptr, int d, int e, int p, int nelem, int pc, int imesh)
 {
 //Hack just to find ne cut. Only need this for debugging cases, 
 //we'll actually get this from PUNDIT later, we just need necut 
@@ -51,7 +51,8 @@ int FIND_NECUT(double x0, double *x,int* iptr, int d, int e, int p, int nelem, i
         }         
 
 	//keep track of how many vertices are on cut side of cut boundary
-        if(xvert[2*j]<x0) tally[j]=1;
+	if(imesh==0) if(xvert[2*j]>x0) tally[j]=1;
+	if(imesh==1) if(xvert[2*j]<x0) tally[j]=1;
       }
 
       // check if element has vertices on both sides of x=x0 then 
@@ -78,7 +79,7 @@ int FIND_NECUT(double x0, double *x,int* iptr, int d, int e, int p, int nelem, i
   return necut; 
 }
 
-void CUT_CELLS(double x0, double *x, double* xcut, int* iptr, int* cut2e, int d, int e, int p, int nelem, int pc, int *cut2face, int* cut2neigh, int* elem2face, int* faces, int* iblank)
+void CUT_CELLS(double x0, double *x, double* xcut, int* iptr, int* cut2e, int d, int e, int p, int nelem, int pc, int *cut2face, int* cut2neigh, int* elem2face, int* faces, int* iblank, int imesh)
 // This routine cuts the cells according to some arbitrary vertical line. 
 // This is for testing purposes and will eventually be replaced with 
 // an actual cutting routine.
@@ -104,6 +105,7 @@ void CUT_CELLS(double x0, double *x, double* xcut, int* iptr, int* cut2e, int d,
   double bv[nbasis*nfp];
   n = 0; 
   for(i=0;i<nelem;i++){
+      iblank[i] = 1; 
       ix=iptr[pc*i+1];
       // get bases at rst = [0 0 ; 1 0; 0 1]
       for(j=0;j<nfp;j++){ // loop over vertices
@@ -122,7 +124,8 @@ void CUT_CELLS(double x0, double *x, double* xcut, int* iptr, int* cut2e, int d,
         }         
 
 	//keep track of how many vertices are on cut side of cut boundary
-        if(xvert[2*j]<x0) tally[j]=1;
+	if(imesh==0) if(xvert[2*j]>x0) tally[j]=1;
+	if(imesh==1) if(xvert[2*j]<x0) tally[j]=1;
       }
 
       // check if element has vertices on both sides of x=x0 then 
@@ -143,7 +146,7 @@ void CUT_CELLS(double x0, double *x, double* xcut, int* iptr, int* cut2e, int d,
         }
       }
       else if(sum==nfp){
-        iblank[i] = 1;
+        iblank[i] = 0;
         printf("\nelem %i is blanked\n",i+1);
       }
 
