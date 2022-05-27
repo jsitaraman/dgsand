@@ -395,7 +395,7 @@ void setCutFacesQuantities(double *x, double *q, int *iptr, int pc,
 
       // only do if it's face cut by cut boundary interface
       // (overset boundaries already exchanged and internal cut faces cancel out)
-      if(eid!=-1 && fid!=-1){ 
+      if(eid>-1 && fid!=-1){ 
         for(f=0;f<nfields;f++){ 
           fcflux[floc+f+nfields]=bfcutR[bloc]*q[iptr[eid*pc]+f*nbasis];
           for(b=1;b<nbasis;b++)
