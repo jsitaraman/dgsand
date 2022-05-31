@@ -15,17 +15,17 @@ int main(int argc, char *argv[])
   }
   dgsand *sol=new dgsand[nmesh];
   
+  int i, B; 
   double x0=1.5;  
-  for(int i=0;i<nmesh;i++) {
+  for(i=0;i<nmesh;i++) {
     sol[i].setup(argv[i+1]);
     sol[i].init();
     sol[i].mass_matrix();
     sol[i].initTimeStepping(i);
   }
 
-  int B; 
   if(nmesh>1){
-    for(int i=0;i<nmesh;i++) {
+    for(i=0;i<nmesh;i++) {
 printf("\n=================\nCUTTING MESH %i\n=================\n",i);
       sol[i].cut(x0,i);
       sol[i].cut_metrics(x0);
@@ -48,39 +48,53 @@ printf("\n ENTERING OVERSET SETUP\n");
   
   for(int n=1;n<=nsteps;n++) {
     // RK step 1
-    for(int i=0;i<nmesh;i++){
+    for(i=0;i<nmesh;i++){
       // exchange overset flux information	    
       if(nmesh>1){
         B = 1-i; 
- //       sol[i].exchangeOverset(sol[B].q, sol[B].iptrc); 
+printf("Exchanging for mesh %i\n",i);
+        sol[i].exchangeOverset(sol[B].q, sol[B].iptr); 
       }
       sol[i].computeRHS(sol[i].q);
     }
-    for(int i=0;i<nmesh;i++)
+    for(i=0;i<nmesh;i++)
       {
 	sol[i].update(sol[i].qstar,sol[i].q,rk[1]*dt);
 	sol[i].update(sol[i].q,sol[i].q,rk[0]*dt);
       }
+
     // RK step 2
-    for(int i=0;i<nmesh;i++)
+    for(i=0;i<nmesh;i++){
+      if(nmesh>1){
+        B = 1-i; 
+//       sol[i].exchangeOverset(sol[B].qstar, sol[B].iptr); 
+      }
       sol[i].computeRHS(sol[i].qstar);
-    for(int i=0;i<nmesh;i++)
+    }
+    for(i=0;i<nmesh;i++)
       sol[i].update(sol[i].qstar,sol[i].q,rk[2]*dt);
+
     //RK step 3
-    for(int i=0;i<nmesh;i++)
+    for(i=0;i<nmesh;i++){
+      if(nmesh>1){
+        B = 1-i; 
+//       sol[i].exchangeOverset(sol[B].qstar, sol[B].iptr); 
+      }
       sol[i].computeRHS(sol[i].qstar);
-    for(int i=0;i<nmesh;i++)
+    }
+    for(i=0;i<nmesh;i++)
       sol[i].update(sol[i].q,sol[i].q,rk[3]*dt);
+
     // compute norms
     int imax;
     double rmax,rnorm;
-    for(int i=0;i<nmesh;i++)
+    for(i=0;i<nmesh;i++)
       {
 	sol[i].rnorm(imax,rmax,rnorm,rk[3]*dt);
 	printf("mesh%d : step %d\t%18.16f\t%d\t%18.16f\n",i,n,rnorm,imax,rmax);
       }
     if (n%nsave==0) {
-      for(int i=0;i<nmesh;i++)
+      for(i=0;i<nmesh;i++)
 	sol[i].output(i,n);
     }
   }

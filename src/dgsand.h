@@ -70,7 +70,8 @@ extern "C" {
                  double *bvcut, double *bvdcut,double *detJcut,
                  double *bfcutL, double *bfcutR,double *fwcut,
                  double *fcflux,int *iptrc,
-                 int necut, int* cut2e, int *cut2face, int* cut2neigh, int* iblank, int ireg);
+                 int necut, int* cut2e, int *cut2face, int* cut2neigh, int* iblank, int ireg,
+		 int *cutoverset);
   void UPDATE_DOFS(double *qdest, double coef, double *qsrc, double *R, int ndof);
 
   void OUTPUT_TECPLOT(int meshid, int step,double *x, double *q,
@@ -283,7 +284,7 @@ class dgsand
 	cut2e.resize(necut);       
 	cut2face.resize(necut*3);  // map between cut face and orig face id                       
 	cut2neigh.resize(necut*3); // map between cut face and R side neighbor
-	cutoverset.resize(necut*3);        // cutoverset array                    
+	cutoverset.resize(necut*3);        // cutoverset array 
 
 	//create all the cut cell pointers
 	bvcut.resize(necut*nbasis*ngElem);         // basis value at volume QP	   
@@ -462,7 +463,7 @@ class dgsand
 		  cut2face.data(),
 		  cut2neigh.data(),
 		  iblank.data(),
-		  ireg);
+		  ireg,cutoverset.data());
     }
 
     void update(std::vector<double>&qdest, std::vector<double>&qsrc, double dtfac)

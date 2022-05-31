@@ -10,20 +10,35 @@ void setOversetFluxes(double *fcflux, double *bfcutR, double *qB, int* cutoverse
 
   int floc = 0;
   int bloc = 0;  
+printf("In oversetfluxes\n");
   for(int j = 0; j<nfp; j++){
     // neg neigh id means it's on the other mesh
     for(int w=0; w<ngauss; w++){
+printf("\t j = %i, w = %i\n",j,w);
       // notice the sign switch on the fluxes
       // compared to the other cut face fluxes. 
       // this flux is getting added to the system, 
       // not removed
       eid = cutoverset[j]; 
       if(eid>=0){
-	qloc = iptrB[abs(eid)*pc]; 
+	qloc = iptrB[eid*pc]; 
 	for(int f = 0; f<nfields; f++){
-          fcflux[floc+f+nfields]=-bfcutR[bloc]*qB[qloc+f*nbasis];
+          fcflux[floc+f+nfields]= bfcutR[bloc]*qB[qloc+f*nbasis];
           for(int b=1;b<nbasis;b++)
-            fcflux[floc+f+nfields]-=bfcutR[bloc+b]*qB[qloc+f*nbasis+b];
+            fcflux[floc+f+nfields]+=bfcutR[bloc+b]*qB[qloc+f*nbasis+b];
+/*if(isnan(bfcutR[bloc+b])){
+  printf("\n\nbfcutR[%i] is NaN: %i %i %i %i \n\n",bloc+b,j,w,f,b);
+exit(1); 
+}
+else if(isnan(qB[qloc+f*nbasis+b])){
+  printf("\n\nqB[%i] is NaN: %i %i %i %i \n\n",qloc+f*nbasis+b,j,w,f,b);
+exit(1); 
+}
+else{
+printf("fcflux[%i] = %f\n",floc+f+nfields,fcflux[floc+f+nfields]);
+}
+}*/
+printf("\t\tfcflux[%i] = %f\n",floc+f+nfields,fcflux[floc+f+nfields]);
         } // nfields
       } // cut overset
       bloc+=nbasis;
@@ -36,8 +51,8 @@ void EXCHANGE_OVERSET(double* fcfluxA, double* bfcutRA, double* qB, int* iptrcA,
 {
   int ip, ix, iq, ibf, ic2n, iflx;
   int nfp = facePerElem[e];
-  int eid, flag; 
-
+  int eid, flag;
+printf("In Exchange\n");
   // Loop over cut cells in mesh A
   for(int i = 0; i<necutA; i++){
     flag = 0; 
@@ -48,17 +63,20 @@ void EXCHANGE_OVERSET(double* fcfluxA, double* bfcutRA, double* qB, int* iptrcA,
 
     // does this cut cell have an overset boundary?
     for(int j=0;j<nfp;j++)
-      if(cutoverset[i*nfp+j]>=0) flag = 1; 
+      if(cutoverset[i*nfp+j]>=0){
+	eid = cutoverset[i*nfp+j]; 
+	flag = 1;
+      }
 
     if(flag ==1){
       // cut cell quantities
       ibf=iptrcA[ip+6];
 
       // mesh B quantities
-      iq=iptrB[pc*abs(eid)]; 
+      iq=iptrB[pc*eid]; 
 
       // interpolate q fluxes from mesh B
-      setOversetFluxes(fcfluxA+iflx, bfcutRA+ibf, qB+iq, cutoverset+ic2n, iptrB, d, e, p, pc, pde);
+      setOversetFluxes(fcfluxA+iflx, bfcutRA+ibf, qB, cutoverset+ic2n, iptrB, d, e, p, pc, pde);
     } // cut overset
   } // cut cells
 }
@@ -174,13 +192,20 @@ printf("f %i, w %i, xloc,yloc = %f %f\n",j,w,xloc,yloc);
 	    }
 	  } // mesh B elem
 
+	  // compute the rst coordinate
+	  dx[0] = xloc-xvert[0];
+	  dx[1] = yloc-xvert[1];
+          ij = iptrB[pc*cutoversetA[j]+4];
+          axb(JinvB+ij,dx,rs,2);
+
 	  // if finished loop and still not found, something is wrong
-          if(inside==0){
+          if(inside==0 || rs[0]<0 || rs[0]>1 || rs[1]<0 || rs[1]>1){
             printf("ERROR! Can't find mesh B element for mesh A point (%f, %f)!\n",xloc,yloc); 
 	    exit(0); 
           }
 	  else{
 	    printf("\t found mesh A pt (%f, %f) in mesh B elem %i:  (%f, %f), (%f, %f), (%f, %f)\n",xloc,yloc,cutoversetA[j],xvert[0],xvert[1],xvert[2],xvert[3],xvert[4],xvert[5]);
+		printf("\t\t rst = %f %f\n",rs[0],rs[1]);
           }
       
 	// get mesh B shape function values at quad pt and store in bfcutR
