@@ -421,5 +421,5 @@ printf("\telem neigh(%i, %i, %i) = %i %i %i\n",3*n,3*n+1,3*n+2,cut2neigh[3*n],cu
 
 for(int aa = 0;aa<n;aa++)
 for(int f = 0;f<nfp;f++)
-printf("el %i, side %i, cutoverset[%i] = %i\n",aa,f,aa*nfp+f,cutoverset[aa*nfp+f]);
+printf("orig %i, el %i, side %i, cutoverset[%i] = %i\n",cut2e[aa],aa,f,aa*nfp+f,cutoverset[aa*nfp+f]);
 }

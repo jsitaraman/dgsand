@@ -291,7 +291,7 @@ printf("\n");
 	{
 	  // subtract fluxes if it's the overset boundary
 	  // add if it's a regular face
-	  printf("cutoverset = %i\n",cutoverset[i]);
+//	  printf("cutoverset = %i\n",cutoverset[i]);
 	  sgn = -signum(cutoverset[i]);
 	  wgt=gaussgl[e][g][(d)*w+1]; 
 //printf("wgt = %f\n",wgt);
@@ -502,11 +502,12 @@ void FILL_BC(double *fnorm,double *fflux, int *faces,
 	     
 void COMPUTE_FACE_FLUXES(double *fnorm, double *fflux,
 			 int pde, int d, int e, int p, int nfaces, int *faces,
-			 int necut, int pccut, int *iptrc, double *fcflux, double *fwcut,int* cut2e)
+			 int necut, int pccut, int *iptrc, double *fcflux, double *fwcut,int* cut2e,
+			 int* cutoverset, int* cut2neigh)
 {
   int nfields=get_nfields[pde](d);
   double normal[d],xnorm[d];
-  int i,j,k,m,w,floc,wloc,ifl,ifr,iflux,f;
+  int i,j,k,m,w,floc,wloc,ifl,ifr,iflux,ic2n,f,eid;
   int nfp = facePerElem[e];
 
   for(i=0;i<nfaces*ngGL[e][p];i++)
@@ -533,8 +534,11 @@ printf("\txNorm = %f %f \n",xnorm[0],xnorm[1]);
 //printf("\n======================\ngetting cut face fluxes\n============================\n");
   // cut face fluxes
   for(i=0;i<necut;i++){
+    eid=cut2e[i];
     floc=iptrc[i*pccut+11];
     wloc=iptrc[i*pccut+9]; 
+    ic2n=iptrc[i*pccut+12]; 
+
     m = 0; 
     for(j=0;j<nfp;j++){
       for(w=0;w<ngGL[e][p];w++){
@@ -545,16 +549,20 @@ printf("\txNorm = %f %f \n",xnorm[0],xnorm[1]);
         ifl=floc; 
         ifr=ifl+nfields;
         iflux=ifr+nfields;
-int eid=cut2e[i];
-printf("\nORIG %i, CUT i %i, j %i, w %i\n",eid,i,j,w);
+/*
+ * printf("\nORIG %i, CUT i %i, j %i, w %i\n",eid,i,j,w);
+printf("\tcutoverset = %i\n",cutoverset[ic2n+j]); 
+printf("\tcut2neigh = %i\n",cut2neigh[ic2n+j]); 
 printf("\tifl %i, ifr %i, iflux %i\n",ifl,ifr,iflux);
 printf("\tLflx = %f %f %f %f\n",fcflux[ifl+0],fcflux[ifl+1],fcflux[ifl+2],fcflux[ifl+3]); 
 printf("\tRflx = %f %f %f %f\n",fcflux[ifr+0],fcflux[ifr+1],fcflux[ifr+2],fcflux[ifr+3]); 
 printf("\txNorm = %f %f \n",xnorm[0],xnorm[1]);
+*/
+	
+	if(cut2neigh[ic2n+j]!=eid) // ignore cut edges interior to orig elem
+          gradient_indep_flux[pde](fcflux+ifl,fcflux+ifr,fcflux+iflux,xnorm,0.0);
 
-        gradient_indep_flux[pde](fcflux+ifl,fcflux+ifr,fcflux+iflux,xnorm,0.0);
-
-printf("\tflx = %f %f %f %f\n",fcflux[iflux+0],fcflux[iflux+1],fcflux[iflux+2],fcflux[iflux+3]); 
+//printf("\tflx = %f %f %f %f\n",fcflux[iflux+0],fcflux[iflux+1],fcflux[iflux+2],fcflux[iflux+3]); 
 
 
 	floc = floc + 3*nfields;
@@ -835,7 +843,7 @@ void COMPUTE_RHS(double *R,double *mass,double *bv, double *bvd, double *JinvV, 
 
   FILL_BC(fnorm,fflux,faces,pde,d,e,p,nfaces);
 
-  COMPUTE_FACE_FLUXES(fnorm,fflux,pde,d,e,p,nfaces,faces,necut,pccut,iptrc,fcflux,fwcut,cut2e);
+  COMPUTE_FACE_FLUXES(fnorm,fflux,pde,d,e,p,nfaces,faces,necut,pccut,iptrc,fcflux,fwcut,cut2e,cutoverset,cut2neigh);
 
   //CHECK_GRADIENTS(x, q,bv, bvd, bf, bfd,iptr,pc,pde,d,e,p,nelem);
 

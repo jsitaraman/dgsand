@@ -26,11 +26,11 @@ int main(int argc, char *argv[])
 
   if(nmesh>1){
     for(i=0;i<nmesh;i++) {
-printf("\n=================\nCUTTING MESH %i\n=================\n",i);
+//printf("\n=================\nCUTTING MESH %i\n=================\n",i);
       sol[i].cut(x0,i);
       sol[i].cut_metrics(x0);
 
-printf("\n ENTERING OVERSET SETUP\n");      
+//printf("\n ENTERING OVERSET SETUP\n");      
       B = 1-i; 
       sol[i].setupOverset(sol[B].iptr,
 		          sol[B].iptrc,
@@ -52,7 +52,6 @@ printf("\n ENTERING OVERSET SETUP\n");
       // exchange overset flux information	    
       if(nmesh>1){
         B = 1-i; 
-printf("Exchanging for mesh %i\n",i);
         sol[i].exchangeOverset(sol[B].q, sol[B].iptr); 
       }
       sol[i].computeRHS(sol[i].q);
@@ -67,7 +66,7 @@ printf("Exchanging for mesh %i\n",i);
     for(i=0;i<nmesh;i++){
       if(nmesh>1){
         B = 1-i; 
-//       sol[i].exchangeOverset(sol[B].qstar, sol[B].iptr); 
+        sol[i].exchangeOverset(sol[B].qstar, sol[B].iptr); 
       }
       sol[i].computeRHS(sol[i].qstar);
     }
@@ -78,7 +77,7 @@ printf("Exchanging for mesh %i\n",i);
     for(i=0;i<nmesh;i++){
       if(nmesh>1){
         B = 1-i; 
-//       sol[i].exchangeOverset(sol[B].qstar, sol[B].iptr); 
+        sol[i].exchangeOverset(sol[B].qstar, sol[B].iptr); 
       }
       sol[i].computeRHS(sol[i].qstar);
     }

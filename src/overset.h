@@ -10,11 +10,11 @@ void setOversetFluxes(double *fcflux, double *bfcutR, double *qB, int* cutoverse
 
   int floc = 0;
   int bloc = 0;  
-printf("In oversetfluxes\n");
+//printf("In oversetfluxes\n");
   for(int j = 0; j<nfp; j++){
     // neg neigh id means it's on the other mesh
     for(int w=0; w<ngauss; w++){
-printf("\t j = %i, w = %i\n",j,w);
+//printf("\t j = %i, w = %i\n",j,w);
       // notice the sign switch on the fluxes
       // compared to the other cut face fluxes. 
       // this flux is getting added to the system, 
@@ -38,7 +38,7 @@ else{
 printf("fcflux[%i] = %f\n",floc+f+nfields,fcflux[floc+f+nfields]);
 }
 }*/
-printf("\t\tfcflux[%i] = %f\n",floc+f+nfields,fcflux[floc+f+nfields]);
+//printf("\t\tfcflux[%i] = %f\n",floc+f+nfields,fcflux[floc+f+nfields]);
         } // nfields
       } // cut overset
       bloc+=nbasis;
@@ -52,7 +52,7 @@ void EXCHANGE_OVERSET(double* fcfluxA, double* bfcutRA, double* qB, int* iptrcA,
   int ip, ix, iq, ibf, ic2n, iflx;
   int nfp = facePerElem[e];
   int eid, flag;
-printf("In Exchange\n");
+//printf("In Exchange\n");
   // Loop over cut cells in mesh A
   for(int i = 0; i<necutA; i++){
     flag = 0; 
@@ -204,8 +204,8 @@ printf("f %i, w %i, xloc,yloc = %f %f\n",j,w,xloc,yloc);
 	    exit(0); 
           }
 	  else{
-	    printf("\t found mesh A pt (%f, %f) in mesh B elem %i:  (%f, %f), (%f, %f), (%f, %f)\n",xloc,yloc,cutoversetA[j],xvert[0],xvert[1],xvert[2],xvert[3],xvert[4],xvert[5]);
-		printf("\t\t rst = %f %f\n",rs[0],rs[1]);
+//	    printf("\t found mesh A pt (%f, %f) in mesh B elem %i:  (%f, %f), (%f, %f), (%f, %f)\n",xloc,yloc,cutoversetA[j],xvert[0],xvert[1],xvert[2],xvert[3],xvert[4],xvert[5]);
+//		printf("\t\t rst = %f %f\n",rs[0],rs[1]);
           }
       
 	// get mesh B shape function values at quad pt and store in bfcutR
@@ -246,7 +246,7 @@ void SETUP_OVERSET(int* cut2e, int* cutoversetA, int* iptrA, int* iptrB, int* ip
       // cut cell quantities
  
       // fill fcflux array on cut cell
-      printf("ncut %i\n",i); 
+//      printf("ncut %i\n",i); 
       interpOversetCutNodes(xA+ix, xB, iptrB, pc, cutoversetA+ic2n, bfcutLA+ibf, bfcutRA+ibf, JinvB, d, e, p, nelemB);
     }
   }
