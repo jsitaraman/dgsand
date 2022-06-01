@@ -16,7 +16,7 @@ int main(int argc, char *argv[])
   dgsand *sol=new dgsand[nmesh];
   
   int i, B; 
-  double x0=1.5;  
+  double x0=1.5; 
   for(i=0;i<nmesh;i++) {
     sol[i].setup(argv[i+1]);
     sol[i].init();
@@ -45,7 +45,9 @@ int main(int argc, char *argv[])
   int nsave=sol[0].getNsave();
   double dt=sol[0].getDt();
   const double rk[4]={0.25,8./15,5./12,3./4};
-  
+  for(i=0;i<nmesh;i++)
+    sol[i].output(i,0);
+ 
   for(int n=1;n<=nsteps;n++) {
     // RK step 1
     for(i=0;i<nmesh;i++){
@@ -54,6 +56,7 @@ int main(int argc, char *argv[])
         B = 1-i; 
         sol[i].exchangeOverset(sol[B].q, sol[B].iptr); 
       }
+printf("==================\nCOMPUTING MESH %i\n===================\n",i);
       sol[i].computeRHS(sol[i].q);
     }
     for(i=0;i<nmesh;i++)
@@ -68,6 +71,7 @@ int main(int argc, char *argv[])
         B = 1-i; 
         sol[i].exchangeOverset(sol[B].qstar, sol[B].iptr); 
       }
+printf("==================\nCOMPUTING MESH %i\n===================\n",i);
       sol[i].computeRHS(sol[i].qstar);
     }
     for(i=0;i<nmesh;i++)
@@ -79,6 +83,7 @@ int main(int argc, char *argv[])
         B = 1-i; 
         sol[i].exchangeOverset(sol[B].qstar, sol[B].iptr); 
       }
+printf("==================\nCOMPUTING MESH %i\n===================\n",i);
       sol[i].computeRHS(sol[i].qstar);
     }
     for(i=0;i<nmesh;i++)
