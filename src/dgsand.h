@@ -29,7 +29,7 @@ extern "C" {
   void INIT_FIELDS(double *xcoord,int *e2n, 
 		   double *Q, double *x, double *q, // data populated here
 		   int *iptr, int pde, int e, int p,
-		   int d, int nbasis, int itype, int nelem, int pc);  
+		   int d, int nbasis, int itype, int nelem, int pc,int imesh);  
   int number_of_fields(int pde,int d);
   int order_to_basis(int etype, int p);
   int get_ngElem(int etype, int p);
@@ -43,14 +43,14 @@ extern "C" {
   void CUT_CELLS(double x0, double *x, double* xcut, int* iptr, int* cut2e, int d, int e, int p,
 		 int nelem, int pc, int *cut2face, int* cut2neigh, int* elem2face, int* faces,
 		 int* iblank, int* cutoverset, int imesh);
-  void MASS_MATRIX(double *mass,double *x, int *iptr, int d, int e, int p, int nelem, int pc);
+  void MASS_MATRIX(double *mass,double *x, int *iptr, int d, int e, int p, int nelem, int pc, int imesh);
   void CUT_MASS_MATRIX(double *mass,double *x, double *Jinv, int *iptr, double *xcut,
 		       double *detJcut, int *iptrc, int d, int e, int p, int nelem,
-		       int pc, int pccut, int necut, int* cut2e);
+		       int pc, int pccut, int necut, int* cut2e, int imesh);
 
   void COMPUTE_GRID_METRICS(double *x, double *bv, double *bvd,double *JinvV, 
 			    double *detJ,double *bf, double *bfd, double *JinvF, double *faceWeight,
-			    int *iptr, int d, int e, int p, int nelem, int pc);
+			    int *iptr, int d, int e, int p, int nelem, int pc, int* iblank, int imesh);
 
   void COMPUTE_CUT_METRICS(double *x, double *JinvV, 
 			   double *detJ,double *JinvF,
@@ -60,7 +60,7 @@ extern "C" {
 			   double *detJcut, double *bfcutL, double *bfdcutL,  
 			   double *bfcutR, double *bfdcutR,  
 			   double *fwcut, int* iptrc, int necut, int* cut2e,
-			   int* cut2neigh);
+			   int* cut2neigh, int imesh);
   
   void COMPUTE_RHS(double *R,double *mass,double *bv, double *bvd, double *JinvV, double *detJ,
 		 double *bf, double *bfd, double *JinvF,
@@ -71,7 +71,7 @@ extern "C" {
                  double *bfcutL, double *bfcutR,double *fwcut,
                  double *fcflux,int *iptrc,
                  int necut, int* cut2e, int *cut2face, int* cut2neigh, int* iblank, int ireg,
-		 int *cutoverset);
+		 int *cutoverset,int imesh);
   void UPDATE_DOFS(double *qdest, double coef, double *qsrc, double *R, int ndof);
 
   void OUTPUT_TECPLOT(int meshid, int step,double *x, double *q,
@@ -249,7 +249,7 @@ class dgsand
 	}
       };
 
-    void init() {
+    void init(int imesh) {
 
       /* initialize fields on all the elements */
       INIT_FIELDS(xcoord,
@@ -258,7 +258,7 @@ class dgsand
 		  x.data(),
 		  q.data(),
 		  iptr.data(),
-		  pde,etype,p,d,nbasis,itype,nelem,pc);
+		  pde,etype,p,d,nbasis,itype,nelem,pc,imesh);
       
       /* compute grid metrics */
       COMPUTE_GRID_METRICS(x.data(),
@@ -271,7 +271,7 @@ class dgsand
 			   JinvF.data(),
 			   faceWeight.data(),
 			   iptr.data(),
-			   d,etype,p,nelem,pc);      
+			   d,etype,p,nelem,pc,iblank.data(),imesh);      
     }
 
     void cut(double x0,int imesh)
@@ -338,12 +338,12 @@ class dgsand
       }
     };
 
-    void mass_matrix() {
+    void mass_matrix(int imesh) {
       MASS_MATRIX(mass.data(),x.data(),
-		  iptr.data(),d,etype,p,nelem,pc);
+		  iptr.data(),d,etype,p,nelem,pc, imesh);
     }
 
-    void cut_metrics(double x0) {
+    void cut_metrics(double x0, int imesh) {
       if (necut > 0) {
 	COMPUTE_CUT_METRICS(x.data(),
 			    JinvV.data(),
@@ -365,7 +365,7 @@ class dgsand
 			    iptrc.data(),
 			    necut,
 			    cut2e.data(),
-			    cut2neigh.data());
+			    cut2neigh.data(),imesh);
 	
 	CUT_MASS_MATRIX(mass.data(),
 			x.data(),
@@ -376,7 +376,7 @@ class dgsand
 			iptrc.data(),
 			d,etype,p,nelem,
 			pc,pccut,necut,
-			cut2e.data());
+			cut2e.data(),imesh);
       }
     };
 
@@ -430,7 +430,7 @@ class dgsand
 		       necut, pccut, d, etype, p, pc, pde); 
     } 
 
-    void computeRHS(std::vector<double>& qsrc) {
+    void computeRHS(std::vector<double>& qsrc,int imesh) {
       COMPUTE_RHS(R.data(),
 		  mass.data(),
 		  bv.data(),
@@ -463,7 +463,7 @@ class dgsand
 		  cut2face.data(),
 		  cut2neigh.data(),
 		  iblank.data(),
-		  ireg,cutoverset.data());
+		  ireg,cutoverset.data(),imesh);
     }
 
     void update(std::vector<double>&qdest, std::vector<double>&qsrc, double dtfac)

@@ -61,7 +61,7 @@ void init_data(double *x,double *q, double *X, double *Q, int d, int nfields, in
 void INIT_FIELDS(double *xcoord,int *e2n, 
 		 double *Q, double *x, double *q, // data populated here
 		 int *iptr, int pde, int e, int p,
-		 int d, int nbasis, int itype, int nelem, int pc)
+		 int d, int nbasis, int itype, int nelem, int pc,int imesh)
 {
   int nvert=order2basis[e][p+(p==0)];
   int nfields=get_nfields[pde](d);  
@@ -78,7 +78,7 @@ void INIT_FIELDS(double *xcoord,int *e2n,
 	for(j=0;j<nvert;j++)
 	  for(k=0;k<d;k++)
 	  X[m++]=xcoord[d*e2n[nvert*i+j]+k];
-        init_fields[pde](X,&(Q[iQ]),d,nbasis,itype);      
+        init_fields[pde](X,&(Q[iQ]),d,nbasis,itype,imesh);      
 	init_data(&(x[ix]),&(q[iq]),X,&(Q[iQ]),d,nfields,e,p);
       }
       else {

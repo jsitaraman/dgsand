@@ -140,7 +140,7 @@ void CutCellInterp(double *x, int d, int e, int p, double* Jinv,
     printf("\t(%f %f)\n",x0cut[0],x0cut[1]); 
     printf("\torig Jinv = %f %f ; %f %f\n",Jinv[0],Jinv[1],Jinv[2],Jinv[3]);
      
-     
+    exit(1);  
   }
 }
 
@@ -409,7 +409,7 @@ void cut_mass_matrix(double *M, double *x, double *Jinv, double *xcut, double *d
       M[0]-=0.5*detJcut[0];
   }
 }
-void mass_matrix(double *M, double *x, int d, int e, int p)
+void mass_matrix(double *M, double *x, int d, int e, int p, int debug)
 {
   int i,j,ij,w,b,ii,jj;
   int nbasis=order2basis[e][p+(p==0)];
@@ -443,7 +443,6 @@ void mass_matrix(double *M, double *x, int d, int e, int p)
 			mat[ii][jj]+=x[ii*nbasis+b]*bd[b][jj];
 		    }
 		}
-	      
 	      if (d==2) invmat2x2(mat,jac,det);
 	      wgt=gauss[e][g][(d+1)*w+2]*det;
 	      /* could use bv here instead of reevaluating */
@@ -451,6 +450,10 @@ void mass_matrix(double *M, double *x, int d, int e, int p)
 	      M[ij]+=(wgt*basis[e][i](u)*basis[e][j](u));
 	    }
 	}
+if(debug){
+printf("\tfull Jac = %f %f %f %f\n",mat[0][0], mat[0][1], mat[1][0], mat[1][1]);
+printf("\tfull invJac = %f %f %f %f\n",jac[0][0], jac[0][1], jac[1][0], jac[1][1]);
+}	      
   }
   else {
     /* p=0 */
@@ -645,7 +648,7 @@ void FaceWeights(double *x, double *bf, double *bfd, double *Jinv, double *faceW
 
 void COMPUTE_GRID_METRICS(double *x, double *bv, double *bvd,double *JinvV, 
 			  double *detJ,double *bf, double *bfd, double *JinvF, double *faceWeight,
-			  int *iptr, int d, int e, int p, int nelem, int pc)
+			  int *iptr, int d, int e, int p, int nelem, int pc, int* iblank, int imesh)
 {
   int i,j,b;
   int ip,ix,ibv,ibvd,ibf,ij,idetj,ibfd,ijf,ifw;
@@ -653,6 +656,8 @@ void COMPUTE_GRID_METRICS(double *x, double *bv, double *bvd,double *JinvV,
   // Metrics for the uncut cells
   for(i=0;i<nelem;i++)
     {
+      iblank[i] = 1; 
+
       ip=pc*i;
       ix   =iptr[ip+1];
       ibv  =iptr[ip+2];
@@ -679,7 +684,7 @@ void COMPUTE_CUT_METRICS(double *x, double *JinvV,
 			 double *detJcut, double *bfcutL, double *bfdcutL,  
 			 double *bfcutR, double *bfdcutR,  
 			 double *fwcut, int* iptrc, int necut, int* cut2e,
-			 int* cut2neigh)
+			 int* cut2neigh, int imesh)
 {
   int i,j,b,eid;
   int ip,ix,ij,idetj,ijf;
@@ -730,20 +735,30 @@ void COMPUTE_CUT_METRICS(double *x, double *JinvV,
 
 }
 
-void MASS_MATRIX(double *mass,double *x, int *iptr, int d, int e, int p, int nelem, int pc)
+void MASS_MATRIX(double *mass,double *x, int *iptr, int d, int e, int p, int nelem, int pc, int imesh)
 {
   int i;
   int ix,im,ixc;
   //compute mass matrix of all elements
+  int debug;
   for(i=0;i<nelem;i++)
     {
+if(imesh==1 && i==225){
+ debug = 1; 
+printf("\n\nDEBUG: Mesh %i, cell %i:\n",imesh,i); 
+}
+else{ debug = 0;}
+
       ix=iptr[pc*i+1];
       im=iptr[pc*i+10];
-      mass_matrix(&(mass[im]),&(x[ix]),d,e,p);
+      mass_matrix(&(mass[im]),&(x[ix]),d,e,p,debug); 
+
+if(debug) printf("Mesh %i, cell %i, full mass = %f %f %f %f\n",imesh,i,mass[im],mass[im+1],mass[im+2],mass[im+3]);
+
     }
 }
 
-void CUT_MASS_MATRIX(double *mass,double *x, double *Jinv, int *iptr, double *xcut, double *detJcut, int *iptrc, int d, int e, int p, int nelem, int pc, int pccut, int necut, int* cut2e)
+void CUT_MASS_MATRIX(double *mass,double *x, double *Jinv, int *iptr, double *xcut, double *detJcut, int *iptrc, int d, int e, int p, int nelem, int pc, int pccut, int necut, int* cut2e, int imesh)
 {
   int i,j,k,ld,eid;
   int ix,im,ij,ixc,id;
@@ -760,6 +775,10 @@ void CUT_MASS_MATRIX(double *mass,double *x, double *Jinv, int *iptr, double *xc
       id=iptrc[pccut*i+5]; 
       cut_mass_matrix(&(mass[im]),&(x[ix]),&(Jinv[ij]),&(xcut[ixc]),&(detJcut[id]),d,e,p);
 
+if(imesh==1 && eid==225){
+printf("Mesh %i, cell %i, cut %i mass = %f %f %f %f\n",imesh,eid,i,mass[im],mass[im+1],mass[im+2],mass[im+3]);
+printf("Mesh %i, cell %i, cut %i detJ = %f\n",imesh,eid,i,detJcut[id]); 
+}
   }
 }
 

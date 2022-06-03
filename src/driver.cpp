@@ -3,6 +3,7 @@
 int main(int argc, char *argv[])
 {
   const int nmesh=argc-1;
+  printf("NMESH = %i \n",nmesh); 
   if (nmesh == 0) {
    printf("dgsand: Need at least one input file as argument\n");
    printf("e.g. for a two mesh case\n");
@@ -16,11 +17,11 @@ int main(int argc, char *argv[])
   dgsand *sol=new dgsand[nmesh];
   
   int i, B; 
-  double x0=1.5; 
+  double x0=9.6875;
   for(i=0;i<nmesh;i++) {
     sol[i].setup(argv[i+1]);
-    sol[i].init();
-    sol[i].mass_matrix();
+    sol[i].init(i);
+    sol[i].mass_matrix(i);
     sol[i].initTimeStepping(i);
   }
 
@@ -28,7 +29,7 @@ int main(int argc, char *argv[])
     for(i=0;i<nmesh;i++) {
 //printf("\n=================\nCUTTING MESH %i\n=================\n",i);
       sol[i].cut(x0,i);
-      sol[i].cut_metrics(x0);
+      sol[i].cut_metrics(x0,i);
 
 //printf("\n ENTERING OVERSET SETUP\n");      
       B = 1-i; 
@@ -56,8 +57,8 @@ int main(int argc, char *argv[])
         B = 1-i; 
         sol[i].exchangeOverset(sol[B].q, sol[B].iptr); 
       }
-printf("==================\nCOMPUTING MESH %i\n===================\n",i);
-      sol[i].computeRHS(sol[i].q);
+printf("==================\nCOMPUTING MESH %i Step %i, RK 1\n===================\n",i,n);
+      sol[i].computeRHS(sol[i].q,i);
     }
     for(i=0;i<nmesh;i++)
       {
@@ -71,8 +72,8 @@ printf("==================\nCOMPUTING MESH %i\n===================\n",i);
         B = 1-i; 
         sol[i].exchangeOverset(sol[B].qstar, sol[B].iptr); 
       }
-printf("==================\nCOMPUTING MESH %i\n===================\n",i);
-      sol[i].computeRHS(sol[i].qstar);
+printf("==================\nCOMPUTING MESH %i Step %i, RK 2 \n===================\n",i,n);
+      sol[i].computeRHS(sol[i].qstar,i);
     }
     for(i=0;i<nmesh;i++)
       sol[i].update(sol[i].qstar,sol[i].q,rk[2]*dt);
@@ -83,8 +84,8 @@ printf("==================\nCOMPUTING MESH %i\n===================\n",i);
         B = 1-i; 
         sol[i].exchangeOverset(sol[B].qstar, sol[B].iptr); 
       }
-printf("==================\nCOMPUTING MESH %i\n===================\n",i);
-      sol[i].computeRHS(sol[i].qstar);
+printf("==================\nCOMPUTING MESH %i Step %i, RK 3\n===================\n",i,n);
+      sol[i].computeRHS(sol[i].qstar,i);
     }
     for(i=0;i<nmesh;i++)
       sol[i].update(sol[i].q,sol[i].q,rk[3]*dt);

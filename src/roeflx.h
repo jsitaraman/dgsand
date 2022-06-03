@@ -59,6 +59,7 @@ void roeflx(double *leftState,double *rightState, double *flux,double *ds,double
   urht = rightState[irhou]/rightState[irho];
   vrht = rightState[irhov]/rightState[irho];
   prht = gm1*(rightState[ie]-0.5*rrht*(urht*urht+vrht*vrht));
+  printf("Inside Roe flux\n L state %f %f %f %f\n R state %f %f %f %f\n",rlft,ulft,vlft,plft,rrht,urht,vrht,prht); 
   rrhti = 1.0/rrht;
   rurht = rrht*urht;
   rvrht = rrht*vrht;
@@ -147,10 +148,14 @@ void roeflx(double *leftState,double *rightState, double *flux,double *ds,double
   // flux = 0.5*((fL+fR) + |A|(uR-uL)).ds
   //
   //
+  printf("aq1 = %f %f %f %f\n", aq1,aq2,aq3,aq4);
+//  aq1=aq2=aq3=aq4=0;
   flux[0] = aj*( rlft*uulft+rrht*uurht-aq1 );
   flux[1] = aj*( rulft*uulft+rurht*uurht+r1*plar-aq2 );
   flux[2] = aj*( rvlft*uulft+rvrht*uurht+r2*plar-aq3 );
   flux[3] = aj*( eplft*uulft+eprht*uurht-r3*plar-aq4 );
+
+printf("fluxes = %f %f %f %f\n",flux[0],flux[1],flux[2],flux[3]); 
 }
 
 

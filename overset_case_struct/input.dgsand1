@@ -1,0 +1,13 @@
+pde=0                           # type of pde 0=Euler, nothing else is implemented
+itype=0                         # type of initialization 1=vortex 0=freestream
+nsteps=500                   # number of steps
+ireg=1                          # regularization
+dt=0.02                         # non-dimensional dt
+nsave=100                       # frequency to save output files
+param[0]=1.0                    # density
+param[1]=0.2                    # velocity-x
+param[2]=0.0                    # velocity-y
+param[3]=7.142857142857143e-01  # pressure
+param[4]=5.0                   # x-location of vortex
+param[5]=5.0                   # y-location of vortex
+gridfile=grid1.dat              # name of the grid

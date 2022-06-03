@@ -106,7 +106,7 @@ int pointInTri(double x0, double y0, double x1, double y1, double x2, double y2,
 void interpOversetCutNodes(double *xA, double *xB, int *iptrB, int pc,
 			   int *cutoversetA, 
 			   double *bfcutLA, double *bfcutRA, double *JinvB,
-			   int d, int e, int p,int nelemB)
+			   int d, int e, int p,int nelemB,int debug)
 {
   int i,j,k,f,n,w,b,fid,eid,ixB,ind,ij;
   int nfp = facePerElem[e];
@@ -116,7 +116,8 @@ void interpOversetCutNodes(double *xA, double *xB, int *iptrB, int pc,
   double xvert[6];
 
   int bloc = 0;
-/*
+
+if(debug){
 // ================================================
 printf("in interpOversetCutNodes\n"); 
 
@@ -152,12 +153,12 @@ printf("basis %i: %f\n",k,basis[e][k](u));
 printf("Vertex %i (%f,%f) = %f %f\n",j,u[0],u[1],xloc,yloc);
 }
 // ================================================
-*/
+}
   for(j=0;j<nfp;j++){
     for(w=0;w<ngauss;w++){
       if(cutoversetA[j]>=0){
         // Find x coordinates of the desired face quadrature points
-        // have bfcutR, use this to get xyz coords
+        // have bfcutL, use this to get xyz coords
         xloc = 0.0;
         yloc = 0.0;
         for(b=0;b<nbasis;b++){
@@ -165,7 +166,7 @@ printf("Vertex %i (%f,%f) = %f %f\n",j,u[0],u[1],xloc,yloc);
           yloc = yloc + bfcutLA[bloc+b]*xA[b+nbasis]; 
         }
 
-printf("f %i, w %i, xloc,yloc = %f %f\n",j,w,xloc,yloc);
+if(debug) printf("f %i, w %i, xloc,yloc = %f %f\n",j,w,xloc,yloc);
 
 	// loop over mesh B elements and find element that contains mesh A gauss pt
 	int inside = 0;
@@ -204,8 +205,9 @@ printf("f %i, w %i, xloc,yloc = %f %f\n",j,w,xloc,yloc);
 	    exit(0); 
           }
 	  else{
-//	    printf("\t found mesh A pt (%f, %f) in mesh B elem %i:  (%f, %f), (%f, %f), (%f, %f)\n",xloc,yloc,cutoversetA[j],xvert[0],xvert[1],xvert[2],xvert[3],xvert[4],xvert[5]);
-//		printf("\t\t rst = %f %f\n",rs[0],rs[1]);
+if(debug)	    printf("\t found mesh A pt (%f, %f) in mesh B elem %i:  (%f, %f), (%f, %f), (%f, %f)\n",xloc,yloc,cutoversetA[j],xvert[0],xvert[1],xvert[2],xvert[3],xvert[4],xvert[5]);
+if(debug)		printf("\t\t rst = %f %f\n",rs[0],rs[1]);
+if(debug) 	    printf("\t cutoverset[%i] = %i\n",j,cutoversetA[j]);
           }
       
 	// get mesh B shape function values at quad pt and store in bfcutR
@@ -247,7 +249,18 @@ void SETUP_OVERSET(int* cut2e, int* cutoversetA, int* iptrA, int* iptrB, int* ip
  
       // fill fcflux array on cut cell
 //      printf("ncut %i\n",i); 
-      interpOversetCutNodes(xA+ix, xB, iptrB, pc, cutoversetA+ic2n, bfcutLA+ibf, bfcutRA+ibf, JinvB, d, e, p, nelemB);
+int debug;       
+if(eid==225 && i==23){
+debug = 1; 
+} else{
+debug = 0;}
+      interpOversetCutNodes(xA+ix, xB, iptrB, pc, cutoversetA+ic2n, bfcutLA+ibf, bfcutRA+ibf, JinvB, d, e, p, nelemB,debug);
+
+if(eid==225 && i==23){
+ printf("i*nfp = %i, ic2n = %i\n", i*nfp, ic2n);
+ printf("debug! cutoverset = %i %i %i\n",cutoversetA[ic2n+0], cutoversetA[ic2n+1],cutoversetA[ic2n+2]); 
+
+}
     }
   }
 }
