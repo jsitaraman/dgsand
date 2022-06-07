@@ -740,6 +740,7 @@ void MASS_MATRIX(double *mass,double *x, int *iptr, int d, int e, int p, int nel
   int i;
   int ix,im,ixc;
   //compute mass matrix of all elements
+  int nbasis=order2basis[e][p]; // XXX double check last argument, should be p=1 for cut cell
   int debug;
   for(i=0;i<nelem;i++)
     {
@@ -753,7 +754,14 @@ else{ debug = 0;}
       im=iptr[pc*i+10];
       mass_matrix(&(mass[im]),&(x[ix]),d,e,p,debug); 
 
-if(debug) printf("Mesh %i, cell %i, full mass = %f %f %f %f\n",imesh,i,mass[im],mass[im+1],mass[im+2],mass[im+3]);
+if(debug){
+int m = 0; 
+for(int j=0;j<nbasis;j++)
+for(int k=0;k<nbasis;k++){
+ printf("Mesh %i, cell %i, full mass[%i] = %f\n",imesh,i,m,mass[im+m]);
+m++;
+}
+}
 
     }
 }
@@ -776,7 +784,12 @@ void CUT_MASS_MATRIX(double *mass,double *x, double *Jinv, int *iptr, double *xc
       cut_mass_matrix(&(mass[im]),&(x[ix]),&(Jinv[ij]),&(xcut[ixc]),&(detJcut[id]),d,e,p);
 
 if(imesh==1 && eid==225){
-printf("Mesh %i, cell %i, cut %i mass = %f %f %f %f\n",imesh,eid,i,mass[im],mass[im+1],mass[im+2],mass[im+3]);
+int m = 0; 
+for(int j=0;j<nbasis;j++)
+for(int k=0;k<nbasis;k++){
+ printf("Mesh %i, cell %i, cut mass[%i] = %f\n",imesh,i,im+m,mass[im+m]);
+m++;
+}
 printf("Mesh %i, cell %i, cut %i detJ = %f\n",imesh,eid,i,detJcut[id]); 
 }
   }

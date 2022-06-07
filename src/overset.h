@@ -1,4 +1,4 @@
-void setOversetFluxes(double *fcflux, double *bfcutR, double *qB, int* cutoverset, int *iptrB, int d, int e, int p, int pc, int pde)
+void setOversetFluxes(double *fcflux, double *bfcutR, double *qB, int* cutoverset, int *iptrB, int d, int e, int p, int pc, int pde, int debug)
 // computes R q values at cut cell interface
 // using q from other mesh
 {
@@ -10,7 +10,7 @@ void setOversetFluxes(double *fcflux, double *bfcutR, double *qB, int* cutoverse
 
   int floc = 0;
   int bloc = 0;  
-//printf("In oversetfluxes\n");
+if(debug) printf("In oversetfluxes\n");
   for(int j = 0; j<nfp; j++){
     // neg neigh id means it's on the other mesh
     for(int w=0; w<ngauss; w++){
@@ -21,6 +21,14 @@ void setOversetFluxes(double *fcflux, double *bfcutR, double *qB, int* cutoverse
       // not removed
       eid = cutoverset[j]; 
       if(eid>=0){
+
+
+if(debug){
+printf("\telemB = %i\n",eid); 
+for(int f = 0; f<nfields; f++)
+for(int k = 0; k<nbasis; k++)
+printf("\tqB(f = %i, b = %i) = %f\n",f,j,qB[qloc+f*nbasis+k]);
+}
 	qloc = iptrB[eid*pc]; 
 	for(int f = 0; f<nfields; f++){
           fcflux[floc+f+nfields]= bfcutR[bloc]*qB[qloc+f*nbasis];
@@ -47,11 +55,11 @@ printf("fcflux[%i] = %f\n",floc+f+nfields,fcflux[floc+f+nfields]);
   } // nfp
 }
 
-void EXCHANGE_OVERSET(double* fcfluxA, double* bfcutRA, double* qB, int* iptrcA, int* iptrB, int* cutoverset, int necutA, int pccut, int d, int e, int p, int pc, int pde)
+void EXCHANGE_OVERSET(double* fcfluxA, double* bfcutRA, double* qB, int* iptrcA, int* iptrB, int* cutoverset, int necutA, int pccut, int d, int e, int p, int pc, int pde, int imesh)
 {
   int ip, ix, iq, ibf, ic2n, iflx;
   int nfp = facePerElem[e];
-  int eid, flag;
+  int eid, flag, debug;
 //printf("In Exchange\n");
   // Loop over cut cells in mesh A
   for(int i = 0; i<necutA; i++){
@@ -75,8 +83,13 @@ void EXCHANGE_OVERSET(double* fcfluxA, double* bfcutRA, double* qB, int* iptrcA,
       // mesh B quantities
       iq=iptrB[pc*eid]; 
 
+if(imesh==1 && (i ==24 || i ==25)) {
+debug=1;
+}
+else { debug = 0; }
+
       // interpolate q fluxes from mesh B
-      setOversetFluxes(fcfluxA+iflx, bfcutRA+ibf, qB, cutoverset+ic2n, iptrB, d, e, p, pc, pde);
+      setOversetFluxes(fcfluxA+iflx, bfcutRA+ibf, qB, cutoverset+ic2n, iptrB, d, e, p, pc, pde, debug);
     } // cut overset
   } // cut cells
 }
@@ -250,13 +263,14 @@ void SETUP_OVERSET(int* cut2e, int* cutoversetA, int* iptrA, int* iptrB, int* ip
       // fill fcflux array on cut cell
 //      printf("ncut %i\n",i); 
 int debug;       
-if(eid==225 && i==23){
+if(eid==256 && (i==24 || i ==25) ){
+printf("eid = %i, i = %i\n",eid,i);
 debug = 1; 
 } else{
 debug = 0;}
       interpOversetCutNodes(xA+ix, xB, iptrB, pc, cutoversetA+ic2n, bfcutLA+ibf, bfcutRA+ibf, JinvB, d, e, p, nelemB,debug);
 
-if(eid==225 && i==23){
+if(eid==256 && (i==24 || i==25)){
  printf("i*nfp = %i, ic2n = %i\n", i*nfp, ic2n);
  printf("debug! cutoverset = %i %i %i\n",cutoversetA[ic2n+0], cutoversetA[ic2n+1],cutoversetA[ic2n+2]); 
 

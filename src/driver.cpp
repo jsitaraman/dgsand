@@ -53,9 +53,26 @@ int main(int argc, char *argv[])
     // RK step 1
     for(i=0;i<nmesh;i++){
       // exchange overset flux information	    
+ 
+
+      // Euler
       if(nmesh>1){
         B = 1-i; 
-        sol[i].exchangeOverset(sol[B].q, sol[B].iptr); 
+        sol[i].exchangeOverset(sol[B].q, sol[B].iptr,i); 
+      }
+printf("==================\nCOMPUTING MESH %i Step %i, Euler \n===================\n",i,n);
+      sol[i].computeRHS(sol[i].q,i);
+    }
+    for(i=0;i<nmesh;i++)
+      {
+        sol[i].update(sol[i].q,sol[i].q,dt);
+      }
+/*
+
+      
+      if(nmesh>1){
+        B = 1-i; 
+        sol[i].exchangeOverset(sol[B].q, sol[B].iptr,i); 
       }
 printf("==================\nCOMPUTING MESH %i Step %i, RK 1\n===================\n",i,n);
       sol[i].computeRHS(sol[i].q,i);
@@ -70,7 +87,7 @@ printf("==================\nCOMPUTING MESH %i Step %i, RK 1\n===================
     for(i=0;i<nmesh;i++){
       if(nmesh>1){
         B = 1-i; 
-        sol[i].exchangeOverset(sol[B].qstar, sol[B].iptr); 
+        sol[i].exchangeOverset(sol[B].qstar, sol[B].iptr, i); 
       }
 printf("==================\nCOMPUTING MESH %i Step %i, RK 2 \n===================\n",i,n);
       sol[i].computeRHS(sol[i].qstar,i);
@@ -82,14 +99,14 @@ printf("==================\nCOMPUTING MESH %i Step %i, RK 2 \n==================
     for(i=0;i<nmesh;i++){
       if(nmesh>1){
         B = 1-i; 
-        sol[i].exchangeOverset(sol[B].qstar, sol[B].iptr); 
+        sol[i].exchangeOverset(sol[B].q, sol[B].iptr, i); 
       }
 printf("==================\nCOMPUTING MESH %i Step %i, RK 3\n===================\n",i,n);
       sol[i].computeRHS(sol[i].qstar,i);
     }
     for(i=0;i<nmesh;i++)
       sol[i].update(sol[i].q,sol[i].q,rk[3]*dt);
-
+ */ 
     // compute norms
     int imax;
     double rmax,rnorm;

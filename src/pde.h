@@ -25,7 +25,7 @@ void newtonian_fluid_init(double *X, double *Q, int d, int nbasis, int itype)
   double sinf=pinf/pow(rinf,gamma);
   double tinf=pinf/rinf;
   double strnth=1.0;
-  double sigma=1.0;
+  double sigma=1.0; // 0.020; //1.0;
   double scale=1.0;
   double gm1=gamma-1;
   double afac=strnth/(2.0*pi);
@@ -73,7 +73,7 @@ void newtonian_fluid_init(double *X, double *Q, int d, int nbasis, int itype)
 	    Q[3*nbasis + i]=p/(gamma-1)+(0.5*Q[i]*(u*u+v*v));
 	  } 
       }
-    }
+    } 
 }
  
 void newtonian_fluid_flux2D(double *F, double *Q,double *QD, int idir)

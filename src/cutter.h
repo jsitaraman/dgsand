@@ -101,7 +101,7 @@ void CUT_CELLS(double x0, double *x, double* xcut, int* iptr, int* cut2e, int d,
   double u[2],a,b,ycut1,ycut2;
   double xvert[6]; // x1 y1 x2 y2 x3 y3
   double xtmp[6];
-  int vcut[2],vorig[2],neigh[3],forig[3];
+  int vcut[3],vorig[3],neigh[3],forig[3];
 
   int nbasis=order2basis[e][p]; // first order bases are interpolative at nodes so it's ok to do this?
   double bv[nbasis*nfp];

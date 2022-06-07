@@ -84,7 +84,7 @@ extern "C" {
 
   void EXCHANGE_OVERSET(double* fcfluxA, double* bfcutRA, double* qB, 
                         int* iptrcA, int* iptrB, int* cut2neighA, 
-                        int necutA, int pccut, int d, int e, int p, int pc, int pde);
+                        int necutA, int pccut, int d, int e, int p, int pc, int pde, int imesh);
 }
 
 #include<vector>
@@ -419,7 +419,8 @@ class dgsand
     }
     
     void exchangeOverset(std::vector<double>& qB,
-		         std::vector<int>& iptrB)
+		         std::vector<int>& iptrB,
+			 int imesh)
     {
       EXCHANGE_OVERSET(fcflux.data(),
 		       bfcutR.data(), 
@@ -427,7 +428,7 @@ class dgsand
 		       iptrc.data(),
 		       iptrB.data(),
 		       cutoverset.data(),
-		       necut, pccut, d, etype, p, pc, pde); 
+		       necut, pccut, d, etype, p, pc, pde, imesh); 
     } 
 
     void computeRHS(std::vector<double>& qsrc,int imesh) {

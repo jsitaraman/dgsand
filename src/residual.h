@@ -281,8 +281,6 @@ printf("\n");
   for(b=0;b<nbasis;b++)
   keep[f*nbasis+b]=0;
 
-if(debug)
-printf("Cutting Faces for Orig Elem 225\n");
 
   l=ld=m=0;
   floc = 2*nfields; 
@@ -292,9 +290,16 @@ printf("Cutting Faces for Orig Elem 225\n");
       for(w=0;w<ngGL[e][p];w++)
 	{
 	  // subtract fluxes if it's the overset boundary
-	  // add if it's a regular face
+	  // add if it's a regular cut face
 if(debug)	  printf("cutoverset = %i\n",cutoverset[i]);
-	  wgt=gaussgl[e][g][(d)*w+1]; 
+          if(cutoverset[i]>-1){
+	    sgn = -1; 
+	  }
+	  else{
+	    sgn = 1; 
+	  }
+if(debug) printf("sgn = %f\n",sgn); 
+	  wgt=gaussgl[e][g][(d)*w+1]*sgn; 
 if(debug) printf("wgt = %f\n",wgt);
           // get the basis and basis derivative for this gauss point
           bvv=bfL+l;
@@ -310,8 +315,8 @@ if(debug) printf("wgt = %f\n",wgt);
 		{
  	          //notice the sign change from the faceIntegral routine
 		  residual[m]+=(flux*bvv[b]);
-		  keep[m] -= (flux*bvv[b]);
-if(debug)		  printf("side %i, w %i, field %i, basis %i,\n\tflux = %f, bvv = %f, res inc = %f, curr res = %f\n",i,w,f,b,flux,bvv[b],flux*bvv[b],residual[m]);
+		  keep[m] += (flux*bvv[b]);
+if(debug && f ==0)		  printf("side %i, w %i, field %i, basis %i,\n\tsgn = %f, flux = %f, bvv = %f, res inc = %f, curr res = %f\n",i,w,f,b,sgn,flux,bvv[b],flux*bvv[b],residual[m]);
 		  m++;
 		}
 	    }
@@ -540,25 +545,32 @@ printf("\txNorm = %f %f \n",xnorm[0],xnorm[1]);
     floc=iptrc[i*pccut+11];
     wloc=iptrc[i*pccut+9]; 
     ic2n=iptrc[i*pccut+12]; 
-
-    m = 0; 
-    for(j=0;j<nfp;j++){
-      for(w=0;w<ngGL[e][p];w++){
-
-        for(k=0;k<d;k++)
- 	    xnorm[k]=fwcut[wloc + m++];
-
-        ifl=floc; 
-        ifr=ifl+nfields;
-        iflux=ifr+nfields;
 int debug; 
-if(i==23 && eid == 225){
+if((i==23 || i==25) && eid == 225){
 debug = 1;
 }
 else{
 debug = 0;
 }
 
+
+    m = 0; 
+    for(j=0;j<nfp;j++){
+      for(w=0;w<ngGL[e][p];w++){
+
+        for(k=0;k<d;k++){
+	  if(cutoverset[ic2n+j]>-1){ // overset face needs sign flip
+ 	    xnorm[k]=-fwcut[wloc + m++];
+          }
+	  else{
+ 	    xnorm[k]=fwcut[wloc + m++];
+          }
+
+        }
+
+        ifl=floc; 
+        ifr=ifl+nfields;
+        iflux=ifr+nfields;
 
 if(debug){
 printf("\nORIG %i, CUT i %i, j %i, w %i\n",eid,i,j,w);
@@ -584,7 +596,7 @@ printf("\tflx%i = [%f %f %f %f]\n",(j*ngGL[e][p]+w),fcflux[iflux+0],fcflux[iflux
 
 }
 
-void invertMass(double *mass, double *R, int pde, int d , int e, int p,int iscut,int ireg)
+void invertMass(double *mass, double *R, int pde, int d , int e, int p,int iscut,int ireg, int debug)
 {
   int i,j,f;
   int nbasis=order2basis[e][p];
@@ -593,13 +605,19 @@ void invertMass(double *mass, double *R, int pde, int d , int e, int p,int iscut
 
   if(iscut){
     if(ireg){
-      solvec_copy_reshape_reg(mass,R,&iflag,nbasis,nfields);  
+if(debug) printf("\nEntering solvec_reg\n"); 
+
+      solvec_copy_reshape_reg(mass,R,&iflag,nbasis,nfields,debug);  
+for(i=0;i<nbasis;i++)
+if(debug) printf("R_final[%i] = %f\n",i,R[i]);
     }
     else{
+if(debug) printf("\nEntering solvec\n"); 
       solvec_copy_reshape(mass,R,&iflag,nbasis,nfields);  
     }
   }
   else{
+if(debug) printf("\nEntering solvec\n"); 
     solvec_copy_reshape(mass,R,&iflag,nbasis,nfields);
   }
 }
@@ -754,12 +772,12 @@ printf("Pre-cut res for elem %i is NaN\n",i);
 exit(1);
 }
 
-if(imesh==1 && i==225){
-printf("DEBUG: Mesh 1, full cell 225:\n");
+if(imesh==1 && (i==225)){
+printf("DEBUG: Mesh %i, full cell %i:\n",imesh,i);
 debug = 1;
 }
-else if(imesh==0 && i==255){
-printf("DEBUG: Mesh 0, full cell 255:\n");
+else if(imesh==0 && i==286){
+printf("DEBUG: Mesh %i, full cell %i:\n",imesh,i);
 debug = 1;
 }
 else{
@@ -827,7 +845,7 @@ if(isnan(R[j])){
 printf("Post-vol-cut res for elem %i is NaN\n",eid);
 exit(1);
 }
-if(debug) printf("\nCUT FACE:\n");
+if(debug) printf("\nCUT FACE: cut elem %i\n",i);
       cutFace(R+iR,fcflux+iflx,bfcutL+ibf,bfcutR+ibf,q,pf,pde,d,e,p,eid,cutoverset+ic2n,debug);
 iR2 = iptr[pc*(eid+1)];
 for(j=iR;j<iR2;j++)
@@ -869,11 +887,23 @@ max = 0;
 	printf("===============\n");
       }
 #endif     
-if(imesh==1 && i==225){
-printf("\n");
+if(imesh==1 && (i==225||i==286)){
+debug = 1; 
+printf("MESH %i ELEM %i \n", imesh,i);
 for(int f = 0; f<nfields; f++)
-for(int j = 0; j<nbasis; j++)
+for(int j = 0; j<nbasis; j++){
+//R[iR+f*nbasis+j] = 0.001; 
 printf("\tComplete R(f = %i, b = %i) = %f\n",f,j,R[iR+f*nbasis+j]);
+}
+int m = 0; 
+for(int k = 0; k<nbasis; k++)
+for(int j = 0; j<nbasis; j++){
+printf("mass(%i,%i) = %f\n",k+1,j+1,mass[im+m]);
+m++;
+}
+}
+else{
+debug = 0; 
 }
  
       int iscut = 0; 
@@ -882,7 +912,14 @@ printf("\tComplete R(f = %i, b = %i) = %f\n",f,j,R[iR+f*nbasis+j]);
           iscut=1;
 	  break;    
         }
-      invertMass(mass+im,R+iR,pde,d,e,p,iscut,ireg);
+      invertMass(mass+im,R+iR,pde,d,e,p,iscut,ireg,debug);
+
+if(imesh==1 && (i==225||i==286)){
+printf("\n");
+for(int f = 0; f<nfields; f++)
+for(int j = 0; j<nbasis; j++)
+printf("\tUpdate(f = %i, b = %i) = %f\n",f,j,R[iR+f*nbasis+j]);
+}
     }
 }
 
