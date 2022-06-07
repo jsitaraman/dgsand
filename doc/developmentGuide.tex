@@ -42,14 +42,14 @@ The conservation law for first order hyperbolic systems are given by :
   \frac{\partial Q}{\partial t} + \nabla \cdot F(Q) = 0
   \label{eq1}
 \end{equation}
-where $Q$ is the conserved variable and $F(Q)$ is the flux of this variable~\cite{wikipedia}. In a
+where $Q$ is the conserved variable and $F(Q)$ is the flux of this variable. In a
 Discontinuous Galerkin Finite Element Method, implemented in a semi-discrete form (i.e finite elements in space
 only), the space is split into $N_e$ non-overlapping elements.
 Each element is then equipped with a basis set (which are almost always polynomials) that
 approximate the variation of a field within that element. The coefficients of these polynomials are the
 unknowns that need to be solved using the chosen numerical method. The finite element method, in this sense
-is a glorified curve-fitting approach, where the method used to reduce the constraint that the unknowns
-must satisfy the partial differential equation and its boundary condition into a set of algebraic equations
+is a glorified curve-fitting approach, where the method used to reduce the constraint ( that the unknowns
+must satisfy the partial differential equation and its boundary condition ) into a set of algebraic equations
 usually defines the type of the method. In a ``Discontinuous'' approach, all of the basis set of an element is
 constrained to have identically zero values outside of that element. This stands in contrast to a
 more well known ``continuous'' approach where the basis associated with a degree of freedom will have
@@ -454,4 +454,6 @@ kind of race condition and can easily be multi-threaded. The algorithm is summar
 %\section{Summary}
 %This development guide is rough and unrefined and will be updated further as and when time
 %allows for it.
+\bibliographystyle{unsrt}
+\bibliography{refs}
 \end{document}
