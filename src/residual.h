@@ -267,7 +267,7 @@ printf("\n");
   void cutFace(double *residual, double *fflux, double *bfL, double *bfR, 
   	       double *q, int pf, int pde, int d, int e, int p, int iorig,int *cutoverset, int debug)
 {
-  int b,w,i,j,l,ld,m,f,floc;
+  int b,w,i,j,l,ld,m,f,floc,z;
   int nbasis=order2basis[e][p];
   double wgt,v;
   double *bvv,*bvvd;
@@ -282,7 +282,7 @@ printf("\n");
   keep[f*nbasis+b]=0;
 
 
-  l=ld=m=0;
+  l=ld=m=z=0;
   floc = 2*nfields; 
   for(i=0;i<nfp;i++)
     {
@@ -291,8 +291,8 @@ printf("\n");
 	{
 	  // subtract fluxes if it's the overset boundary
 	  // add if it's a regular cut face
-if(debug)	  printf("cutoverset = %i\n",cutoverset[i]);
-          if(cutoverset[i]>-1){
+if(debug)	  printf("cutoverset = %i\n",cutoverset[z]);
+          if(cutoverset[z]>-1){
 	    sgn = -1; 
 	  }
 	  else{
@@ -321,6 +321,7 @@ if(debug && f ==0)		  printf("side %i, w %i, field %i, basis %i,\n\tsgn = %f, fl
 		}
 	    }
 	  floc+=(3*nfields); // increment through flux array, 3 is where the completed fluxes are computed
+	  z++; 
 	}
     }
 
@@ -513,7 +514,7 @@ void COMPUTE_FACE_FLUXES(double *fnorm, double *fflux,
 {
   int nfields=get_nfields[pde](d);
   double normal[d],xnorm[d];
-  int i,j,k,m,w,floc,wloc,ifl,ifr,iflux,ic2n,f,eid;
+  int i,j,k,g,m,w,floc,wloc,ifl,ifr,iflux,ic2n,f,eid,ico;
   int nfp = facePerElem[e];
 
   for(i=0;i<nfaces*ngGL[e][p];i++)
@@ -545,6 +546,7 @@ printf("\txNorm = %f %f \n",xnorm[0],xnorm[1]);
     floc=iptrc[i*pccut+11];
     wloc=iptrc[i*pccut+9]; 
     ic2n=iptrc[i*pccut+12]; 
+    ico=iptrc[i*pccut+13]; 
 int debug; 
 if((i==23 || i==25) && eid == 225){
 debug = 1;
@@ -554,12 +556,12 @@ debug = 0;
 }
 
 
-    m = 0; 
+    g = m = 0; 
     for(j=0;j<nfp;j++){
       for(w=0;w<ngGL[e][p];w++){
 
         for(k=0;k<d;k++){
-	  if(cutoverset[ic2n+j]>-1){ // overset face needs sign flip
+	  if(cutoverset[ico+g]>-1){ // overset face needs sign flip
  	    xnorm[k]=-fwcut[wloc + m++];
           }
 	  else{
@@ -574,7 +576,7 @@ debug = 0;
 
 if(debug){
 printf("\nORIG %i, CUT i %i, j %i, w %i\n",eid,i,j,w);
-printf("\tcutoverset = %i\n",cutoverset[ic2n+j]); 
+printf("\tcutoverset = %i\n",cutoverset[ico+g]); 
 printf("\tcut2neigh = %i\n",cut2neigh[ic2n+j]); 
 printf("\tifl %i, ifr %i, iflux %i\n",ifl,ifr,iflux);
 printf("\tLflx = %f %f %f %f\n",fcflux[ifl+0],fcflux[ifl+1],fcflux[ifl+2],fcflux[ifl+3]); 
@@ -590,6 +592,7 @@ printf("\tflx%i = [%f %f %f %f]\n",(j*ngGL[e][p]+w),fcflux[iflux+0],fcflux[iflux
 
 
 	floc = floc + 3*nfields;
+	g++; 
       }    // gauss pts
     } // tri faces
   } // cut elems
@@ -742,7 +745,7 @@ void COMPUTE_RESIDUAL(double *R, double *mass, double *q, double *detJ, double *
 		      int *cutoverset,int imesh)
 
 {
-  int i,j,k,ix,idet,im,iR,iq,ibv,ibvd,ibf,ibfd,eid,iflx,ic2n;
+  int i,j,k,ix,idet,im,iR,iq,ibv,ibvd,ibf,ibfd,eid,iflx,ic2n,ico;
   int nfp=facePerElem[e];
   int f,w,ld,stop;
   double max;
@@ -772,7 +775,7 @@ printf("Pre-cut res for elem %i is NaN\n",i);
 exit(1);
 }
 
-if(imesh==1 && (i==225)){
+if(imesh==1 && (i==0)){
 printf("DEBUG: Mesh %i, full cell %i:\n",imesh,i);
 debug = 1;
 }
@@ -826,8 +829,9 @@ printf("\tfull R(f = %i, b = %i) = %f\n",f,j,R[iR+f*nbasis+j]);
       ibfd=iptrc[ix+7];
       iflx=iptrc[ix+11];
       ic2n=iptrc[ix+12];
+      ico=iptrc[ix+13];
       
-if(imesh==1 && eid==225){
+if(imesh==0 && eid==959){
 printf("DEBUG: Mesh %i, cut cell %i:\n",imesh,i);
 printf("CUT VOL:\n"); 
 debug = 1;
@@ -846,7 +850,9 @@ printf("Post-vol-cut res for elem %i is NaN\n",eid);
 exit(1);
 }
 if(debug) printf("\nCUT FACE: cut elem %i\n",i);
-      cutFace(R+iR,fcflux+iflx,bfcutL+ibf,bfcutR+ibf,q,pf,pde,d,e,p,eid,cutoverset+ic2n,debug);
+
+      cutFace(R+iR,fcflux+iflx,bfcutL+ibf,bfcutR+ibf,q,pf,pde,d,e,p,eid,cutoverset+ico,debug);
+
 iR2 = iptr[pc*(eid+1)];
 for(j=iR;j<iR2;j++)
 if(isnan(R[j])){
@@ -887,7 +893,7 @@ max = 0;
 	printf("===============\n");
       }
 #endif     
-if(imesh==1 && (i==225||i==286)){
+if(imesh==1 && (i==0||i==286)){
 debug = 1; 
 printf("MESH %i ELEM %i \n", imesh,i);
 for(int f = 0; f<nfields; f++)
@@ -914,7 +920,7 @@ debug = 0;
         }
       invertMass(mass+im,R+iR,pde,d,e,p,iscut,ireg,debug);
 
-if(imesh==1 && (i==225||i==286)){
+if(imesh==1 && (i==0||i==286)){
 printf("\n");
 for(int f = 0; f<nfields; f++)
 for(int j = 0; j<nbasis; j++)

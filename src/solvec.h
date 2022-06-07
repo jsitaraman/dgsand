@@ -19,7 +19,7 @@ void matmult(double *A, double *B, double *C,int m,int n, int p, int debug){
       }
     }
 
-
+/*
  if(debug){
   for(i=0;i<m;i++)
     for(j=0;j<n;j++){
@@ -38,7 +38,7 @@ void matmult(double *A, double *B, double *C,int m,int n, int p, int debug){
     }
 //  exit(1); 
 }
-
+*/
 
 }
 
@@ -202,6 +202,7 @@ void solvec_copy_reshape_reg(double *a_in,double *b_in,int *iflag,int n,int neq,
   AregA=(double *)calloc(n*n,sizeof(double));
   Aregb=(double *)calloc(n*neq,sizeof(double)); // handle neq dim correctly
 
+/*
 if(debug){
 for(i=0;i<n;i++)
 for(j=0;j<n;j++){
@@ -213,6 +214,7 @@ for(j=0;j<n;j++)
 printf("b_in(%i) = %f\n",j+1,b_in[j]);
 printf("\n");
 }
+*/
 
   for(i=0;i<2*n;i++){
     for(j=0;j<n;j++){
@@ -241,6 +243,7 @@ printf("\n");
       AregT[ind2] = Areg[ind1]; 
     }
 
+/*
 if(debug){
 for(i=0;i<2*n;i++)
 for(j=0;j<n;j++){
@@ -260,6 +263,7 @@ ind1 = i*2*n+j;
 printf("A_regT(%i,%i) = %f;\n",i+1,j+1,AregT[ind1]);
 }
 }
+*/
   // Replace matrix with Areg'*Areg and vec with Areg'*b
   debug2=0;
   if(debug) debug2 = 0; 
@@ -273,7 +277,9 @@ for(i=0;i<neq;i++)
     ind2 = j*neq+i;
     b_in[ind1] = Aregb[ind2]; 
   }
-if(debug){
+
+/*
+ * if(debug){
 for(i=0;i<n;i++)
 for(j=0;j<n;j++){
 ind1 = n*i+j; 
@@ -284,16 +290,19 @@ for(j=0;j<n;j++)
 printf("Aregb(%i) = %f;\n",j+1,Aregb[j]);
 printf("\n");
 }
+*/
 
   a=(double **)malloc(sizeof(double)*n);
   double (*b)[n]=(double(*)[n]) b_in ;
 
+/*
 if(debug){
 for(j=0;j<neq;j++){
 for(i=0;i<n;i++){
 printf("b_rsz(%i,%i) = %f;\n",j+1,i+1,b[j][i]); 
 }}
 }
+*/
   for(i=0;i<n;i++)
     {
       a[i]=(double *)malloc(sizeof(double)*n);
@@ -352,13 +361,13 @@ printf("b_rsz(%i,%i) = %f;\n",j+1,i+1,b[j][i]);
 	  b[m][i]=(b[m][i]-sum)/a[i][i];
 	}
     }
-
+/*
 if(debug){
 for(j=0;j<n;j++)
 printf("b_out(%i) = %f\n",j+1,b[j]);
 printf("\n");
 }
-
+*/
   *iflag=1;
   
   for(i=0;i<n;i++) free(a[i]);

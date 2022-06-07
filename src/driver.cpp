@@ -17,7 +17,7 @@ int main(int argc, char *argv[])
   dgsand *sol=new dgsand[nmesh];
   
   int i, B; 
-  double x0=9.6875;
+  double x0=1.5;    
   for(i=0;i<nmesh;i++) {
     sol[i].setup(argv[i+1]);
     sol[i].init(i);
@@ -53,7 +53,7 @@ int main(int argc, char *argv[])
     // RK step 1
     for(i=0;i<nmesh;i++){
       // exchange overset flux information	    
- 
+ /*
 
       // Euler
       if(nmesh>1){
@@ -67,7 +67,7 @@ printf("==================\nCOMPUTING MESH %i Step %i, Euler \n=================
       {
         sol[i].update(sol[i].q,sol[i].q,dt);
       }
-/*
+*/
 
       
       if(nmesh>1){
@@ -106,7 +106,7 @@ printf("==================\nCOMPUTING MESH %i Step %i, RK 3\n===================
     }
     for(i=0;i<nmesh;i++)
       sol[i].update(sol[i].q,sol[i].q,rk[3]*dt);
- */ 
+    
     // compute norms
     int imax;
     double rmax,rnorm;

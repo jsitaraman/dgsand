@@ -42,7 +42,7 @@ extern "C" {
   double total_area(double *detJ, int etype, int p, int d, int nelem);
   void CUT_CELLS(double x0, double *x, double* xcut, int* iptr, int* cut2e, int d, int e, int p,
 		 int nelem, int pc, int *cut2face, int* cut2neigh, int* elem2face, int* faces,
-		 int* iblank, int* cutoverset, int imesh);
+		 int* iblank, int* cutoverset, int imesh, int ng);
   void MASS_MATRIX(double *mass,double *x, int *iptr, int d, int e, int p, int nelem, int pc, int imesh);
   void CUT_MASS_MATRIX(double *mass,double *x, double *Jinv, int *iptr, double *xcut,
 		       double *detJcut, int *iptrc, int d, int e, int p, int nelem,
@@ -284,7 +284,7 @@ class dgsand
 	cut2e.resize(necut);       
 	cut2face.resize(necut*3);  // map between cut face and orig face id                       
 	cut2neigh.resize(necut*3); // map between cut face and R side neighbor
-	cutoverset.resize(necut*3);        // cutoverset array 
+	cutoverset.resize(necut*3*ngGL);        // cutoverset array 
 
 	//create all the cut cell pointers
 	bvcut.resize(necut*nbasis*ngElem);         // basis value at volume QP	   
@@ -301,7 +301,7 @@ class dgsand
 	fwcut.resize(d*ngGL*fpe*necut);	      // faceNormals at face QP      
 	fcflux.resize(3*nfields*ngGL*fpe*necut);    // face fields and flux        
 	
-	pccut = 13; 
+	pccut = 14; 
 	printf("nbasisx = %i\n",nbasisx); 
 	iptrc.resize(pccut*necut);
 	
@@ -322,6 +322,7 @@ class dgsand
 
 	  iptrc[ix+11]+=i*(fpe*3*nfields*ngGL);  //faceFlux
 	  iptrc[ix+12]+=i*fpe; 			   // cut2neigh & cut2face
+	  iptrc[ix+13]+=i*fpe*ngGL;		// cutoverset
 	}
 
 	CUT_CELLS(x0,
@@ -330,7 +331,7 @@ class dgsand
 		  cut2e.data(),
 		  d, etype, p, nelem, pc,
 		  cut2face.data(),cut2neigh.data(),
-		  elem2face, faces, iblank.data(),cutoverset.data(),imesh);
+		  elem2face, faces, iblank.data(),cutoverset.data(),imesh,ngGL);
 	
 	for(int i=0;i<necut;i++)
 	  printf("cut elem %i: neigh = %i %i %i\n",
