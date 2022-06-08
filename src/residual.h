@@ -779,7 +779,7 @@ if(imesh==1 && (i==0)){
 printf("DEBUG: Mesh %i, full cell %i:\n",imesh,i);
 debug = 1;
 }
-else if(imesh==0 && i==286){
+else if(imesh==0 && i==895){
 printf("DEBUG: Mesh %i, full cell %i:\n",imesh,i);
 debug = 1;
 }
@@ -831,7 +831,7 @@ printf("\tfull R(f = %i, b = %i) = %f\n",f,j,R[iR+f*nbasis+j]);
       ic2n=iptrc[ix+12];
       ico=iptrc[ix+13];
       
-if(imesh==0 && eid==959){
+if(imesh==0 && eid==895){
 printf("DEBUG: Mesh %i, cut cell %i:\n",imesh,i);
 printf("CUT VOL:\n"); 
 debug = 1;
@@ -893,7 +893,7 @@ max = 0;
 	printf("===============\n");
       }
 #endif     
-if(imesh==1 && (i==0||i==286)){
+if(imesh==0 && (i==0||i==895)){
 debug = 1; 
 printf("MESH %i ELEM %i \n", imesh,i);
 for(int f = 0; f<nfields; f++)
@@ -920,7 +920,7 @@ debug = 0;
         }
       invertMass(mass+im,R+iR,pde,d,e,p,iscut,ireg,debug);
 
-if(imesh==1 && (i==0||i==286)){
+if(imesh==0 && (i==0||i==895)){
 printf("\n");
 for(int f = 0; f<nfields; f++)
 for(int j = 0; j<nbasis; j++)
