@@ -17,7 +17,7 @@ int main(int argc, char *argv[])
   dgsand *sol=new dgsand[nmesh];
   
   int i, B; 
-  double x0=9.68750000000000;
+  double x0=9.1; //68750000000000-0*.625;
   for(i=0;i<nmesh;i++) {
     sol[i].setup(argv[i+1]);
     sol[i].init(i);

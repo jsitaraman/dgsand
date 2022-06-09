@@ -109,7 +109,7 @@ void CUT_CELLS(double x0, double *x, double* xcut, int* iptr, int* cut2e, int d,
 
   n = 0; 
   for(i=0;i<nelem;i++){
-      iblank[i] = 1; 
+      iblank[i] = 0; 
       ix=iptr[pc*i+1];
       // get bases at rst = [0 0 ; 1 0; 0 1]
       for(j=0;j<nfp;j++){ // loop over vertices
@@ -150,7 +150,7 @@ void CUT_CELLS(double x0, double *x, double* xcut, int* iptr, int* cut2e, int d,
         }
       }
       else if(sum==nfp){
-        iblank[i] = 0;
+        iblank[i] = 1;
         printf("\nelem %i is blanked\n",i+1);
       }
 
