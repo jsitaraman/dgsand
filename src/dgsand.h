@@ -74,7 +74,7 @@ extern "C" {
 		 int *cutoverset,int imesh);
   void UPDATE_DOFS(double *qdest, double coef, double *qsrc, double *R, int ndof);
 
-  void OUTPUT_TECPLOT(int meshid, int step,double *x, double *q,
+  void OUTPUT_TECPLOT(int meshid, int step,double *x, double *q, int *iblank,
 		    int pc, int *iptr, int pde, int d, int e, int p, int nelem);
 
   void SETUP_OVERSET(int* cut2e, int* cut2neighA, int* iptrA, int* iptrB, int* iptrcA, int* iptrcB, 
@@ -249,7 +249,14 @@ class dgsand
 	}
       };
 
-    void init(int imesh) {
+  void transform(double xt, double yt) {
+    for(int i=0;i<nnodes;i++) {
+      xcoord[2*i]+=xt;
+      xcoord[2*i+1]+=yt;
+    }    
+  };
+  
+  void init(int imesh) {
 
       /* initialize fields on all the elements */
       INIT_FIELDS(xcoord,
@@ -489,7 +496,7 @@ class dgsand
     };
     
     void output(int meshid, int istep) {
-      OUTPUT_TECPLOT(meshid,istep,x.data(),q.data(),pc,iptr.data(),pde,d,etype,p,nelem);
+      OUTPUT_TECPLOT(meshid,istep,x.data(),q.data(),iblank.data(),pc,iptr.data(),pde,d,etype,p,nelem);
     }
     
     int getNsteps() { return nsteps; };

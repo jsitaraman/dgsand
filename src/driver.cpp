@@ -17,9 +17,13 @@ int main(int argc, char *argv[])
   dgsand *sol=new dgsand[nmesh];
   
   int i, B; 
-  double x0=9.1; //68750000000000-0*.625;
+  double x0=9.9; //68750000000000-0*.625;
+  //double x0=9.68750000000000; //-0*.625;
   for(i=0;i<nmesh;i++) {
     sol[i].setup(argv[i+1]);
+    if (i==1) {
+      sol[i].transform(1.8,0);
+    }
     sol[i].init(i);
     sol[i].mass_matrix(i);
     sol[i].initTimeStepping(i);

@@ -105,6 +105,9 @@ void CUT_CELLS(double x0, double *x, double* xcut, int* iptr, int* cut2e, int d,
 
   int nbasis=order2basis[e][p]; // first order bases are interpolative at nodes so it's ok to do this?
   double bv[nbasis*nfp];
+  char fname[20];
+  sprintf(fname,"cut_pts_%d.dat",imesh);
+  FILE *fp=fopen(fname,"w");
 //  int ng = ngGL[e][p]; 
 
   n = 0; 
@@ -181,11 +184,19 @@ void CUT_CELLS(double x0, double *x, double* xcut, int* iptr, int* cut2e, int d,
         ycut2=a*x0+b; 
 
   	xtmp[0] = xvert[2*j0];
-  	xtmp[3] = xvert[2*j0+1];
+  	xtmp[3] = xvert[2*j0+1];	
         xtmp[1] = x0;
 	xtmp[4] = ycut1;
         xtmp[2] = x0;
 	xtmp[5] = ycut2;
+
+	/* xtmp[1] = (xvert[2*j0]+xvert[2*jp1])*0.5; */
+	/* xtmp[4] = (xvert[2*j0+1]+xvert[2*jp1+1])*0.5; */
+	/* xtmp[2] = (xvert[2*j0]+xvert[2*jp2])*0.5; */
+	/* xtmp[5] = (xvert[2*j0+1]+xvert[2*jp2+1])*0.5; */
+	
+	fprintf(fp,"%f %f\n",xtmp[1],xtmp[4]);
+	fprintf(fp,"%f %f\n",xtmp[2],xtmp[5]);
 
 	// get the element neighbors on edges 0 and 2
 
@@ -289,13 +300,19 @@ printf("\telem neigh(%i, %i, %i) = %i %i %i\n",3*n,3*n+1,3*n+2,cut2neigh[3*n],cu
         b = xvert[2*j0+1]-a*xvert[2*j0]; 
         ycut2=a*x0+b; 
 
+
 	// form first triangle (cut node 1 -> cut node 2 -> int 1)
         xtmp[0] = xvert[2*j0];
         xtmp[3] = xvert[2*j0+1];
         xtmp[1] = xvert[2*jp1];
         xtmp[4] = xvert[2*jp1+1];
-        xtmp[2] = x0; 
+        xtmp[2] = x0;
         xtmp[5] = ycut1;
+	/* xtmp[2] = (xvert[2*jp2]+xvert[2*jp1])*0.5; */
+	/* xtmp[5] = (xvert[2*jp2+1]+xvert[2*jp1+1])*0.5; */
+
+	fprintf(fp,"%f %f\n",xtmp[2],xtmp[5]);
+
 
         fid = abs(elem2face[i*3+j0])-1;
         forig[0] = fid; 
@@ -365,12 +382,18 @@ printf("\telem neigh(%i, %i, %i) = %i %i %i\n",3*n,3*n+1,3*n+2,cut2neigh[3*n],cu
         n++; 
 
 	//Second triangle (cut node 1, both intersect nodes)
-        xtmp[0] = x0; 
-        xtmp[3] = ycut1; 
-        xtmp[1] = x0; 
+        xtmp[0] = x0;
+        xtmp[3] = ycut1;
+	/* xtmp[0] = (xvert[2*jp2]+xvert[2*jp1])*0.5; */
+	/* xtmp[3] = (xvert[2*jp2+1]+xvert[2*jp1+1])*0.5; */
+        xtmp[1] = x0;
         xtmp[4] = ycut2;
+	/* xtmp[1] = (xvert[2*j0]+xvert[2*jp2])*0.5; */
+	/* xtmp[4] = (xvert[2*j0+1]+xvert[2*jp2+1])*0.5; */
         xtmp[2] = xvert[2*j0]; 
         xtmp[5] = xvert[2*j0+1]; 
+
+	fprintf(fp,"%f %f\n",xtmp[1],xtmp[4]);
 
 	neigh[0] = -2; // this is the overset boundary
         fid = abs(elem2face[i*3+jp2])-1;

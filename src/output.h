@@ -1,4 +1,4 @@
-void output_coords(FILE *fp,double *x,double *q, int d, int e , int p, int nfields)
+void output_coords(int ielem,FILE *fp,double *x,double *q, int *iblank, int d, int e , int p, int nfields)
 {
   int i,j, k,b;
   double u[d], bi;
@@ -29,6 +29,8 @@ void output_coords(FILE *fp,double *x,double *q, int d, int e , int p, int nfiel
     fprintf(fp,"%18.16f ",xv[k]);
   for(k=0;k<nfields;k++)
     fprintf(fp,"%18.16f ",qv[k]);
+  fprintf(fp,"%d ",iblank[0]);
+  fprintf(fp,"%d",ielem);
   fprintf(fp,"\n");
   }
 }
@@ -45,7 +47,7 @@ void output_connectivity(FILE *fp,int offset,int p)
     fprintf(fp,"%d %d %d\n",subtri[p][3*i+0]+offset,subtri[p][3*i+1]+offset,subtri[p][3*i+2]+offset);
 }
 
-void OUTPUT_TECPLOT(int meshid, int step,double *x, double *q,
+void OUTPUT_TECPLOT(int meshid, int step,double *x, double *q, int *iblank,
 		    int pc, int *iptr, int pde, int d, int e, int p, int nelem)
 {
 
@@ -69,6 +71,7 @@ void OUTPUT_TECPLOT(int meshid, int step,double *x, double *q,
       sprintf(qstr,"Q%d",i);
       fprintf(fp,"\"%s\",",qstr);
     }
+  fprintf(fp,"\"iblank\",\"cellid\",");
   fprintf(fp,"\n");
   if (p > 0) {
       fprintf(fp,"ZONE T=\"VOL_MIXED\",N=%d E=%d ET=TRIANGLE, F=FEPOINT\n",nelem*nvert,nelem*nsubtri[p]);
@@ -76,7 +79,7 @@ void OUTPUT_TECPLOT(int meshid, int step,double *x, double *q,
   else {
     fprintf(fp,"ZONE T=\"VOL_MIXED\",N=%d E=%d ET=TRIANGLE, F=FEBLOCK\n",nelem*nvert,nelem*nsubtri[p]);
     fprintf(fp,"VARLOCATION = (1=NODAL, 2=NODAL");
-    for(i=0;i<nfields;i++) fprintf(fp, ", %d=CELLCENTERED",i+3);
+    for(i=0;i<nfields+2;i++) fprintf(fp, ", %d=CELLCENTERED",i+3);
     fprintf(fp,")\n");
   }
   if (p==0) {
@@ -84,6 +87,9 @@ void OUTPUT_TECPLOT(int meshid, int step,double *x, double *q,
       for(i=0;i<nelem;i++)
 	for(k=0;k<nvert;k++)
 	  fprintf(fp,"%f\n",x[i*d*nvert+j*nvert+k]);
+    for(i=0;i<nelem;i++) {
+      fprintf(fp,"%d\n",iblank[i]);
+    }
     for(j=0;j<nfields;j++)
       for(i=0;i<nelem;i++)
 	fprintf(fp,"%f\n",q[i*nfields+j]);
@@ -93,7 +99,7 @@ void OUTPUT_TECPLOT(int meshid, int step,double *x, double *q,
       {
 	ix=iptr[pc*i+1];
 	iq=iptr[pc*i];
-	output_coords(fp,x+ix,q+iq,d,e,p,nfields);
+	output_coords(i,fp,x+ix,q+iq,iblank+i,d,e,p,nfields);
       }
   }
   for(i=0;i<nelem;i++)
