@@ -1,3 +1,30 @@
+double consIntegral(double *bv, double *q, double *detJ,
+		    int pde, int d, int e, int p, int eid, int f1)
+{
+  int b,w,i,j,l,ld,m,f,n;
+  int nbasis=order2basis[e][p];
+  double wgt;
+  double *bvv;
+  int nfields=get_nfields[pde](d);
+  double qv[nfields],qvv;
+  int g=p2g[e][p];
+
+  for(f=0;f<nfields;f++) qv[f]=0;
+  
+  for(w=0;w<ngElem[e][p];w++)
+    {
+      wgt=gauss[e][g][(d+1)*w+2]*detJ[w];
+      bvv=bv+w*nbasis;
+      for(f=0;f<nfields;f++)
+	{
+	  qvv=bvv[0]*q[f*nbasis];
+	  for(b=1;b<nbasis;b++)     
+	    qvv+=(bvv[b]*q[f*nbasis+b]);
+	  qv[f]+=(wgt*qvv);
+	}
+    }
+  return qv[f1];     
+}
 
 void volIntegral(double *residual, double *bv, double *bvd, double *q, double *detJ,
 		 int pde, int d, int e, int p, int eid)
@@ -39,57 +66,57 @@ void volIntegral(double *residual, double *bv, double *bvd, double *q, double *d
       for(j=0;j<d;j++)
 	flux_function[pde](flux[j],qv,qvd,j);
 
-/*if(eid==2){
-printf("\n");
-for(f=0;f<nfields;f++){
-printf("wgt = %f\n",wgt); 
-printf("w = %i, qv = %f, qvd[%i] = %f %f\n",w,f,qv[f],qvd[f][0],qvd[f][1]);
-}
-for(f=0;f<nfields;f++){
-printf("flux[%i] = %f %f\n",f,flux[0][f],flux[1][f]);
-}
-for(b=0;b<nbasis;b++){
-printf("bvvd[%i] = %f %f\n",b,bvvd[0 + b*d], bvvd[1 + b*d]);
-}
-}
-*/
+      /*if(eid==2){
+	printf("\n");
+	for(f=0;f<nfields;f++){
+	printf("wgt = %f\n",wgt); 
+	printf("w = %i, qv = %f, qvd[%i] = %f %f\n",w,f,qv[f],qvd[f][0],qvd[f][1]);
+	}
+	for(f=0;f<nfields;f++){
+	printf("flux[%i] = %f %f\n",f,flux[0][f],flux[1][f]);
+	}
+	for(b=0;b<nbasis;b++){
+	printf("bvvd[%i] = %f %f\n",b,bvvd[0 + b*d], bvvd[1 + b*d]);
+	}
+	}
+      */
 
       m=0;
       n=0;
       for(f=0;f<nfields;f++)
         {
-         for(j=0;j<d;j++) flux[j][f]*=wgt;
-	 for(b=0;b<nbasis;b++)
-	  {
-	    if (w==0) residual[m]=0;
-	    for(j=0;j<d;j++){
-	      residual[m]+=(bvvd[b*d+j]*flux[j][f]); /* \grad b . F */
-	      keep[n++]=(bvvd[b*d+j]*flux[j][f]);
+	  for(j=0;j<d;j++) flux[j][f]*=wgt;
+	  for(b=0;b<nbasis;b++)
+	    {
+	      if (w==0) residual[m]=0;
+	      for(j=0;j<d;j++){
+		residual[m]+=(bvvd[b*d+j]*flux[j][f]); /* \grad b . F */
+		keep[n++]=(bvvd[b*d+j]*flux[j][f]);
+	      }
+	      m++;
 	    }
-	    m++;
-	  }
         }
 
-/*if(eid==2){
-printf("\n");
-m=0;
-n=0; 
-for(f=0;f<nfields;f++){
-	 for(b=0;b<nbasis;b++){
-	 for(j=0;j<d;j++){
-	   printf("f %i, b %i, d %i, N %f, flux %f, vol res input = %f\n",f, b, j,bvvd[b*d+j], flux[j][f], keep[n++]);
-}
-}
-printf("\n");
-}
-for(f=0;f<nfields;f++){
-	 for(b=0;b<nbasis;b++)
-		printf("w = %i, Rvol[%i] = %f\n",w,m,residual[m++]);
-printf("\n");
-}
+      /*if(eid==2){
+	printf("\n");
+	m=0;
+	n=0; 
+	for(f=0;f<nfields;f++){
+	for(b=0;b<nbasis;b++){
+	for(j=0;j<d;j++){
+	printf("f %i, b %i, d %i, N %f, flux %f, vol res input = %f\n",f, b, j,bvvd[b*d+j], flux[j][f], keep[n++]);
+	}
+	}
+	printf("\n");
+	}
+	for(f=0;f<nfields;f++){
+	for(b=0;b<nbasis;b++)
+	printf("w = %i, Rvol[%i] = %f\n",w,m,residual[m++]);
+	printf("\n");
+	}
 
-}
-*/
+	}
+      */
     }
 }
 
@@ -111,7 +138,7 @@ void faceIntegral(double *residual, double *fflux, double *bf, double *bfd, int 
   l=ld=m=0;
   for(f=0;f<nfields;f++)
     for(b=0;b<nbasis;b++)
-        resf[m++]=0; 
+      resf[m++]=0; 
 
   for(i=0;i<nfp;i++)
     {
@@ -141,34 +168,34 @@ void faceIntegral(double *residual, double *fflux, double *bf, double *bfd, int 
   		    residual[m]-=(flux[f]*bvv[b]);
 		    m++;
 	 	  }
-	        }
+	      }
 	    }
 
-/*if(ielem==2){
-printf("\n"); 
-m = 0; 
-  for(f=0;f<nfields;f++)
-    for(b=0;b<nbasis;b++){
-        printf("face %i, w %i, flux[%i] = %f, bvv[%i] = %f\n\tresf[%i]=%f\n",i, w,f,flux[f],b,bvv[b],m,flux[f]*bvv[b]); 
-	m++;
-     }
-}
-*/
+	  /*if(ielem==2){
+	    printf("\n"); 
+	    m = 0; 
+	    for(f=0;f<nfields;f++)
+	    for(b=0;b<nbasis;b++){
+	    printf("face %i, w %i, flux[%i] = %f, bvv[%i] = %f\n\tresf[%i]=%f\n",i, w,f,flux[f],b,bvv[b],m,flux[f]*bvv[b]); 
+	    m++;
+	    }
+	    }
+	  */
 
 	  fst+=(3*fsgn*nfields);
 	}
     }
-/*
-if(ielem==2){
-printf("\n"); 
-m = 0; 
-  for(f=0;f<nfields;f++)
+  /*
+    if(ielem==2){
+    printf("\n"); 
+    m = 0; 
+    for(f=0;f<nfields;f++)
     for(b=0;b<nbasis;b++){
-        printf("f = %i, b = %i, face res =%f\n",f,b,resf[m]);
-	m++;
-     }
-}
-*/
+    printf("f = %i, b = %i, face res =%f\n",f,b,resf[m]);
+    m++;
+    }
+    }
+  */
 
 }
 
@@ -189,8 +216,8 @@ void cutVol(double *residual, double *bv, double *bvd, double *q, double *detJ,
   l=ld=0;
 
   for(f=0;f<nfields;f++)
-  for(b=0;b<nbasis;b++)
-  keep[f*nbasis+b]=0;
+    for(b=0;b<nbasis;b++)
+      keep[f*nbasis+b]=0;
 
   // for all gauss-quadrature points 
   for(w=0;w<ngElem[e][p];w++)
@@ -219,45 +246,45 @@ void cutVol(double *residual, double *bv, double *bvd, double *q, double *detJ,
       m=0;
 
 
-if(debug){
-printf("\n");
-for(f=0;f<nfields;f++){
-printf("cut wgt = %f\n",wgt); 
-printf("cut w = %i, qv = %f, qvd[%i] = %f %f\n",w,f,qv[f],qvd[f][0],qvd[f][1]);
-}
-for(f=0;f<nfields;f++){
-printf("cut flux[%i] = %f %f\n",f,flux[0][f],flux[1][f]);
-}
-for(b=0;b<nbasis;b++){
-printf("cut bvvd[%i] = %f %f\n",b,bvvd[0 + b*d], bvvd[1 + b*d]);
-}
-}
+      if(debug){
+	printf("\n");
+	for(f=0;f<nfields;f++){
+	  printf("cut wgt = %f\n",wgt); 
+	  printf("cut w = %i, qv = %f, qvd[%i] = %f %f\n",w,f,qv[f],qvd[f][0],qvd[f][1]);
+	}
+	for(f=0;f<nfields;f++){
+	  printf("cut flux[%i] = %f %f\n",f,flux[0][f],flux[1][f]);
+	}
+	for(b=0;b<nbasis;b++){
+	  printf("cut bvvd[%i] = %f %f\n",b,bvvd[0 + b*d], bvvd[1 + b*d]);
+	}
+      }
 
       for(f=0;f<nfields;f++)
         {
-         for(j=0;j<d;j++) flux[j][f]*=wgt;
-	 for(b=0;b<nbasis;b++)
-	  {
-	    for(j=0;j<d;j++){
- 	      //notice the sign change from the volIntegral routine
-	      residual[m]-=(bvvd[b*d+j]*flux[j][f]); /* \grad b . F */
-              keep[m]+=(bvvd[b*d+j]*flux[j][f]);
+	  for(j=0;j<d;j++) flux[j][f]*=wgt;
+	  for(b=0;b<nbasis;b++)
+	    {
+	      for(j=0;j<d;j++){
+		//notice the sign change from the volIntegral routine
+		residual[m]-=(bvvd[b*d+j]*flux[j][f]); /* \grad b . F */
+		keep[m]+=(bvvd[b*d+j]*flux[j][f]);
+	      }
+	      m++;
 	    }
-	    m++;
-	  }
         }
     }
 
-if(debug){
-printf("\n");
-  for(f=0;f<nfields;f++)
-  for(b=0;b<nbasis;b++)
-  printf("R_volcut[%i] = %f\n",f*nbasis+b,keep[f*nbasis+b]);
+  if(debug){
+    printf("\n");
+    for(f=0;f<nfields;f++)
+      for(b=0;b<nbasis;b++)
+	printf("R_volcut[%i] = %f\n",f*nbasis+b,keep[f*nbasis+b]);
   }
 
 }
 
-  double signum(int a)
+double signum(int a)
 {
   if(a<0){
     return 1.0; 
@@ -268,9 +295,9 @@ printf("\n");
 }
 
 //XXX Debug here
-  void cutFace(double *residual, double *fflux, double *bfL, double *bfR, 
-  	       double *q, int pf, int pde, int d, int e, int p, int iorig,
-	       int *cutoverset, int debug, int* cut2neigh, int* iblank)
+void cutFace(double *residual, double *fflux, double *bfL, double *bfR, 
+	     double *q, int pf, int pde, int d, int e, int p, int iorig,
+	     int *cutoverset, int debug, int* cut2neigh, int* iblank)
 {
   int b,w,i,j,l,ld,m,f,floc,z;
   int nbasis=order2basis[e][p];
@@ -283,28 +310,28 @@ printf("\n");
   double keep[nbasis*nfields],sgn; 
 
   for(f=0;f<nfields;f++)
-  for(b=0;b<nbasis;b++)
-  keep[f*nbasis+b]=0;
+    for(b=0;b<nbasis;b++)
+      keep[f*nbasis+b]=0;
 
   l=ld=m=z=0;
   floc = 2*nfields; 
   for(i=0;i<nfp;i++)
     {
-//printf("\n"); 
+      //printf("\n"); 
       for(w=0;w<ngGL[e][p];w++)
 	{
 	  // subtract fluxes if it's the overset boundary
 	  // add if it's a regular cut face
-if(debug)	  printf("cutoverset = %i\n",cutoverset[z]);
+	  if(debug)	  printf("cutoverset = %i\n",cutoverset[z]);
           if(cutoverset[z]>-1){
 	    sgn = -1; 
 	  }
 	  else{
 	    sgn = 1; 
 	  }
-if(debug) printf("sgn = %f\n",sgn); 
+	  if(debug) printf("sgn = %f\n",sgn); 
 	  wgt=gaussgl[e][g][(d)*w+1]*sgn; 
-if(debug) printf("wgt = %f\n",wgt);
+	  if(debug) printf("wgt = %f\n",wgt);
           // get the basis and basis derivative for this gauss point
           bvv=bfL+l;
           l+=nbasis;
@@ -319,26 +346,26 @@ if(debug) printf("wgt = %f\n",wgt);
  	            //notice the sign change from the faceIntegral routine
   		    residual[m]+=(flux*bvv[b]);
 		    keep[m] += (flux*bvv[b]);
-if(debug && f ==0)		  printf("side %i, w %i, field %i, basis %i,\n\tsgn = %f, flux = %f, bvv = %f, res inc = %f, curr res = %f\n",i,w,f,b,sgn,flux,bvv[b],flux*bvv[b],residual[m]);
+		    if(debug && f ==0)		  printf("side %i, w %i, field %i, basis %i,\n\tsgn = %f, flux = %f, bvv = %f, res inc = %f, curr res = %f\n",i,w,f,b,sgn,flux,bvv[b],flux*bvv[b],residual[m]);
 		    m++;
 		  }
-	        }
+	      }
 	    }
 	  floc+=(3*nfields); // increment through flux array, 3 is where the completed fluxes are computed
 	  z++; 
 	}
     }
 
-if(debug){
-printf("\n"); 
-m=0;
-  for(f=0;f<nfields;f++){
-  for(b=0;b<nbasis;b++){
-  printf("R_facecut[%i] = %f\n",f*nbasis+b,keep[m]);
-  m++ ;
-}
-  printf("\n");
-}
+  if(debug){
+    printf("\n"); 
+    m=0;
+    for(f=0;f<nfields;f++){
+      for(b=0;b<nbasis;b++){
+	printf("R_facecut[%i] = %f\n",f*nbasis+b,keep[m]);
+	m++ ;
+      }
+      printf("\n");
+    }
   }
 
 
@@ -434,15 +461,15 @@ void setCutFacesQuantities(double *x, double *q, int *iptr, int pc,
               fcflux[floc+f+nfields]+=bfcutR[bloc+b]*q[iptr[eid*pc]+f*nbasis+b];    
           }// loop over nfields
         } else if(eid==-1){ // inflow face
-            far_field[pde](fcflux+floc+nfields);
+	  far_field[pde](fcflux+floc+nfields);
         } // end of r side
       } 
       else{ // flux = 0 for faces with blanked neighbors
-          // L side quantities
-          for(f=0;f<nfields;f++){
-            fcflux[floc+f]=0.0; // l side
-  	    fcflux[floc+f+nfields]=0.0; // r side
-	  }
+	// L side quantities
+	for(f=0;f<nfields;f++){
+	  fcflux[floc+f]=0.0; // l side
+	  fcflux[floc+f+nfields]=0.0; // r side
+	}
       } // iblank
       bloc+=nbasis;
       floc+=3*nfields; // third set of values to be computed later, skip ahead to next quad pt
@@ -508,21 +535,21 @@ void FILL_BC(double *fnorm,double *fflux, int *faces,
       /* there should be a way to avoid this if loop */
       /* collect boundary faces in to a separate list in preproc */ 
       if (faces[6*i+4] == -1) {
-	    for(j=0;j<ngGL[e][p];j++)
-	      {
-	      ifp=(i*ngGL[e][p]+j)*3*nfields+nfields;
-	      far_field[pde](fflux+ifp);
-	      }
+	for(j=0;j<ngGL[e][p];j++)
+	  {
+	    ifp=(i*ngGL[e][p]+j)*3*nfields+nfields;
+	    far_field[pde](fflux+ifp);
+	  }
       }
-      else if (faces[6*i+4]==-2) {
-          for(j=0;j<ngGL[e][p];j++)
-            {
-              inr=((i*ngGL[e][p]+j)*d);
-              ifl=(i*ngGL[e][p]+j)*3*nfields;
-              ifp=ifl+nfields;
-              wall_bc[pde](fflux+ifp,fflux+ifl,fnorm+inr,d);
-              //far_field[pde](fflux+ifp);
-            }
+      else if (faces[6*i+4]==-2 ) {
+	for(j=0;j<ngGL[e][p];j++)
+	  {
+	    inr=((i*ngGL[e][p]+j)*d);
+	    ifl=(i*ngGL[e][p]+j)*3*nfields;
+	    ifp=ifl+nfields;
+	    wall_bc[pde](fflux+ifp,fflux+ifl,fnorm+inr,d);
+	    //far_field[pde](fflux+ifp);
+	  }
       }
     }
 }
@@ -542,25 +569,25 @@ void COMPUTE_FACE_FLUXES(double *fnorm, double *fflux,
     {
       f=i/ngGL[e][p];
       for(j=0;j<d;j++)
-	    xnorm[j]=fnorm[d*i+j];
+	xnorm[j]=fnorm[d*i+j];
 
       ifl=i*3*nfields;
       ifr=ifl+nfields;
       iflux=ifr+nfields;
       gradient_indep_flux[pde](fflux+ifl,fflux+ifr,fflux+iflux,xnorm,0.0);
-/*
-if(i==1){
-printf("FULL i %i, j %i, w %i\n",i,j,w);
-printf("\tifl %i, ifr %i, iflux %i\n",ifl,ifr,iflux);
-printf("\tLflx = %f %f %f %f\n",fflux[ifl+0],fflux[ifl+1],fflux[ifl+2],fflux[ifl+3]); 
-printf("\tRflx = %f %f %f %f\n",fflux[ifr+0],fflux[ifr+1],fflux[ifr+2],fflux[ifr+3]); 
-printf("\txNorm = %f %f \n",xnorm[0],xnorm[1]);
-}
-*/
+      /*
+	if(i==1){
+	printf("FULL i %i, j %i, w %i\n",i,j,w);
+	printf("\tifl %i, ifr %i, iflux %i\n",ifl,ifr,iflux);
+	printf("\tLflx = %f %f %f %f\n",fflux[ifl+0],fflux[ifl+1],fflux[ifl+2],fflux[ifl+3]); 
+	printf("\tRflx = %f %f %f %f\n",fflux[ifr+0],fflux[ifr+1],fflux[ifr+2],fflux[ifr+3]); 
+	printf("\txNorm = %f %f \n",xnorm[0],xnorm[1]);
+	}
+      */
 
-//if(i==1) printf("\tflx = %f %f %f %f\n\n",fflux[iflux+0],fflux[iflux+1],fflux[iflux+2],fflux[iflux+3]); 
+      //if(i==1) printf("\tflx = %f %f %f %f\n\n",fflux[iflux+0],fflux[iflux+1],fflux[iflux+2],fflux[iflux+3]); 
     }
-//printf("\n======================\ngetting cut face fluxes\n============================\n");
+  //printf("\n======================\ngetting cut face fluxes\n============================\n");
   // cut face fluxes
   for(i=0;i<necut;i++){
     eid=cut2e[i];
@@ -568,14 +595,15 @@ printf("\txNorm = %f %f \n",xnorm[0],xnorm[1]);
     wloc=iptrc[i*pccut+9]; 
     ic2n=iptrc[i*pccut+12]; 
     ico=iptrc[i*pccut+13]; 
-int debug; 
-if(eid==916 ){
-debug = 1;
-}
-else{
-debug = 0;
-}
-
+    int debug=0; 
+    /*
+    if(eid==916 ){
+      debug = 1;
+    }
+    else{
+      debug = 0;
+    }
+    */
 
     g = m = 0; 
     for(j=0;j<nfp;j++){
@@ -595,23 +623,23 @@ debug = 0;
         ifr=ifl+nfields;
         iflux=ifr+nfields;
 
-if(debug){
-printf("\nORIG %i, CUT i %i, j %i, w %i\n",eid,i,j,w);
-printf("\tcutoverset = %i\n",cutoverset[ico+g]); 
-printf("\tcut2neigh = %i\n",cut2neigh[ic2n+j]); 
-printf("\tifl %i, ifr %i, iflux %i\n",ifl,ifr,iflux);
-printf("\tLflx = %f %f %f %f\n",fcflux[ifl+0],fcflux[ifl+1],fcflux[ifl+2],fcflux[ifl+3]); 
-printf("\tRflx = %f %f %f %f\n",fcflux[ifr+0],fcflux[ifr+1],fcflux[ifr+2],fcflux[ifr+3]); 
-printf("\txNorm = %f %f \n",xnorm[0],xnorm[1]);
-}
+	if(debug){
+	  printf("\nORIG %i, CUT i %i, j %i, w %i\n",eid,i,j,w);
+	  printf("\tcutoverset = %i\n",cutoverset[ico+g]); 
+	  printf("\tcut2neigh = %i\n",cut2neigh[ic2n+j]); 
+	  printf("\tifl %i, ifr %i, iflux %i\n",ifl,ifr,iflux);
+	  printf("\tLflx = %f %f %f %f\n",fcflux[ifl+0],fcflux[ifl+1],fcflux[ifl+2],fcflux[ifl+3]); 
+	  printf("\tRflx = %f %f %f %f\n",fcflux[ifr+0],fcflux[ifr+1],fcflux[ifr+2],fcflux[ifr+3]); 
+	  printf("\txNorm = %f %f \n",xnorm[0],xnorm[1]);
+	}
 	neigh = cut2neigh[ic2n+j];
 	if(neigh!=eid && iblank[neigh]!=1) // ignore cut edges interior to orig elem
           gradient_indep_flux[pde](fcflux+ifl,fcflux+ifr,fcflux+iflux,xnorm,0.0);
 
-if(debug){
-printf("\tflx%i = [%f %f %f %f]\n",(j*ngGL[e][p]+w),fcflux[iflux+0],fcflux[iflux+1],fcflux[iflux+2],fcflux[iflux+3]); 
-printf("\tneigh = %i, eid = %i, blank = %i\n",neigh,eid,iblank[neigh]);
-}
+	if(debug){
+	  printf("\tflx%i = [%f %f %f %f]\n",(j*ngGL[e][p]+w),fcflux[iflux+0],fcflux[iflux+1],fcflux[iflux+2],fcflux[iflux+3]); 
+	  printf("\tneigh = %i, eid = %i, blank = %i\n",neigh,eid,iblank[neigh]);
+	}
 
 
 	floc = floc + 3*nfields;
@@ -631,19 +659,19 @@ void invertMass(double *mass, double *R, int pde, int d , int e, int p,int iscut
 
   if(iscut){
     if(ireg){
-if(debug) printf("\nEntering solvec_reg\n"); 
+      if(debug) printf("\nEntering solvec_reg\n"); 
 
       solvec_copy_reshape_reg(mass,R,&iflag,nbasis,nfields,debug);  
-for(i=0;i<nbasis;i++)
-if(debug) printf("R_final[%i] = %f\n",i,R[i]);
+      for(i=0;i<nbasis;i++)
+	if(debug) printf("R_final[%i] = %f\n",i,R[i]);
     }
     else{
-if(debug) printf("\nEntering solvec\n"); 
+      if(debug) printf("\nEntering solvec\n"); 
       solvec_copy_reshape(mass,R,&iflag,nbasis,nfields);  
     }
   }
   else{
-if(debug) printf("\nEntering solvec\n"); 
+    if(debug) printf("\nEntering solvec\n"); 
     solvec_copy_reshape(mass,R,&iflag,nbasis,nfields);
   }
 }
@@ -728,7 +756,7 @@ void checkGradients(double *x, double *q, double *bv, double *bvd, double *bf,
 		    {
 		      qvd[f][j]+=(bvvd[b][j]*q[f*nbasis+b]);
 		    }
-		   printf("%16.12f ",qvd[f][j]);
+		  printf("%16.12f ",qvd[f][j]);
 		}
 	    }
 	  printf("\n");
@@ -774,9 +802,9 @@ void COMPUTE_RESIDUAL(double *R, double *mass, double *q, double *detJ, double *
   double max;
   int iR2; 
 
-int nfields=get_nfields[pde](d);
-int nbasis=order2basis[e][p];
-int debug;
+  int nfields=get_nfields[pde](d);
+  int nbasis=order2basis[e][p];
+  int debug;
 
 
   //Accumulate residual on all elements
@@ -791,46 +819,46 @@ int debug;
       ibfd=iptr[ix+7];
       im=iptr[ix+10];
  
-iR2 = iptr[pc*(i+1)];
-for(j=iR;j<iR2;j++)
-if(isnan(R[j])){
-printf("Pre-cut res for elem %i is NaN\n",i);
-exit(1);
-}
+      iR2 = iptr[pc*(i+1)];
+      for(j=iR;j<iR2;j++)
+	if(isnan(R[j])){
+	  printf("Pre-cut res for elem %i is NaN\n",i);
+	  exit(1);
+	}
 
-if(imesh==1 && (i==916)){
-printf("DEBUG: Mesh %i, full cell %i:\n",imesh,i);
-debug = 1;
-}
-else if(imesh==0 && i==895){
-printf("DEBUG: Mesh %i, full cell %i:\n",imesh,i);
-debug = 1;
-}
-else{
-debug = 0;
-}
-if(debug){ // print out node weights
-for(int f = 0; f<nfields; f++)
-for(int j = 0; j<nbasis; j++)
-printf("\tq weights, q(f = %i, b = %i) = %f\n",f,j,q[iq+f*nbasis+j]);
-}
+      if(imesh==1 && (i==916) && 1==0){
+	printf("DEBUG: Mesh %i, full cell %i:\n",imesh,i);
+	debug = 1;
+      }
+      else if(imesh==0 && i==895 && 1==0){
+	printf("DEBUG: Mesh %i, full cell %i:\n",imesh,i);
+	debug = 1;
+      }
+      else{
+	debug = 0;
+      }
+      if(debug){ // print out node weights
+	for(int f = 0; f<nfields; f++)
+	  for(int j = 0; j<nbasis; j++)
+	    printf("\tq weights, q(f = %i, b = %i) = %f\n",f,j,q[iq+f*nbasis+j]);
+      }
 
 
       if(iblank[i]!=1){
         volIntegral(R+iR,bv+ibv,bvd+ibvd,q+iq,detJ+idet, pde,d,e,p,i);
-if(debug){
-for(int f = 0; f<nfields; f++)
-for(int j = 0; j<nbasis; j++)
-printf("\tonly vol R(f = %i, b = %i) = %f\n",f,j,R[iR+f*nbasis+j]);
-}
+	if(debug){
+	  for(int f = 0; f<nfields; f++)
+	    for(int j = 0; j<nbasis; j++)
+	      printf("\tonly vol R(f = %i, b = %i) = %f\n",f,j,R[iR+f*nbasis+j]);
+	}
 
         faceIntegral(R+iR,fflux,bf+ibf,bfd+ibfd,elem2face+nfp*i,iptrf,q,pf,pde,d,e,p,i,faces,iblank,i);
 
-if(debug){
-for(int f = 0; f<nfields; f++)
-for(int j = 0; j<nbasis; j++)
-printf("\tfull R(f = %i, b = %i) = %f\n",f,j,R[iR+f*nbasis+j]);
-}
+	if(debug){
+	  for(int f = 0; f<nfields; f++)
+	    for(int j = 0; j<nbasis; j++)
+	      printf("\tfull R(f = %i, b = %i) = %f\n",f,j,R[iR+f*nbasis+j]);
+	}
 
       }
     }
@@ -854,40 +882,40 @@ printf("\tfull R(f = %i, b = %i) = %f\n",f,j,R[iR+f*nbasis+j]);
       ic2n=iptrc[ix+12];
       ico=iptrc[ix+13];
       
-if(imesh==0 && eid==916){
-printf("DEBUG: Mesh %i, cut cell %i:\n",imesh,i);
-printf("CUT VOL:\n"); 
-debug = 1;
-}
-else{
-debug = 0;
-}
+      if(imesh==0 && eid==916 && 1==0){
+	printf("DEBUG: Mesh %i, cut cell %i:\n",imesh,i);
+	printf("CUT VOL:\n"); 
+	debug = 1;
+      }
+      else{
+	debug = 0;
+      }
 
 
       cutVol(R+iR,bvcut+ibv,bvdcut+ibvd,q+iq,detJcut+idet,pde,d,e,p,eid,debug);
 
-iR2 = iptr[pc*(eid+1)];
-for(j=iR;j<iR2;j++)
-if(isnan(R[j])){
-printf("Post-vol-cut res for elem %i is NaN\n",eid);
-exit(1);
-}
-if(debug) printf("\nCUT FACE: cut elem %i\n",i);
+      iR2 = iptr[pc*(eid+1)];
+      for(j=iR;j<iR2;j++)
+	if(isnan(R[j])){
+	  printf("Post-vol-cut res for elem %i is NaN\n",eid);
+	  exit(1);
+	}
+      if(debug) printf("\nCUT FACE: cut elem %i\n",i);
 
       cutFace(R+iR,fcflux+iflx,bfcutL+ibf,bfcutR+ibf,q,pf,pde,d,e,p,eid,cutoverset+ico,debug,cut2neigh+ic2n,iblank);
 
-iR2 = iptr[pc*(eid+1)];
-for(j=iR;j<iR2;j++)
-if(isnan(R[j])){
-printf("Post-face-cut res for elem %i is NaN\n",eid);
-exit(1);
-}
+      iR2 = iptr[pc*(eid+1)];
+      for(j=iR;j<iR2;j++)
+	if(isnan(R[j])){
+	  printf("Post-face-cut res for elem %i is NaN\n",eid);
+	  exit(1);
+	}
 
 
     }
 
   //Solve each element
-max = 0; 
+  max = 0; 
   for(i=0;i<nelem;i++)
     {
       ix=pc*i;
@@ -916,24 +944,24 @@ max = 0;
 	printf("===============\n");
       }
 #endif     
-if(imesh==0 && (i==916||i==895)){
-debug = 1; 
-printf("MESH %i ELEM %i \n", imesh,i);
-for(int f = 0; f<nfields; f++)
-for(int j = 0; j<nbasis; j++){
-//R[iR+f*nbasis+j] = 0.001; 
-printf("\tComplete R(f = %i, b = %i) = %f\n",f,j,R[iR+f*nbasis+j]);
-}
-int m = 0; 
-for(int k = 0; k<nbasis; k++)
-for(int j = 0; j<nbasis; j++){
-printf("mass(%i,%i) = %f\n",k+1,j+1,mass[im+m]);
-m++;
-}
-}
-else{
-debug = 0; 
-}
+      if(imesh==0 && (i==916||i==895) && (1==0)){
+	debug = 1; 
+	printf("MESH %i ELEM %i \n", imesh,i);
+	for(int f = 0; f<nfields; f++)
+	  for(int j = 0; j<nbasis; j++){
+	    //R[iR+f*nbasis+j] = 0.001; 
+	    printf("\tComplete R(f = %i, b = %i) = %f\n",f,j,R[iR+f*nbasis+j]);
+	  }
+	int m = 0; 
+	for(int k = 0; k<nbasis; k++)
+	  for(int j = 0; j<nbasis; j++){
+	    printf("mass(%i,%i) = %f\n",k+1,j+1,mass[im+m]);
+	    m++;
+	  }
+      }
+      else{
+	debug = 0; 
+      }
  
       int iscut = 0; 
       for(j=0;j<necut;j++)
@@ -943,12 +971,12 @@ debug = 0;
         }
       invertMass(mass+im,R+iR,pde,d,e,p,iscut,ireg,debug);
 
-if(imesh==0 && (i==0||i==895)){
-printf("\n");
-for(int f = 0; f<nfields; f++)
-for(int j = 0; j<nbasis; j++)
-printf("\tUpdate(f = %i, b = %i) = %f\n",f,j,R[iR+f*nbasis+j]);
-}
+      if(imesh==0 && (i==0||i==895) && (1==0)){
+	printf("\n");
+	for(int f = 0; f<nfields; f++)
+	  for(int j = 0; j<nbasis; j++)
+	    printf("\tUpdate(f = %i, b = %i) = %f\n",f,j,R[iR+f*nbasis+j]);
+      }
     }
 }
 
@@ -996,3 +1024,39 @@ void UPDATE_DOFS(double *qdest, double coef, double *qsrc, double *R, int ndof)
   for(i=0;i<ndof;i++)
     qdest[i]=qsrc[i]+coef*R[i];
 }
+
+
+double COMPUTE_CONSERVATION(double *q, double *detJ, double *bv, int *iptr,
+			    int pc, int pde, int d, int e, int p, int fieldid,int nelem,
+			    int *cut2e,int *iptrc, double *bvcut, double *detJcut, int pccut, int necut)
+{
+  int i,ix,iq,ibv,idet;
+  int eid;
+  double cons=0;
+  for(i=0;i<nelem;i++)
+    {
+      ix=pc*i;
+      iq=iptr[ix];
+      ibv=iptr[ix+2];
+      idet=iptr[ix+5];
+      cons+=consIntegral(bv+ibv,q+iq,detJ+idet,pde,d,e,p,i,fieldid);
+    }
+
+  //Modify removing contributions from cut cells
+  for(i=0;i<necut;i++)
+    {
+      // get original element quantities
+      eid = cut2e[i]; 
+      ix=pc*eid;
+      iq=iptr[ix];	    
+      //cut cell quantities
+      ix=pccut*i; 
+      ibv=iptrc[ix+2];
+      idet=iptrc[ix+5];
+      
+      cons-=consIntegral(bvcut+ibv,q+iq,detJcut+idet,pde,d,e,p,eid,fieldid);
+    }
+  
+  return cons;
+}
+

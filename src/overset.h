@@ -93,7 +93,7 @@ void EXCHANGE_OVERSET(double* fcfluxA, double* bfcutRA, double* qB, int* iptrcA,
       // mesh B quantities
       iq=iptrB[pc*eid]; 
 
-if(imesh==1 && (i ==24 || i ==25)) {
+if(imesh==1 && (i ==24 || i ==25) && (1==0)) {
 debug=1;
 }
 else { debug = 0; }

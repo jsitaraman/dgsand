@@ -31,10 +31,27 @@ double total_area(double *detJ, int etype, int p, int d, int nelem)
   for(i=0;i<nelem;i++) 
     for(j=0;j<ngElem[etype][p];j++)
       {
-	wgt=0.5*gauss[etype][p2g[etype][p]][(d+1)*j+2];
+	wgt=gauss[etype][p2g[etype][p]][(d+1)*j+2];
 	totalArea+=(wgt*detJ[m]);
 	m++;
       }
+}
+
+double total_area_cut(double *detJ, int *iptrc, int pccut, int etype, int p, int d, int necut)
+{
+  int i,j,m,id;
+  double totalArea=0;
+  double wgt;
+  m=0;
+  for(i=0;i<necut;i++)
+    {
+      id=iptrc[pccut*i+5];
+      for(j=0;j<ngElem[etype][p];j++)
+	{
+	  wgt=gauss[etype][p2g[etype][p]][(d+1)*j+2];
+	  totalArea+=(wgt*detJ[id]);
+	}
+    }
 }
 
 void CutCellInterp(double *x, int d, int e, int p, double* Jinv, 
@@ -744,7 +761,7 @@ void MASS_MATRIX(double *mass,double *x, int *iptr, int d, int e, int p, int nel
   int debug;
   for(i=0;i<nelem;i++)
     {
-if(imesh==1 && i==225){
+if(imesh==1 && i==225 & 1==0){
  debug = 1; 
 printf("\n\nDEBUG: Mesh %i, cell %i:\n",imesh,i); 
 }

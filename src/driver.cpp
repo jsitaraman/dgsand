@@ -26,7 +26,6 @@ int main(int argc, char *argv[])
     }
     sol[i].init(i);
     sol[i].mass_matrix(i);
-    sol[i].initTimeStepping(i);
   }
 
   if(nmesh>1){
@@ -45,6 +44,8 @@ int main(int argc, char *argv[])
 
     }
   }	  
+  for(i=0;i<nmesh;i++)
+    sol[i].initTimeStepping(i);
 
   int nsteps=sol[0].getNsteps();
   int nsave=sol[0].getNsave();
@@ -78,7 +79,7 @@ printf("==================\nCOMPUTING MESH %i Step %i, Euler \n=================
         B = 1-i; 
         sol[i].exchangeOverset(sol[B].q, sol[B].iptr,i); 
       }
-printf("==================\nCOMPUTING MESH %i Step %i, RK 1\n===================\n",i,n);
+    //printf("==================\nCOMPUTING MESH %i Step %i, RK 1\n===================\n",i,n);
       sol[i].computeRHS(sol[i].q,i);
     }
     for(i=0;i<nmesh;i++)
@@ -93,7 +94,7 @@ printf("==================\nCOMPUTING MESH %i Step %i, RK 1\n===================
         B = 1-i; 
         sol[i].exchangeOverset(sol[B].qstar, sol[B].iptr, i); 
       }
-printf("==================\nCOMPUTING MESH %i Step %i, RK 2 \n===================\n",i,n);
+     //printf("==================\nCOMPUTING MESH %i Step %i, RK 2 \n===================\n",i,n);
       sol[i].computeRHS(sol[i].qstar,i);
     }
     for(i=0;i<nmesh;i++)
@@ -105,7 +106,7 @@ printf("==================\nCOMPUTING MESH %i Step %i, RK 2 \n==================
         B = 1-i; 
         sol[i].exchangeOverset(sol[B].q, sol[B].iptr, i); 
       }
-printf("==================\nCOMPUTING MESH %i Step %i, RK 3\n===================\n",i,n);
+     //printf("==================\nCOMPUTING MESH %i Step %i, RK 3\n===================\n",i,n);
       sol[i].computeRHS(sol[i].qstar,i);
     }
     for(i=0;i<nmesh;i++)
@@ -114,11 +115,14 @@ printf("==================\nCOMPUTING MESH %i Step %i, RK 3\n===================
     // compute norms
     int imax;
     double rmax,rnorm;
+    double cons=0;
     for(i=0;i<nmesh;i++)
       {
 	sol[i].rnorm(imax,rmax,rnorm,rk[3]*dt);
+	cons+=sol[i].cons_metric(0);
 	printf("mesh%d : step %d\t%18.16f\t%d\t%18.16f\n",i,n,rnorm,imax,rmax);
       }
+    printf("cons : %.16e\n",cons);
     if (n%nsave==0) {
       for(i=0;i<nmesh;i++)
 	sol[i].output(i,n);

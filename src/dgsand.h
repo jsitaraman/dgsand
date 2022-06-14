@@ -40,6 +40,7 @@ extern "C" {
 
   
   double total_area(double *detJ, int etype, int p, int d, int nelem);
+  double total_area_cut(double *detJ, int *iptrc, int pccut, int etype, int p, int d, int nelem);
   void CUT_CELLS(double x0, double *x, double* xcut, int* iptr, int* cut2e, int d, int e, int p,
 		 int nelem, int pc, int *cut2face, int* cut2neigh, int* elem2face, int* faces,
 		 int* iblank, int* cutoverset, int imesh, int ng);
@@ -85,6 +86,10 @@ extern "C" {
   void EXCHANGE_OVERSET(double* fcfluxA, double* bfcutRA, double* qB, 
                         int* iptrcA, int* iptrB, int* cut2neighA, 
                         int necutA, int pccut, int d, int e, int p, int pc, int pde, int imesh);
+  double COMPUTE_CONSERVATION(double *q, double *detJ, double *bv, int *iptr,
+			      int pc, int pde, int d, int e, int p, int fieldid,int nelem,
+			      int *cut2e,int *iptrc, double *bvcut,
+			      double *detJcut, int pccut, int necut);
 }
 
 #include<vector>
@@ -396,6 +401,8 @@ class dgsand
 	printf("#nfaces=%d\n",nfaces);
 	printf("#totalArea=%f\n",total_area(detJ.data(),etype,p,d,nelem));
 	printf("#necut=%d\n",necut);
+	printf("#totalArea_cut=%f\n",total_area_cut(detJcut.data(),
+						    iptrc.data(),pccut,etype,p,d,necut));	
 	printf("#ireg=%d\n",ireg);
 	printf("#nsteps=%d\n",nsteps);
 	printf("#Input parameters = ");
@@ -503,4 +510,12 @@ class dgsand
     int getNsave()  { return nsave;  };
     int getNecut()  { return necut;  };
     double getDt()  { return dt;};
+
+   double cons_metric(int fieldid) {
+    return COMPUTE_CONSERVATION(q.data(),detJ.data(),bv.data(),iptr.data(),
+				pc,pde,d,etype,p,fieldid,nelem,
+				cut2e.data(),iptrc.data(),bvcut.data(),detJcut.data(),
+				pccut,necut);
+  }
+
 };
