@@ -9,7 +9,7 @@ ymin = 0;
 ymax = 10; 
 ds = 0.3125;
 order = 1; 
-offset = xmax-ds/2-1.25; %xmax-ds*2; 
+offset = xmax-ds; %xmax-ds/2-1.25; %xmax-ds*2; 
 
 Lx = xmax-xmin; 
 Ly = ymax-ymin; 
@@ -69,6 +69,13 @@ for i = 1:ny % row
 end
 
 % boundary nodes
+nbnodes=0;
+for i= 1:nnodes
+  if(coords(i,1)==xmin || coords(i,1) == xmax || coords(i,2)==ymin || coords(i,2) == ymax)     nbnodes=nbnodes+1;
+  end
+end
+fprintf(fid1,"%i\n",nbnodes);
+fprintf(fid2,"%i\n",nbnodes);
 for i = 1:nnodes
     if(coords(i,1)==xmin || coords(i,1) == xmax || coords(i,2)==ymin || coords(i,2) == ymax)
         fprintf(fid1,'%i 1\n',i); 

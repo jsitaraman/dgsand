@@ -229,6 +229,7 @@ if(debug) printf("f %i, w %i, xloc,yloc = %f %f\n",j,w,xloc,yloc);
 	  // if finished loop and still not found, something is wrong
           if(inside==0 || rs[0]<0 || rs[0]>1 || rs[1]<0 || rs[1]>1){
             printf("ERROR! Can't find mesh B element for mesh A point (%f, %f)!\n",xloc,yloc); 
+	    printf("%f %f\n",rs[0],rs[1]);
 	    exit(0); 
           }
 	  else{
