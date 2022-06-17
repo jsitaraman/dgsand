@@ -35,6 +35,47 @@ void output_coords(int ielem,FILE *fp,double *x,double *q, int *iblank, int d, i
   }
 }
 
+
+double l2_error(double *x,double *q, double *qexact, 
+		int *iblank, int d, int e , int p, int nfields)
+{
+  int i,j, k,b;
+  double u[d], bi;
+  double qv[nfields],qve[nfields];
+  double err[nfields];
+  int nbasis=order2basis[e][p];
+  double error=0;
+  if (iblank[0]==1) {
+    return error;
+  }
+  for(i=0;i<nbasis;i++)
+    {
+      for(j=0;j<nbasis;j++)
+	{
+	  u[0]=eloc[e][p][i*d+0];
+	  u[1]=eloc[e][p][i*d+1];
+	  bi=basis[e][0](u);
+	  for(k=0;k<nfields;k++)
+	    {
+	      qv[k]=bi*q[k*nbasis];
+	      qve[k]=bi*qexact[k*nbasis];
+	    }
+	  for(b=1;b<nbasis;b++)
+	    {
+	      bi=basis[e][b](u);
+	      for(k=0;k<nfields;k++)
+		{
+		  qv[k]+=(bi*q[k*nbasis+b]);
+		  qve[k]+=(bi*qexact[k*nbasis+b]);
+		}
+	    }
+	  for(k=0;k<nfields;k++)
+	    error+=((qv[k]-qve[k])*(qv[k]-qve[k]));
+	}
+    }
+  return error;
+}
+
 void output_connectivity(FILE *fp,int offset,int p)
 {
   int nsubtri[3]={1,1,4};
@@ -45,6 +86,21 @@ void output_connectivity(FILE *fp,int offset,int p)
   
   for(i=0;i<nsubtri[p];i++)
     fprintf(fp,"%d %d %d\n",subtri[p][3*i+0]+offset,subtri[p][3*i+1]+offset,subtri[p][3*i+2]+offset);
+}
+
+double L2_ERROR(double *x, double *q, double *qexact, int *iblank,
+	      int pc, int *iptr, int pde, int d, int e, int p, int nelem)
+{
+  int ix,iq,i;
+  double err=0;
+  int nfields=get_nfields[pde](d);
+  for(i=0;i<nelem;i++)
+    {
+      ix=iptr[pc*i+1];
+      iq=iptr[pc*i];
+      err+=l2_error(x+ix,q+iq,qexact+iq,iblank+i,d,e,p,nfields);
+    }
+  return err;
 }
 
 void OUTPUT_TECPLOT(int meshid, int step,double *x, double *q, int *iblank,
@@ -87,13 +143,15 @@ void OUTPUT_TECPLOT(int meshid, int step,double *x, double *q, int *iblank,
       for(i=0;i<nelem;i++)
 	for(k=0;k<nvert;k++)
 	  fprintf(fp,"%f\n",x[i*d*nvert+j*nvert+k]);
+   for(j=0;j<nfields;j++)
+      for(i=0;i<nelem;i++)
+	fprintf(fp,"%f\n",q[i*nfields+j]);
     for(i=0;i<nelem;i++) {
       fprintf(fp,"%d\n",iblank[i]);
     }
-    for(j=0;j<nfields;j++)
-      for(i=0;i<nelem;i++)
-	fprintf(fp,"%f\n",q[i*nfields+j]);
-  }
+    for(i=0;i<nelem;i++)
+      fprintf(fp,"%d\n",i);
+   }
   else {
     for(i=0;i<nelem;i++)
       {

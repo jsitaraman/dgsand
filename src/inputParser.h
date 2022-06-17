@@ -27,6 +27,13 @@ void output_params()
 {
   for(int i=0;i<6;i++) printf("%f ",param[i]);
 }
+void move_center(double time)
+{
+ double dist;
+ dist=param[1]*time;
+ printf("dist=%f\n",dist);
+ param[4]+=dist;
+}
 /*
 void main(void)
 {

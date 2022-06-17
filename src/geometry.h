@@ -111,7 +111,8 @@ void CutCellInterp(double *x, int d, int e, int p, double* Jinv,
   // [xycut] = [jac_cut]*[ij] + x0_cut
   axb(jcut,ijk,xycut,d);
   for(j=0;j<d;j++) xycut[j] = xycut[j] + x0cut[j] - x0[j];
-
+  printf("x0    : %f %f\n",x0[0],x0[1]);
+  printf("xycut : %f %f\n",xycut[0],xycut[1]);
   // Compute rst coord of cut cell quad
   // [rs] = [Jinv_orig][xycut - x0_orig]
   axb(Jinv,xycut,rst,d);
@@ -273,7 +274,7 @@ void CutFaceWeights(double *x, double *Jinv, int pc, int* iptr, double *xcut, do
             // now convert ijk coord on sub elem to rst coord on full L side elem
             eid = iorig; 
             CutCellInterp(x+iptr[pc*eid+1],d,e,p,Jinv+iptr[pc*eid+8],ijk,xcut,uL); //,Jinvcut,detJcut);  
-
+	    
 	    eid = cut2neigh[f];
             if(eid>-1){
               CutCellInterp(x+iptr[pc*eid+1],d,e,p,Jinv+iptr[pc*eid+8],ijk,xcut,uR); //,Jinvcut,detJcut);  
@@ -673,7 +674,7 @@ void COMPUTE_GRID_METRICS(double *x, double *bv, double *bvd,double *JinvV,
   // Metrics for the uncut cells
   for(i=0;i<nelem;i++)
     {
-      iblank[i] = 1; 
+      iblank[i] = 0; 
 
       ip=pc*i;
       ix   =iptr[ip+1];
@@ -748,6 +749,7 @@ void COMPUTE_CUT_METRICS(double *x, double *JinvV,
   		   bfcutR+cibf,bfdcutR+cibfd,
                    JinvFcut+cijf,fwcut+cifw,d,e,p,
 		   cut2neigh+cc2n,eid,i); 
+    printf("------\n");
   }
 
 }

@@ -78,7 +78,7 @@ void INIT_FIELDS(double *xcoord,int *e2n,
 	for(j=0;j<nvert;j++)
 	  for(k=0;k<d;k++)
 	  X[m++]=xcoord[d*e2n[nvert*i+j]+k];
-        init_fields[pde](X,&(Q[iQ]),d,nbasis,itype,imesh);      
+        init_fields[pde](X,&(Q[iQ]),d,nbasis,itype); 
 	init_data(&(x[ix]),&(q[iq]),X,&(Q[iQ]),d,nfields,e,p);
       }
       else {

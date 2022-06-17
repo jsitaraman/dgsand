@@ -86,10 +86,17 @@ extern "C" {
   void EXCHANGE_OVERSET(double* fcfluxA, double* bfcutRA, double* qB, 
                         int* iptrcA, int* iptrB, int* cut2neighA, 
                         int necutA, int pccut, int d, int e, int p, int pc, int pde, int imesh);
-  double COMPUTE_CONSERVATION(double *q, double *detJ, double *bv, int *iptr,
-			      int pc, int pde, int d, int e, int p, int fieldid,int nelem,
-			      int *cut2e,int *iptrc, double *bvcut,
-			      double *detJcut, int pccut, int necut);
+
+  double COMPUTE_CONSERVATION(double *q, double *detJ, double *bv, int *iptr, int *iblank,
+			    int pc, int pde, int d, int e, int p, int fieldid,int nelem,
+			    int *cut2e,int *iptrc, double *bvcut, double *detJcut, 
+			    int pccut, int necut, double *fcflux, int *cutoverset, int *cut2neigh,
+			    double *fflux, int *elem2face, int *faces, int *iptrf, int pf,
+                            double *faceFluxSum,double dt);
+
+  double L2_ERROR(double *x, double *q, double *qexact, int *iblank,
+		int pc, int *iptr, int pde, int d, int e, int p, int nelem);
+  void move_center(double);
 }
 
 #include<vector>
@@ -140,10 +147,12 @@ class dgsand
   /* class local variables */
   int pf,ndof,nsteps,nsave;
   double dt;
+  /// storage for face flux sum
+  double faceFluxSum;
 
  public:
   /// field quantities
-  std::vector<double> q,qstar,Q,R;
+  std::vector<double> q,qstar,Q,R,qexact,Qexact;
   /// volumetric basis quantities and grid
   std::vector<double> x,bv,bvd,JinvV,detJ;
   /// face basis quantities
@@ -176,9 +185,8 @@ class dgsand
   int p;
   /// element type
   int etype=0;   
-
   /// generic constructor
-  dgsand(): p(1),ndof(0),nfields(4),pde(1),necut(0),etype(0){};
+  dgsand(): p(1),ndof(0),nfields(4),pde(1),necut(0),etype(0),faceFluxSum(0){};
   /// generic destructor
   ~dgsand() { free(xcoord); free(elem2node); free(ibc); free(elem2face); free(faces);}
   /// setup the case using input file
@@ -201,10 +209,11 @@ class dgsand
 	/* field parameters per element */
 	int qsize=(nfields*nbasis*nelem);
 	q.resize(qsize);     // modal coefficients		  
-	qstar.resize(qsize); // modal coefficients		  
+	qstar.resize(qsize); // modal coefficients
+	qexact.resize(qsize);
 	Q.resize(qsize);	   // values at physical locations  
 	R.resize(qsize);	   //solution residual             
-	
+	Qexact.resize(qsize);
 	/* geometrical parameters per volume QP of each element */
 	/* TODO: some of these such as bv and JinvV can be optimized or omitted */
 	int ngElem=get_ngElem(etype,p);
@@ -311,7 +320,7 @@ class dgsand
 	bfcutR.resize(nbasis*ngGL*fpe*necut);	      // basis value at face QP      
 	bfdcutR.resize(d*nbasis*ngGL*fpe*necut);    // basis der. value at face QP 
 	fwcut.resize(d*ngGL*fpe*necut);	      // faceNormals at face QP      
-	fcflux.resize(3*nfields*ngGL*fpe*necut);    // face fields and flux        
+	fcflux.resize(3*nfields*ngGL*fpe*necut,0);    // face fields and flux        
 	
 	pccut = 14; 
 	printf("nbasisx = %i\n",nbasisx); 
@@ -512,10 +521,31 @@ class dgsand
     double getDt()  { return dt;};
 
    double cons_metric(int fieldid) {
-    return COMPUTE_CONSERVATION(q.data(),detJ.data(),bv.data(),iptr.data(),
-				pc,pde,d,etype,p,fieldid,nelem,
-				cut2e.data(),iptrc.data(),bvcut.data(),detJcut.data(),
-				pccut,necut);
+    double cons= COMPUTE_CONSERVATION(q.data(),detJ.data(),bv.data(),iptr.data(),iblank.data(),
+				      pc,pde,d,etype,p,fieldid,nelem,
+				      cut2e.data(),iptrc.data(),bvcut.data(),detJcut.data(),
+				      pccut,necut,fcflux.data(),cutoverset.data(),cut2neigh.data(),
+				      fflux.data(),elem2face,faces,iptf.data(),pf,&faceFluxSum,dt);
+    return cons;
   }
+
+ double compute_error(int imesh, int step) {
+      double time=step*dt;
+      if (imesh==0) move_center(time);
+      INIT_FIELDS(xcoord,
+		  elem2node,
+		  Qexact.data(),
+		  x.data(),
+		  qexact.data(),
+		  iptr.data(),
+		  pde,etype,p,d,nbasis,1,nelem,pc,imesh);
+
+      double error=
+	L2_ERROR(x.data(),q.data(),qexact.data(),iblank.data(),pc,iptr.data(),pde,d,etype,p,nelem);
+      error/=nelem;
+      return error;
+   }
+
+
 
 };
