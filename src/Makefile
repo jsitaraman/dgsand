@@ -17,7 +17,7 @@ srcdir= $(PWD)
 ### End User configurable options ###
 
 .SUFFIXES:	.c .C .f90
-CFLAGS	  =  -g -std=c++11 $(OPTFLAGS) 
+CFLAGS	  =  -std=c++11 $(OPTFLAGS) 
 CCFLAGS	  = $(CFLAGS)
 LIBS	  = -lm 
 

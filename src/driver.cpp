@@ -63,66 +63,56 @@ int main(int argc, char *argv[])
    cons+=sol[i].cons_metric(0);
   printf("cons : %.16e\n",cons);
   double cons0=cons;
-
+  int euler=0;
   for(int n=1;n<=nsteps;n++) {
     // RK step 1
     for(i=0;i<nmesh;i++){
-      // exchange overset flux information	    
-
-      
+      // exchange overset flux information	          
       // Euler
       if(nmesh>1){
         B = 1-i; 
         sol[i].exchangeOverset(sol[B].q, sol[B].iptr,i); 
       }
-printf("==================\nCOMPUTING MESH %i Step %i, Euler \n===================\n",i,n);
       sol[i].computeRHS(sol[i].q,i);
     }
-    for(i=0;i<nmesh;i++)
-      {
-        sol[i].update(sol[i].q,sol[i].q,dt);
-      }
-     /* 
-
-      
-      if(nmesh>1){
-        B = 1-i; 
-        sol[i].exchangeOverset(sol[B].q, sol[B].iptr,i); 
-      }
-    //printf("==================\nCOMPUTING MESH %i Step %i, RK 1\n===================\n",i,n);
-      sol[i].computeRHS(sol[i].q,i);
+    if (euler) {
+      for(i=0;i<nmesh;i++)
+	{
+	  sol[i].update(sol[i].q,sol[i].q,dt);
+	}
     }
-    for(i=0;i<nmesh;i++)
-      {
+    else {
+      for(i=0;i<nmesh;i++)
+	{
 	sol[i].update(sol[i].qstar,sol[i].q,rk[1]*dt);
 	sol[i].update(sol[i].q,sol[i].q,rk[0]*dt);
+	}
+      
+      // RK step 2
+      for(i=0;i<nmesh;i++){
+	if(nmesh>1){
+	  B = 1-i; 
+	  sol[i].exchangeOverset(sol[B].qstar, sol[B].iptr, i); 
+	}
+	//printf("==================\nCOMPUTING MESH %i Step %i, RK 2 \n===================\n",i,n);
+	sol[i].computeRHS(sol[i].qstar,i);
       }
-
-    // RK step 2
-    for(i=0;i<nmesh;i++){
-      if(nmesh>1){
-        B = 1-i; 
-        sol[i].exchangeOverset(sol[B].qstar, sol[B].iptr, i); 
+      for(i=0;i<nmesh;i++)
+	sol[i].update(sol[i].qstar,sol[i].q,rk[2]*dt);
+      
+      //RK step 3
+      for(i=0;i<nmesh;i++){
+	if(nmesh>1){
+	  B = 1-i; 
+	  sol[i].exchangeOverset(sol[B].q, sol[B].iptr, i); 
+	}
+	//printf("==================\nCOMPUTING MESH %i Step %i, RK 3\n===================\n",i,n);
+	sol[i].computeRHS(sol[i].qstar,i);
       }
-     //printf("==================\nCOMPUTING MESH %i Step %i, RK 2 \n===================\n",i,n);
-      sol[i].computeRHS(sol[i].qstar,i);
+      for(i=0;i<nmesh;i++)
+	sol[i].update(sol[i].q,sol[i].q,rk[3]*dt);
     }
-    for(i=0;i<nmesh;i++)
-      sol[i].update(sol[i].qstar,sol[i].q,rk[2]*dt);
 
-    //RK step 3
-    for(i=0;i<nmesh;i++){
-      if(nmesh>1){
-        B = 1-i; 
-        sol[i].exchangeOverset(sol[B].q, sol[B].iptr, i); 
-      }
-     //printf("==================\nCOMPUTING MESH %i Step %i, RK 3\n===================\n",i,n);
-      sol[i].computeRHS(sol[i].qstar,i);
-    }
-    for(i=0;i<nmesh;i++)
-      sol[i].update(sol[i].q,sol[i].q,rk[3]*dt);
-    */
-    
     // compute norms
     int imax;
     double rmax,rnorm;
@@ -133,14 +123,14 @@ printf("==================\nCOMPUTING MESH %i Step %i, Euler \n=================
 	cons+=sol[i].cons_metric(0);
 	printf("mesh%d : step %d\t%18.16f\t%d\t%18.16f\n",i,n,rnorm,imax,rmax);
       }
-    printf("cons : %.16e %.16e %.16e\n",cons0,cons,cons-cons0);
+    printf("cons : %.16e %.16e %.16e\n",cons0,cons,abs(cons-cons0));
     if (n%nsave==0) {
       for(i=0;i<nmesh;i++)
 	sol[i].output(i,n);
     }
+    printf("l2 error : ");
+    for(i=0;i<nmesh;i++)
+      printf("%0.16e ",sol[i].compute_error(i,n));
+    printf("\n");
   }
-  printf("L2 error =");
-  for(i=0;i<nmesh;i++)
-    printf("%e ",sol[i].compute_error(i,nsteps));
-  printf("\n");
 }

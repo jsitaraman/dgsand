@@ -31,7 +31,6 @@ void move_center(double time)
 {
  double dist;
  dist=param[1]*time;
- printf("dist=%f\n",dist);
  param[4]+=dist;
 }
 /*
