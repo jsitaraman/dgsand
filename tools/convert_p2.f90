@@ -18,6 +18,7 @@ program convert_p2
  close(1)
  !
  allocate(edge(7,3*nelem))
+ edge=0
  !
  call findEdges(tri,3,nelem,edge,nedges)
  write(6,*) 'nedges=',nedges

@@ -7,7 +7,7 @@ xmin = 0;
 xmax = 10; 
 ymin = 0; 
 ymax = 10; 
-ds = 1.0; 
+ds = 10.0; 
 order = 1; 
 offset = xmax-0.2*ds; %xmax-ds/2-1.25; %xmax-ds*2; 
 
@@ -54,8 +54,8 @@ for i = 1:ny % row
         
         fprintf(fid1,'%i %i %i\n',a,b,c); 
         fprintf(fid1,'%i %i %i\n',d,c,b); 
-        fprintf(fid2,'%i %i %i\n',a,b,c); 
-        fprintf(fid2,'%i %i %i\n',d,c,b); 
+        fprintf(fid2,'%i %i %i\n',a,d,c); 
+        fprintf(fid2,'%i %i %i\n',a,b,d); 
 
         xtmp1 = [coords(a,1) coords(b,1) coords(c,1) coords(a,1)]; 
         ytmp1 = [coords(a,2) coords(b,2) coords(c,2) coords(a,2)];         
