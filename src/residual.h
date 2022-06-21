@@ -1180,7 +1180,7 @@ double COMPUTE_CONSERVATION(double *q, double *detJ, double *bv, int *iptr, int 
       cons-=cons1;
     }
   printf("fcons1=%f %f %f\n",cons,fcons,fcons1);
-  //fcons+=fcons1;
+  fcons+=fcons1;
   (*faceFluxSum)+=fcons;
   printf("faceFluxSum=%f\n",*faceFluxSum);
   cons-=((*faceFluxSum)*dt);  
