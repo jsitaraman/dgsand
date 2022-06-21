@@ -448,7 +448,7 @@ void cutFace(double *residual, double *fflux, double *bfL, double *bfR,
               if (cut2neigh[i] >= 0) compute=(iblank[cut2neigh[i]]!=1);
               if(compute){
                 flux=fflux[floc+f]*wgt;
-		//if (cut2neigh[i]==-2 && f==0) printf("overset flux : %d %f\n",iorig,fflux[floc+f]);
+		if (cut2neigh[i]==-2 && f==0) printf("overset flux : %d %.18e\n",iorig,fflux[floc+f]);
   	        for(b=0;b<nbasis;b++)
 	  	  {
  	            //notice the sign change from the faceIntegral routine
@@ -1177,11 +1177,12 @@ double COMPUTE_CONSERVATION(double *q, double *detJ, double *bv, int *iptr, int 
       //printf("cons1=%.18e\n",cons1);
       fcons1+=cutFaceCons(fcflux+iflx,pf,pde,d,e,p,eid,cutoverset+ico,
       			 0,cut2neigh+ic2n,iblank,fieldid);
+      cons-=cons1;
     }
-  //printf("fcons1=%f %f %f\n",cons,fcons,fcons1);
-  fcons+=fcons1;
+  printf("fcons1=%f %f %f\n",cons,fcons,fcons1);
+  //fcons+=fcons1;
   (*faceFluxSum)+=fcons;
-  //printf("faceFluxSum=%f\n",*faceFluxSum);
+  printf("faceFluxSum=%f\n",*faceFluxSum);
   cons-=((*faceFluxSum)*dt);  
   //printf("cons=%f\n",cons);
   return cons;
