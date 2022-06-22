@@ -1,5 +1,4 @@
-#for ds in 1.25 1.0 0.75 0.625 0.5 0.3125 0.15625;do
-for ds in 0.25;do
+for ds in 1.25 1.0 0.625 0.5 0.3125 0.25;do
   sed 's/0.3125/'"$ds"'/g' makeStructGrid_p1.m.temp > makeStructGrid_p1.m
   octave makeStructGrid_p1.m
   ../tools/a.out grid1.dat

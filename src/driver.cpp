@@ -63,7 +63,7 @@ int main(int argc, char *argv[])
    cons+=sol[i].cons_metric(0);
   printf("cons : %.16e\n",cons);
   double cons0=cons;
-  int euler=0;
+  int euler=1;
   for(int n=1;n<=nsteps;n++) {
     // RK step 1
     for(i=0;i<nmesh;i++){
@@ -123,7 +123,7 @@ int main(int argc, char *argv[])
 	cons+=sol[i].cons_metric(0);
 	printf("mesh%d : step %d\t%18.16f\t%d\t%18.16f\n",i,n,rnorm,imax,rmax);
       }
-    printf("cons : %.16e %.16e %.16e\n",cons0,cons,abs(cons-cons0));
+    printf("cons : %.16e %.16e %.16e\n",cons0,cons,fabs(cons-cons0));
     if (n%nsave==0) {
       for(i=0;i<nmesh;i++)
 	sol[i].output(i,n);

@@ -111,8 +111,8 @@ void CutCellInterp(double *x, int d, int e, int p, double* Jinv,
   // [xycut] = [jac_cut]*[ij] + x0_cut
   axb(jcut,ijk,xycut,d);
   for(j=0;j<d;j++) xycut[j] = xycut[j] + x0cut[j] - x0[j];
-  printf("x0    : %f %f\n",x0[0],x0[1]);
-  printf("xycut : %f %f\n",xycut[0],xycut[1]);
+  //printf("x0    : %f %f\n",x0[0],x0[1]);
+  //printf("xycut : %f %f\n",xycut[0],xycut[1]);
   // Compute rst coord of cut cell quad
   // [rs] = [Jinv_orig][xycut - x0_orig]
   axb(Jinv,xycut,rst,d);
