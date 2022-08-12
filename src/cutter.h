@@ -117,7 +117,7 @@ void CUT_CELLS(double x0, double *x, double* xcut, int* iptr, int* cut2e, int d,
         u[0]=eloc[e][1][d*j];
         u[1]=eloc[e][1][d*j+1];
 
-        // get the vertex global coordinates of the original trying
+        // get the vertex global coordinates of the original triangle
         // by doing x = sum(Ni * xi)
 	xvert[2*j] = 0;
 	xvert[2*j+1] = 0;

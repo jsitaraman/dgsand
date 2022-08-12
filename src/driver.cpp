@@ -17,7 +17,7 @@ int main(int argc, char *argv[])
   dgsand *sol=new dgsand[nmesh];
   
   int i, B; 
-  double x0=9.1; //68750000000000-0*.625;
+  double x0=1.5; //68750000000000-0*.625;
   for(i=0;i<nmesh;i++) {
     sol[i].setup(argv[i+1]);
     sol[i].init(i);
@@ -27,17 +27,20 @@ int main(int argc, char *argv[])
 
   if(nmesh>1){
     for(i=0;i<nmesh;i++) {
-//printf("\n=================\nCUTTING MESH %i\n=================\n",i);
+printf("\n=================\nCUTTING MESH %i\n=================\n",i);
       sol[i].cut(x0,i);
       sol[i].cut_metrics(x0,i);
-
-//printf("\n ENTERING OVERSET SETUP\n");      
+    }
+    for(i=0;i<nmesh;i++) {
       B = 1-i; 
+printf("\n=================\nENTERING OVERSET SETUP FOR MESH %i\n=================\n",i);      
       sol[i].setupOverset(sol[B].iptr,
 		          sol[B].iptrc,
 		   	  sol[B].x,
+		   	  sol[B].xcut,
 			  sol[B].JinvV,
-		          sol[B].nelem);
+			  sol[B].cut2e,
+		          sol[B].necut);
 
     }
   }	  

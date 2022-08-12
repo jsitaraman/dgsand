@@ -77,10 +77,12 @@ extern "C" {
   void OUTPUT_TECPLOT(int meshid, int step,double *x, double *q,
 		    int pc, int *iptr, int pde, int d, int e, int p, int nelem);
 
-  void SETUP_OVERSET(int* cut2e, int* cut2neighA, int* iptrA, int* iptrB, int* iptrcA, int* iptrcB, 
-		     double* xA, double* xB, 
+  void SETUP_OVERSET(int* cut2e, int* cut2eB, int* cut2neighA, 
+		     int* iptrA, int* iptrB, int* iptrcA, int* iptrcB, 
+		     double* xA, double* xB, double* xcutA, double* xcutB,
                      double* bfcutLA, double* bfcutRA, double* JinvB,
-		     int d, int e, int p, int pc, int pccut, int necutA, int nelemB); 
+		     int* OSFnseg, int* OSFeID, double* OSFwgt, double* OSFshp,
+		     int d, int e, int p, int pc, int pccut, int necutA, int necutB); 
 
   void EXCHANGE_OVERSET(double* fcfluxA, double* bfcutRA, double* qB, 
                         int* iptrcA, int* iptrB, int* cut2neighA, 
@@ -163,8 +165,12 @@ class dgsand
   std::vector<int> cut2face,cut2neigh;    
   /// number of edges cut
   int necut;
+  /// Overset Face (OSF): number of segments for each cut cell and 
+  /// neighbor cell ID for each segment gauss point
+  std::vector<int> OSFnseg, OSFeID;
+  /// Overset Face (OSF): shape function values at each segment gauss pt
+  std::vector<double> OSFshp, OSFwgt;
   
-
   /// dimensions (only implemented for 2D now)
   const int d=2;
   /// p order
@@ -278,15 +284,16 @@ class dgsand
     {
       int ngElem=get_ngElem(etype,p);
       int ngGL=get_ngGL(etype,p);
+      int maxseg = 20; 
       necut = FIND_NECUT(x0,x.data(),iptr.data(),d,etype,p,nelem,pc,imesh);
       if (necut > 0)  {
+	//create all the cut cell pointers
 	xcut.resize(d*3*necut);
 	cut2e.resize(necut);       
 	cut2face.resize(necut*3);  // map between cut face and orig face id                       
 	cut2neigh.resize(necut*3); // map between cut face and R side neighbor
 	cutoverset.resize(necut*3*ngGL);        // cutoverset array 
 
-	//create all the cut cell pointers
 	bvcut.resize(necut*nbasis*ngElem);         // basis value at volume QP	   
 	bvdcut.resize(necut*d*nbasis*ngElem);// basis derivative value at volume QP
 	JinvVcut.resize(necut*d*d*ngElem);   // J^{-1} at volume QP		   
@@ -300,8 +307,14 @@ class dgsand
 	bfdcutR.resize(d*nbasis*ngGL*fpe*necut);    // basis der. value at face QP 
 	fwcut.resize(d*ngGL*fpe*necut);	      // faceNormals at face QP      
 	fcflux.resize(3*nfields*ngGL*fpe*necut);    // face fields and flux        
+
+	// overset face quantities
+        OSFnseg.resize(necut);
+        OSFeID.resize(necut*maxseg*ngGL); 		// neigh mesh cell ID for each overset QP
+        OSFwgt.resize(necut*maxseg*ngGL); 		// integration weight for each overset QP
+        OSFshp.resize(necut*maxseg*ngGL*nbasis); 	// neigh mesh basis value at each overset QP
 	
-	pccut = 14; 
+	pccut = 15; 
 	printf("nbasisx = %i\n",nbasisx); 
 	iptrc.resize(pccut*necut);
 	
@@ -322,7 +335,9 @@ class dgsand
 
 	  iptrc[ix+11]+=i*(fpe*3*nfields*ngGL);  //faceFlux
 	  iptrc[ix+12]+=i*fpe; 			   // cut2neigh & cut2face
-	  iptrc[ix+13]+=i*fpe*ngGL;		// cutoverset
+	  iptrc[ix+13]+=i*(fpe*ngGL);		// cutoverset
+          iptrc[ix+14]+=i*(maxseg*ngGL);	// OSFeID and OSFwgt
+          iptrc[ix+15]+=i*(maxseg*ngGL*nbasis);	// OSFshp
 	}
 
 	CUT_CELLS(x0,
@@ -401,10 +416,13 @@ class dgsand
     void setupOverset(std::vector<int>& iptrB,
 		      std::vector<int>& iptrcB,
 		      std::vector<double>& xB,
+		      std::vector<double>& xcutB,
 		      std::vector<double>& JinvB,
-		      int nelemB)
+		      std::vector<int>& cut2eB,
+		      int necutB)
     {
     SETUP_OVERSET(cut2e.data(),
+		  cut2eB.data(),
 		  cutoverset.data(),
                   iptr.data(),
                   iptrB.data(),
@@ -412,11 +430,17 @@ class dgsand
                   iptrcB.data(),
                   x.data(),
                   xB.data(),
+		  xcut.data(),
+		  xcutB.data(),
                   bfcutL.data(),
                   bfcutR.data(),
 		  JinvB.data(),
+		  OSFnseg.data(),
+		  OSFeID.data(),
+		  OSFwgt.data(),
+		  OSFshp.data(),
                   d, etype, p, pc, pccut,
-                  necut, nelemB);
+                  necut, necutB);
     }
     
     void exchangeOverset(std::vector<double>& qB,

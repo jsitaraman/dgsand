@@ -1,3 +1,6 @@
+#include<stdio.h>
+#include<stdlib.h>
+#include<math.h>
 void setOversetFluxes(double *fcflux, double *bfcutR, double *qB, int* cutoverset, int *iptrB, int d, int e, int p, int pc, int pde, int debug)
 // computes R q values at cut cell interface
 // using q from other mesh
@@ -251,7 +254,7 @@ if(debug) 	    printf("\t cutoverset[%i] = %i\n",j,cutoversetA[m]);
   } // loop edges
 }
 
-
+/*
 void SETUP_OVERSET(int* cut2e, int* cutoversetA, int* iptrA, int* iptrB, int* iptrcA, int* iptrcB, double* xA, double* xB, double* bfcutLA, double* bfcutRA, double* JinvB, int d, int e, int p, int pc, int pccut, int necutA, int nelemB)
 // For overset boundaries in mesh A, find corresponding element and shape function values on mesh B
 {
@@ -300,9 +303,307 @@ if(debug){
  }
 }
 
-
-
     }
   }
+}
+*/
+int isBetween(double xA, double yA, double xB, double yB, double xC, double yC)
+// checks to see if (xC,yC) is on the straight line between (xA,yA) and (xB,yB)
+{
+  double d1 = sqrt((xA-xC)*(xA-xC) + (yA-yC)*(yA-yC));
+  double d2 = sqrt((xB-xC)*(xB-xC) + (yB-yC)*(yB-yC));
+  double d3 = sqrt((xA-xB)*(xA-xB) + (yA-yB)*(yA-yB));
+
+  double tol = 1e-12; 
+  if(fabs(d3-d1-d2)<=tol){
+    return 1;
+  }
+  else{
+    return 0; 
+  }
+
+}
+
+int isSame(double A, double B){
+  double tol = 1e-14; 
+  if(fabs(A-B)<tol){
+    return 1;
+  } else{
+    return 0; 
+  }
+}
+
+void orderCoords(double* in, double* out, int n)
+// brute force way of reordering things
+// Life would be easier if I could just use vectors in here
+{
+// in = initial array (2*n x 1)
+// out = outal output array 
+// n = number of pts
+
+
+//debug
+//printf("==========\nInside orderCords\n\n");
+//printf("n = %i,\nIn coords:\n",n);
+//
+//This line is causing/stopping segfault somehow
+//for(int i=0;i<n;i++) printf("\t%f %f\n",in[2*i],in[2*i+1]);
+
+  // Assuming first 2 entries into in array are x and y of one of the end pts
+  // Get parametric definition, [x y] = [x0 y0] + [nx ny]*s, s = 0-1
+  double nx = in[2]-in[0];
+  double ny = in[3]-in[1];
+  double L = sqrt(nx*nx+ny*ny);
+
+  out[0] = in[0];
+  out[1] = in[1];
+  out[2*n] = in[2];
+  out[2*n+1] = in[3];
+  double s1,s2,ds,mindiff,x,y;
+  int ind;
+ 
+  //loop over out
+  for(int i=0;i<n-1;i++){
+     y = out[2*i+1];
+     s1 = (y-out[1])/ny;
+     
+     // loop over in
+     mindiff = 1.0; 
+     for(int j=0;j<n;j++){
+       y = in[2*j+1];
+       s2 = (y-out[1])/ny;
+       ds = s2-s1;
+//debug
+//printf("i = %i, j = %i: s1 = %f, s2 = %f\n",i,j,s1,s2); 
+
+ //      printf("fabs(ds) = %f, ds = %f\n",fabs(ds),ds);
+       if(fabs(ds)<mindiff && ds > 0){ 
+         ind = j;
+       }
+   //    printf("\tind = %i\n",ind); 
+     } // loop over in
+
+     //store entry in out
+     out[2*(i+1)]   = in[2*ind];
+     out[2*(i+1)+1] = in[2*ind+1];
+
+  } // loop over out    
+//debug
+//printf("n = %i,\nOrdered coords:\n",n);
+//for(int i=0;i<n;i++) printf("\t%f %f\n",out[2*i],out[2*i+1]);
+//printf("\nExiting orderCords\n============\n");
+}
+
+void createOversetSegs(double* xseg, double* xgseg, int necutB, double* xcutB, int* cut2eB, int* iptrcB, int* OSFnseg, double* OSFwgt, int pccut,int e, int p, int d, int debug)
+// Break up overset face into segments, one for each overlapping element, and distribute quad pts
+{
+  int ip, eid, ixc; 
+  int nfp = facePerElem[e];
+  int i,j,k,m,uniq;
+  int nbasis=order_to_basis(e,p);        // basis for solution
+  int maxseg = 20; 
+  double u[2], bv[nbasis],pt[2],pt2[2];
+  int ngGL=get_ngGL(e,p);
+  double xcpy[maxseg*ngGL*d]; // tmp copy of xseg
+
+  // copy overset end pt coords, rest should be blank anyways
+  for(i=0;i<2*d;i++) xcpy[i]=xseg[i]; 
+
+  // loop over cut cells on mesh B
+  for(i=0;i<necutB;i++){        
+    ip=pccut*i;
+    eid = cut2eB[i];
+    ixc = iptrcB[ip+1];
+    
+    // Get vertices of cut triangle B
+    for(j=0;j<nfp;j++){ // loop over vertices
+      u[0]=eloc[e][1][d*j]; 
+      u[1]=eloc[e][1][d*j+1];
+ 
+      pt[0] = 0;
+      pt[1] = 0;
+      for(k=0;k<nbasis;k++){
+
+        bv[k] = basis[e][k](u);  
+        pt[0] += bv[k]*xcutB[ixc+k];
+        pt[1] += bv[k]*xcutB[ixc+k+3];
+      }
+      // if vert is on cut overset, then store mesh B original cell ID and vertex coordinate
+      if(isBetween(xcpy[0],xcpy[1],xcpy[2],xcpy[3],pt[0],pt[1])){
+
+        // store vertex coordinate if unique
+        uniq = 1;
+        for(k=0;k<(OSFnseg[0]+1);k++){          
+          if(isSame(xcpy[2*k],pt[0]) && isSame(xcpy[2*k+1],pt[1])) uniq = 0;
+        }
+	
+        if(uniq){
+          OSFnseg[0]++;                   	  	  
+          xcpy[2*OSFnseg[0]]   = pt[0];
+          xcpy[2*OSFnseg[0]+1] = pt[1];
+        }
+      } // found vertex in between
+    } // loop over edges B
+  } // loop over cut cell B
+
+  // Reorder list of segment end pts if necessary
+  if(OSFnseg[0]>1){
+    orderCoords(xcpy,xseg,OSFnseg[0]+1);
+  } else{
+    xseg=xcpy; 
+  }
+
+// debug
+if(debug){
+printf("\n\t%i segments:\n",OSFnseg[0]);
+for(i=0;i<OSFnseg[0]+1;i++)
+printf("\t\t%f %f\n",xseg[2*i],xseg[2*i+1]);
+}
+
+/*
+  // Distribute gauss pts between each of the segments
+  double nx, ny, s, L;
+  for(i=0;i<OSFnseg[0];i++){
+    // define segment end pts
+    pt[0] = xseg[2*i];   
+    pt[1] = xseg[2*i+1];   
+    pt2[0] = xseg[2*(i+1)];   
+    pt2[1] = xseg[2*(i+1)+1];   
+    nx = pt2[0]-pt[0];
+    ny = pt2[1]-pt[1];
+    L = sqrt(nx*nx+ny*ny); 
+
+    // distribute gauss pts
+    int g=p2gf[e][p];
+    for(j=0;j<ngGL;j++){
+      s = gaussgl[e][g][2*j]; 
+      xgseg[2*(i*ngGL + j)]   = pt[0] + nx*s;
+      xgseg[2*(i*ngGL + j)+1] = pt[1] + ny*s;
+      OSFwgt[i*ngGL + j] = L*gaussgl[e][g][j*2+1]; 
+    }
+  }  // loop over overset gauss pts
+*/
+
+}
+
+
+/*
+void interpOverSegs()
+// Find node number and shape function value across all the shape functions on overset segment
+{
+
+}
+*/
+// NEW ONE 
+void SETUP_OVERSET(int* cut2e, int* cut2eB, int* cutoversetA, int* iptrA, int* iptrB, int* iptrcA, int* iptrcB, double* xA, double* xB, double* xcutA, double* xcutB, double* bfcutLA, double* bfcutRA, double* JinvB, int* OSFnseg, int* OSFeID, double* OSFwgt, double* OSFshp, int d, int e, int p, int pc, int pccut, int necutA, int necutB)
+// For overset boundaries in mesh A, find corresponding elements and shape function values on mesh B. Build multiple segments along overset boundary to handle discontinuous overset flux across multiple elements
+{
+  int ip, ix, ixc, iq, ibf, ibfd, ifw, ic2n,iflx, cibf,flag, ico, cid, iosf;
+  int nfp = facePerElem[e];
+  int eid, i,j,k,m, count;
+  int nbasis=order_to_basis(e,p);        // basis for solution
+  int ngGL=get_ngGL(e,p);
+  double pt[2],xvertA[6],u[2],bv[nbasis];
+  int maxseg=20; 
+  double *xseg;
+  double *xgseg;
+  xseg=dgsand_alloc(double,((maxseg+1)*d)); // physical coordinates of segment end pts
+  xgseg=dgsand_alloc(double,(maxseg*ngGL*d)); // physical coordinates of segment quad pts
+
+  // Loop over cut cells in mesh A
+  for(int i = 0; i<necutA; i++){
+    ip=pccut*i;
+    eid = cut2e[i]; 
+    ix  =iptrA[eid*pc+1];
+    ixc = iptrcA[ip+1]; 
+    ibf =iptrcA[ip+6];
+    ic2n=iptrcA[ip+12];
+    ico=iptrcA[ip+13];
+    iosf=iptrcA[ip+14];
+    flag = 0; 
+
+    // only handle elements with overset boundaries
+    m = 0;     
+    flag = 0; 
+    for(int j = 0; j<nfp; j++)   
+      for(int w = 0; w<ngGL; w++){
+        if(cutoversetA[ico+m]==1){
+          flag = 1; 
+          cid = m; 
+	}
+        m++; 
+      }
+    if(flag){
+
+int debug;       
+//if(eid==2 && (i==0 || i ==1) ){
+printf("\neid = %i, cut id = %i, overset gauss= %i\n",eid,i,cid); 
+debug = 1; 
+//} else{
+//debug = 0;}
+
+      // reset counters and arrays for new segment
+      for(k=0;k<(maxseg+1)*d;k++) xseg[k] = 0.0;
+      OSFnseg[i] = 1; 
+
+      // Get coord of gauss pt on overset boundary
+      //
+      pt[0] = 0.0; 
+      pt[1] = 0.0;       
+      for(int k=0;k<nbasis;k++){
+        pt[0] += bfcutLA[ibf + cid*nbasis + k]*xA[ix+k];
+        pt[1] += bfcutLA[ibf + cid*nbasis + k]*xA[ix+k+3];
+      }
+
+      // Get vertices of cut triangle A
+      for(j=0;j<nfp;j++){ // loop over vertices
+        u[0]=eloc[e][1][d*j];
+        u[1]=eloc[e][1][d*j+1];
+ 
+        xvertA[2*j] = 0;
+        xvertA[2*j+1] = 0;
+        for(k=0;k<nbasis;k++){
+          bv[k] = basis[e][k](u);
+          xvertA[2*j]   += bv[k]*xcutA[ixc+k];
+          xvertA[2*j+1] += bv[k]*xcutA[ixc+k+3];
+        }
+      }
+if(debug){
+printf("\tcut vertices at: [%f %f; %f %f; %f %f]\n",xvertA[0],xvertA[1],xvertA[2],xvertA[3],xvertA[4],xvertA[5]);
+}
+      // Find the bounds of the overset boundary
+      if(isBetween(xvertA[0],xvertA[1],xvertA[2],xvertA[3],pt[0],pt[1])){
+	xseg[0] = xvertA[0];
+	xseg[1] = xvertA[1];
+	xseg[2] = xvertA[2];
+	xseg[3] = xvertA[3];
+      } else if(isBetween(xvertA[0],xvertA[1],xvertA[4],xvertA[5],pt[0],pt[1])){
+	xseg[0] = xvertA[0];
+	xseg[1] = xvertA[1];
+	xseg[2] = xvertA[4];
+	xseg[3] = xvertA[5];
+      } else {
+	xseg[0] = xvertA[2];
+	xseg[1] = xvertA[3];
+	xseg[2] = xvertA[4];
+	xseg[3] = xvertA[5];
+      }
+if(debug){
+printf("\toverset edge at: [%f %f; %f %f]\n",xseg[0],xseg[1],xseg[2],xseg[3]);
+}
+
+      // break up overset face by element 
+      createOversetSegs(xseg,xgseg,necutB,xcutB,cut2eB,iptrcB,OSFnseg+i,OSFwgt+iosf,pccut,e,p,d,debug);
+if(debug) printf("\tnseg = %i\n",OSFnseg[i]);
+
+//      interpOverSegs(); // get cell id and shp value from mesh B
+    }
+  }
+
+  // free pointers
+  dgsand_free(xseg); 
+  dgsand_free(xgseg); 
+
+  exit(1);       
 }
 
