@@ -60,7 +60,7 @@ extern "C" {
 			   double *detJcut, double *bfcutL, double *bfdcutL,  
 			   double *bfcutR, double *bfdcutR,  
 			   double *fwcut, int* iptrc, int necut, int* cut2e,
-			   int* cut2neigh, int imesh);
+			   int* cut2neigh, int imesh, int* cutoverset);
   
   void COMPUTE_RHS(double *R,double *mass,double *bv, double *bvd, double *JinvV, double *detJ,
 		 double *bf, double *bfd, double *JinvF,
@@ -80,8 +80,8 @@ extern "C" {
   void SETUP_OVERSET(int* cut2e, int* cut2eB, int* cut2neighA, 
 		     int* iptrA, int* iptrB, int* iptrcA, int* iptrcB, 
 		     double* xA, double* xB, double* xcutA, double* xcutB,
-                     double* bfcutLA, double* bfcutRA, double* JinvB,
-		     int* OSFnseg, int* OSFeID, double* OSFwgt, double* OSFshp,
+                     double* bfcutLA, double* bfcutRA, double* JinvA, double* JinvB,
+		     int* OSFnseg, int* OSFeID, double* OSFwgt, double* OSFshpL, double* OSFshpR,
 		     int d, int e, int p, int pc, int pccut, int necutA, int necutB); 
 
   void EXCHANGE_OVERSET(double* fcfluxA, double* bfcutRA, double* qB, 
@@ -169,7 +169,7 @@ class dgsand
   /// neighbor cell ID for each segment gauss point
   std::vector<int> OSFnseg, OSFeID;
   /// Overset Face (OSF): shape function values at each segment gauss pt
-  std::vector<double> OSFshp, OSFwgt;
+  std::vector<double> OSFshpL, OSFshpR, OSFwgt,OSFflux;
   
   /// dimensions (only implemented for 2D now)
   const int d=2;
@@ -312,7 +312,9 @@ class dgsand
         OSFnseg.resize(necut);
         OSFeID.resize(necut*maxseg*ngGL); 		// neigh mesh cell ID for each overset QP
         OSFwgt.resize(necut*maxseg*ngGL); 		// integration weight for each overset QP
-        OSFshp.resize(necut*maxseg*ngGL*nbasis); 	// neigh mesh basis value at each overset QP
+        OSFshpL.resize(necut*maxseg*ngGL*nbasis); 	// neigh mesh basis value at each overset QP
+        OSFshpR.resize(necut*maxseg*ngGL*nbasis); 	// neigh mesh basis value at each overset QP
+        OSFflux.resize(necut*maxseg*ngGL*nfields);	// neigh mesh basis value at each overset QP
 	
 	pccut = 15; 
 	printf("nbasisx = %i\n",nbasisx); 
@@ -337,7 +339,8 @@ class dgsand
 	  iptrc[ix+12]+=i*fpe; 			   // cut2neigh & cut2face
 	  iptrc[ix+13]+=i*(fpe*ngGL);		// cutoverset
           iptrc[ix+14]+=i*(maxseg*ngGL);	// OSFeID and OSFwgt
-          iptrc[ix+15]+=i*(maxseg*ngGL*nbasis);	// OSFshp
+          iptrc[ix+15]+=i*(maxseg*ngGL*nbasis);	// OSFshpL, OSFshpR
+          iptrc[ix+16]+=i*(maxseg*ngGL*nfields); // OSFflux
 	}
 
 	CUT_CELLS(x0,
@@ -381,7 +384,8 @@ class dgsand
 			    iptrc.data(),
 			    necut,
 			    cut2e.data(),
-			    cut2neigh.data(),imesh);
+			    cut2neigh.data(),imesh,
+			    cutoverset.data());
 	
 	CUT_MASS_MATRIX(mass.data(),
 			x.data(),
@@ -434,11 +438,13 @@ class dgsand
 		  xcutB.data(),
                   bfcutL.data(),
                   bfcutR.data(),
+		  JinvV.data(),
 		  JinvB.data(),
 		  OSFnseg.data(),
 		  OSFeID.data(),
 		  OSFwgt.data(),
-		  OSFshp.data(),
+		  OSFshpL.data(),
+		  OSFshpR.data(),
                   d, etype, p, pc, pccut,
                   necut, necutB);
     }

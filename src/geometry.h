@@ -217,7 +217,7 @@ void BasesVCut(double *x, double *Jinv,double *detJ,
   }
 }
 
-void CutFaceWeights(double *x, double *Jinv, int pc, int* iptr, double *xcut, double *bfcutL, double *bfdcutL, double *bfcutR, double *bfdcutR, double *Jinvcut, double *faceWeight, int d, int e, int p, int* cut2neigh, int iorig, int icut)
+void CutFaceWeights(double *x, double *Jinv, int pc, int* iptr, double *xcut, double *bfcutL, double *bfdcutL, double *bfcutR, double *bfdcutR, double *Jinvcut, double *faceWeight, int d, int e, int p, int* cut2neigh, int* cutoverset, int iorig, int icut)
 {
   int b,w,i,j,ij,l,ld,n,m,f,f1,eid,neigh;
   double uL[d],uR[d],v,wgt;
@@ -270,13 +270,21 @@ void CutFaceWeights(double *x, double *Jinv, int pc, int* iptr, double *xcut, do
 		  bdR[b][j]=basis_d[e][b*d+j](uR); 
 	      }
 	      // basis[][](u) computes basis function at u
-	      if (p > 0){
+	      // Skip this step if the face is an overset boundary XXX
+	      if (p > 0 && cutoverset[m]==-1){
 		bfcutL[l]=basis[e][b](uL);  // filled as bf[nfaces][nGL][nbasis]
 		if(eid>-1){
 		  bfcutR[l]=basis[e][b](uR);  // filled as bf[nfaces][nGL][nbasis]
                 }
 		l++;
-	      }
+	      } 
+              else { // overset face are handled using OSFshp and OSFflux, not bfcut
+	        bfcutL[l]=0.0;
+                if(eid>-1){
+                  bfcutR[l]=0.0;
+                }
+                l++;
+              }
 	    }
 	    if (p==0){
 	      bfcutL[l]=1.0;
@@ -684,11 +692,11 @@ void COMPUTE_CUT_METRICS(double *x, double *JinvV,
 			 double *detJcut, double *bfcutL, double *bfdcutL,  
 			 double *bfcutR, double *bfdcutR,  
 			 double *fwcut, int* iptrc, int necut, int* cut2e,
-			 int* cut2neigh, int imesh)
+			 int* cut2neigh, int imesh, int* cutoverset)
 {
   int i,j,b,eid;
   int ip,ix,ij,idetj,ijf;
-  int cip,cix,cibv,cibvd,cibf,cij,cidetj,cibfd,cijf,cifw,cc2n;
+  int cip,cix,cibv,cibvd,cibf,cij,cidetj,cibfd,cijf,cifw,cc2n,cico;
 
   // Metrics for the cut regions
   for(i=0;i<necut;i++)
@@ -717,6 +725,7 @@ void COMPUTE_CUT_METRICS(double *x, double *JinvV,
     cijf  =iptrc[cip+8]; // JinvF
     cifw  =iptrc[cip+9]; // faceWeight
     cc2n  =iptrc[cip+12]; // cut2neigh  
+    cico = iptrc[cip+13];
 
     // get bases at cut vol quad pts
     BasesVCut(x+ix, JinvV+ij, detJ+idetj, 
@@ -730,7 +739,7 @@ void COMPUTE_CUT_METRICS(double *x, double *JinvV,
   		   bfcutL+cibf,bfdcutL+cibfd,
   		   bfcutR+cibf,bfdcutR+cibfd,
                    JinvFcut+cijf,fwcut+cifw,d,e,p,
-		   cut2neigh+cc2n,eid,i); 
+		   cut2neigh+cc2n,cutoverset+cico,eid,i); 
   }
 
 }
