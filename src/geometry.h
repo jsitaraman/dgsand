@@ -99,8 +99,8 @@ void CutCellInterp(double *x, int d, int e, int p, double* Jinv,
   // [rs] = [Jinv_orig][xycut - x0_orig]
   axb(Jinv,xycut,rst,d);
 
-  if(rst[0]<-1e-14 || rst[1]<-1e-14 || rst[0] > 1+1e-10 || rst[1] > 1+1e-10){
-    printf("ERROR: rst = %f %f\n",rst[0],rst[1]);
+  if(rst[0]<-1e-13 || rst[1]<-1e-13 || rst[0] > 1+1e-10 || rst[1] > 1+1e-10){
+    printf("ERROR: rst = %.16e %.16e\n",rst[0],rst[1]);
 
     printf("\tx0 = (%f %f),",x0[0],x0[1]); 
     u[0] = 1; 
@@ -238,8 +238,13 @@ void CutFaceWeights(double *x, double *Jinv, int pc, int* iptr, double *xcut, do
   m=l=0;
   ld=ij=0;
   for(f=0;f<nfaces;f++){    
-      // for every Gauss-point on this sub face
-      for(w=0;w<ngGL[e][p];w++){
+/*      if(cutoverset[f]>-1) // overset face
+
+        l=l+ngGL[e][p];
+      else{
+*/
+        // for every Gauss-point on this sub face
+        for(w=0;w<ngGL[e][p];w++){
 
   	    v=gaussgl[e][g][(d)*w];  // gauss location from 0 to 1
 	    wgt=gaussgl[e][g][(d)*w+1];	 // gauss weight
@@ -271,20 +276,13 @@ void CutFaceWeights(double *x, double *Jinv, int pc, int* iptr, double *xcut, do
 	      }
 	      // basis[][](u) computes basis function at u
 	      // Skip this step if the face is an overset boundary XXX
-	      if (p > 0 && cutoverset[m]==-1){
+	      if (p > 0){
 		bfcutL[l]=basis[e][b](uL);  // filled as bf[nfaces][nGL][nbasis]
 		if(eid>-1){
 		  bfcutR[l]=basis[e][b](uR);  // filled as bf[nfaces][nGL][nbasis]
                 }
 		l++;
 	      } 
-              else { // overset face are handled using OSFshp and OSFflux, not bfcut
-	        bfcutL[l]=0.0;
-                if(eid>-1){
-                  bfcutR[l]=0.0;
-                }
-                l++;
-              }
 	    }
 	    if (p==0){
 	      bfcutL[l]=1.0;
@@ -313,6 +311,10 @@ void CutFaceWeights(double *x, double *Jinv, int pc, int* iptr, double *xcut, do
 	    // do faceWeight = Ja x zhat
 	    // This gives me the normal vector
 	    cross(&(faceWeight[2*m]),Ja,Jb,d); 
+
+printf("\tmat = %f %f %f %f\n",mat[0][0],mat[0][1],mat[1][0],mat[1][1]);
+printf("\tJa = %f %f %f\n",Ja[0],Ja[1],Ja[2]); 
+printf("\tfwcut[%i-%i] = %f %f \n",2*m,2*m+1,faceWeight[2*m],faceWeight[2*m+1]); 
 
             // get [dx/dr]^-1
             if (d==2) invmat2x2(mat,jacL,det);
@@ -374,6 +376,7 @@ void CutFaceWeights(double *x, double *Jinv, int pc, int* iptr, double *xcut, do
 //  	        Jinvcut[ij++]=jacL[i][j];
 	    m++;
 	}// loop over gauss pts
+//     } // if cut overset face
    } //loop over faces
 }
 
@@ -664,7 +667,7 @@ void COMPUTE_GRID_METRICS(double *x, double *bv, double *bvd,double *JinvV,
   // Metrics for the uncut cells
   for(i=0;i<nelem;i++)
     {
-      iblank[i] = 1; 
+      iblank[i] = 0; 
 
       ip=pc*i;
       ix   =iptr[ip+1];
@@ -725,7 +728,7 @@ void COMPUTE_CUT_METRICS(double *x, double *JinvV,
     cijf  =iptrc[cip+8]; // JinvF
     cifw  =iptrc[cip+9]; // faceWeight
     cc2n  =iptrc[cip+12]; // cut2neigh  
-    cico = iptrc[cip+13];
+    cico = iptrc[cip+12];
 
     // get bases at cut vol quad pts
     BasesVCut(x+ix, JinvV+ij, detJ+idetj, 
@@ -735,6 +738,7 @@ void COMPUTE_CUT_METRICS(double *x, double *JinvV,
 
 
     // basis on face
+    printf("cut face weight cut elem %i\n",i);
     CutFaceWeights(x, JinvF,pc,iptr,xcut+cix,
   		   bfcutL+cibf,bfdcutL+cibfd,
   		   bfcutR+cibf,bfdcutR+cibfd,
@@ -753,7 +757,7 @@ void MASS_MATRIX(double *mass,double *x, int *iptr, int d, int e, int p, int nel
   int debug;
   for(i=0;i<nelem;i++)
     {
-if(imesh==1 && i==225){
+if(imesh==1 && i==1){
  debug = 1; 
 printf("\n\nDEBUG: Mesh %i, cell %i:\n",imesh,i); 
 }

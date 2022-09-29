@@ -17,7 +17,10 @@ int main(int argc, char *argv[])
   dgsand *sol=new dgsand[nmesh];
   
   int i, B; 
-  double x0=1.5; //68750000000000-0*.625;
+//  double x0=8.1235;//1.75;
+//  double x0=9.218750; // 
+  double x0=9.98750; // 
+//  double x0=1.75;
   for(i=0;i<nmesh;i++) {
     sol[i].setup(argv[i+1]);
     sol[i].init(i);
@@ -40,7 +43,8 @@ printf("\n=================\nENTERING OVERSET SETUP FOR MESH %i\n===============
 		   	  sol[B].xcut,
 			  sol[B].JinvV,
 			  sol[B].cut2e,
-		          sol[B].necut);
+		          sol[B].necut,
+			  sol[B].nelem);
 
     }
   }	  
@@ -56,10 +60,12 @@ printf("\n=================\nENTERING OVERSET SETUP FOR MESH %i\n===============
     // RK step 1
     for(i=0;i<nmesh;i++){
       // exchange overset flux information	    
- /*
+
 
       // Euler
+      
       if(nmesh>1){
+printf("==================\nEXCHANGING OVERSET FOR MESH %i Step %i, Euler \n===================\n",i,n);
         B = 1-i; 
         sol[i].exchangeOverset(sol[B].q, sol[B].iptr,i); 
       }
@@ -70,9 +76,9 @@ printf("==================\nCOMPUTING MESH %i Step %i, Euler \n=================
       {
         sol[i].update(sol[i].q,sol[i].q,dt);
       }
-*/
 
-      
+/*
+      // RK
       if(nmesh>1){
         B = 1-i; 
         sol[i].exchangeOverset(sol[B].q, sol[B].iptr,i); 
@@ -118,6 +124,8 @@ printf("==================\nCOMPUTING MESH %i Step %i, RK 3\n===================
 	sol[i].rnorm(imax,rmax,rnorm,rk[3]*dt);
 	printf("mesh%d : step %d\t%18.16f\t%d\t%18.16f\n",i,n,rnorm,imax,rmax);
       }
+  */
+    // Output data
     if (n%nsave==0) {
       for(i=0;i<nmesh;i++)
 	sol[i].output(i,n);

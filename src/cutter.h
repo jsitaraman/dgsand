@@ -201,7 +201,7 @@ void CUT_CELLS(double x0, double *x, double* xcut, int* iptr, int* cut2e, int d,
         neigh[2] = faces[6*fid+2] == i ? faces[6*fid+4] : faces[6*fid+2]; 
 
  	// initialize cutoverset index array
- 	for(int a=0;a<3*ng;a++) cutoverset[3*ng*n+a] = -1; 
+ 	for(int a=0;a<3;a++) cutoverset[3*n+a] = -1; 
 
         // double check for positive jacobian
         // and save out info in correct order
@@ -222,11 +222,9 @@ void CUT_CELLS(double x0, double *x, double* xcut, int* iptr, int* cut2e, int d,
 	  cut2neigh[3*n] = neigh[0];
 	  cut2neigh[3*n+1] = neigh[1];
 	  cut2neigh[3*n+2] = neigh[2];
-//        cutoverset[3*n+0] = -1; 
-//        cutoverset[3*n+1] = 1; 
-//        cutoverset[3*n+2] = -1; 
 
-	  for(int a=0;a<ng;a++) cutoverset[3*ng*n + 1*ng + a] = 1; 
+          cutoverset[3*n + 1] = 1; 
+//	  for(int a=0;a<ng;a++) cutoverset[3*ng*n + 1*ng + a] = 1; 
         }
         else{
           xcut[n*3*2]   = xtmp[0];
@@ -244,10 +242,9 @@ void CUT_CELLS(double x0, double *x, double* xcut, int* iptr, int* cut2e, int d,
 	  cut2neigh[3*n] = neigh[0];
 	  cut2neigh[3*n+1] = neigh[2];
 	  cut2neigh[3*n+2] = neigh[1];
-//          cutoverset[3*n+0] = -1; 
-//          cutoverset[3*n+1] = -1; 
-//          cutoverset[3*n+2] = 1; 
-	  for(int a=0;a<ng;a++) cutoverset[3*ng*n + 2*ng + a] = 1; 
+
+          cutoverset[3*n + 2] = 1; 
+//	  for(int a=0;a<ng;a++) cutoverset[3*ng*n + 2*ng + a] = 1; 
         }
         cut2e[n]=i; //store id of orig elem
 
@@ -263,7 +260,8 @@ printf("f = %i,  bv[%i] = %f\n",f,j,bv[f*nbasis+j]);
 
 printf("\tfull vtxcoords: (%f, %f), (%f, %f), (%f, %f)\n", xvert[0],xvert[1],xvert[2],xvert[3],xvert[4],xvert[5]);
 printf("\tcut vtx coords: (%f, %f), (%f, %f), (%f, %f)\n",xcut[n*3*2], xcut[n*3*2+3], xcut[n*3*2+1], xcut[n*3*2+4], xcut[n*3*2+2], xcut[n*3*2+5]);
-printf("\telem neigh(%i, %i, %i) = %i %i %i\n",3*n,3*n+1,3*n+2,cut2neigh[3*n],cut2neigh[3*n+1],cut2neigh[3*n+2]);
+printf("\tcut elem neigh(%i, %i, %i) = %i %i %i\n",3*n,3*n+1,3*n+2,cut2neigh[3*n],cut2neigh[3*n+1],cut2neigh[3*n+2]);
+printf("\tcut2face = %i %i %i\n",cut2face[3*n],cut2face[3*n+1],cut2face[3*n+2]);
         n++; 
       }
 
@@ -309,10 +307,7 @@ printf("\telem neigh(%i, %i, %i) = %i %i %i\n",3*n,3*n+1,3*n+2,cut2neigh[3*n],cu
 	neigh[2] = i;  // this face's fluxes cancel out
 
  	// initialize cutoverset index array
- 	for(int a=0;a<3*ng;a++) cutoverset[3*ng*n+a] = -1; 
-//        cutoverset[3*n+0] = -1;        
-//        cutoverset[3*n+1] = -1;        
-//        cutoverset[3*n+2] = -1;        
+ 	for(int a=0;a<3;a++) cutoverset[3*n+a] = -1; 
 
         // double check for positive jacobian 
         JacP1Tri(jac,xtmp,&det); 
@@ -361,7 +356,8 @@ printf("f = %i,  bv[%i] = %f\n",f,j,bv[f*nbasis+j]);
 }
 printf("\tfull vtxcoords: (%f, %f), (%f, %f), (%f, %f)\n", xvert[0],xvert[1],xvert[2],xvert[3],xvert[4],xvert[5]);
 printf("\tcut vtx coords: (%f, %f), (%f, %f), (%f, %f)\n",xcut[n*3*2], xcut[n*3*2+3], xcut[n*3*2+1], xcut[n*3*2+4], xcut[n*3*2+2], xcut[n*3*2+5]);
-printf("\telem neigh(%i, %i, %i) = %i %i %i\n",3*n,3*n+1,3*n+2,cut2neigh[3*n],cut2neigh[3*n+1],cut2neigh[3*n+2]);
+printf("\tcut elem neigh(%i, %i, %i) = %i %i %i\n",3*n,3*n+1,3*n+2,cut2neigh[3*n],cut2neigh[3*n+1],cut2neigh[3*n+2]);
+printf("\tcut2face = %i %i %i\n",cut2face[3*n],cut2face[3*n+1],cut2face[3*n+2]);
         n++; 
 
 	//Second triangle (cut node 1, both intersect nodes)
@@ -372,13 +368,26 @@ printf("\telem neigh(%i, %i, %i) = %i %i %i\n",3*n,3*n+1,3*n+2,cut2neigh[3*n],cu
         xtmp[2] = xvert[2*j0]; 
         xtmp[5] = xvert[2*j0+1]; 
 
-	neigh[0] = -2; // this is the overset boundary
+/*	neigh[0] = -2; // this is the overset boundary
         fid = abs(elem2face[i*3+jp2])-1;
         neigh[1] = faces[6*fid+2] == i ? faces[6*fid+4] : faces[6*fid+2]; 
 	neigh[2] = i; // this edge's fluxes cancel out 
+*/
+
+        fid = abs(elem2face[i*3+j0])-1;
+        forig[0] = -i; // overset boundary
+        neigh[0] = -2; // overset boundary 
+
+        fid = abs(elem2face[i*3+jp2])-1;
+        forig[1] = fid;
+        neigh[1] = faces[6*fid+2] == i ? faces[6*fid+4] : faces[6*fid+2];
+
+        fid = abs(elem2face[i*3+jp2])-1;
+        forig[2] = -1; // this edge's fluxes cancel out
+        neigh[2] = i; 
 	
  	// initialize cutoverset index array
- 	for(int a=0;a<3*ng;a++) cutoverset[3*ng*n+a] = -1; 
+ 	for(int a=0;a<3;a++) cutoverset[3*n+a] = -1; 
 
         // double check for positive jacobian 
         JacP1Tri(jac,xtmp,&det); 
@@ -390,14 +399,13 @@ printf("\telem neigh(%i, %i, %i) = %i %i %i\n",3*n,3*n+1,3*n+2,cut2neigh[3*n],cu
           xcut[n*3*2+4] = xtmp[4];
           xcut[n*3*2+5] = xtmp[5];
 
+          cut2face[3*n] = forig[0];
+          cut2face[3*n+1] = forig[1];
+          cut2face[3*n+2] = forig[2];
+
 	  cut2neigh[3*n] = neigh[0];
 	  cut2neigh[3*n+1] = neigh[1];
 	  cut2neigh[3*n+2] = neigh[2];
-
-          //cutoverset[3*n+0] = 1;        
-          //cutoverset[3*n+1] = -1;        
-          //cutoverset[3*n+2] = -1;        
-	  for(int a=0;a<ng;a++) cutoverset[3*ng*n + 0*ng + a] = 1; 
         }
         else{
           xcut[n*3*2]   = xtmp[0];
@@ -407,16 +415,16 @@ printf("\telem neigh(%i, %i, %i) = %i %i %i\n",3*n,3*n+1,3*n+2,cut2neigh[3*n],cu
           xcut[n*3*2+4] = xtmp[5];
           xcut[n*3*2+5] = xtmp[4];
 
+          cut2face[3*n] = forig[0];
+          cut2face[3*n+1] = forig[2];
+          cut2face[3*n+2] = forig[1];
+
 	  cut2neigh[3*n] = neigh[0];
 	  cut2neigh[3*n+1] = neigh[2];
 	  cut2neigh[3*n+2] = neigh[1];
+        } 
+	cutoverset[3*n + 0] = 1; 
 
-          //cutoverset[3*n+0] = 1;        
-          //cutoverset[3*n+1] = -1;        
-          //cutoverset[3*n+2] = -1;        
-	  for(int a=0;a<ng;a++) cutoverset[3*ng*n + 0*ng + a] = 1; 
-        }
- 
         cut2e[n]=i; //store id of orig elem
 printf("\norig elem %i, cut cell %i, det %f:\n",i,n,det);
 if(fabs(det)<1e-13){
@@ -429,7 +437,8 @@ printf("f = %i,  bv[%i] = %f\n",f,j,bv[f*nbasis+j]);
 }
 printf("\tfull vtxcoords: (%f, %f), (%f, %f), (%f, %f)\n", xvert[0],xvert[1],xvert[2],xvert[3],xvert[4],xvert[5]);
 printf("\tcut vtx coords: (%f, %f), (%f, %f), (%f, %f)\n",xcut[n*3*2], xcut[n*3*2+3], xcut[n*3*2+1], xcut[n*3*2+4], xcut[n*3*2+2], xcut[n*3*2+5]);
-printf("\telem neigh(%i, %i, %i) = %i %i %i\n",3*n,3*n+1,3*n+2,cut2neigh[3*n],cut2neigh[3*n+1],cut2neigh[3*n+2]);
+printf("\tcut elem neigh(%i, %i, %i) = %i %i %i\n",3*n,3*n+1,3*n+2,cut2neigh[3*n],cut2neigh[3*n+1],cut2neigh[3*n+2]);
+printf("\tcut2face = %i %i %i\n",cut2face[3*n],cut2face[3*n+1],cut2face[3*n+2]);
         n++; 
       }
   }
@@ -437,7 +446,6 @@ printf("\telem neigh(%i, %i, %i) = %i %i %i\n",3*n,3*n+1,3*n+2,cut2neigh[3*n],cu
 for(int aa = 0;aa<n;aa++)
 for(int f = 0;f<nfp;f++){
 printf("\norig %i, el %i, side %i = %i\n",cut2e[aa],aa,f);
-for(int w = 0;w<ng;w++)
-printf("\tcutoverset[%i] = %i\n",aa*nfp*ng+f*ng+w,cutoverset[aa*nfp*ng+f*ng+w]);
+printf("\tcutoverset[%i] = %i\n",aa*nfp+f,cutoverset[aa*nfp+f]);
 }
 }
