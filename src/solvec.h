@@ -42,6 +42,30 @@ void matmult(double *A, double *B, double *C,int m,int n, int p, int debug){
 
 }
 
+void checksol(double* A, double* x, double* b, int n, int ind, int debug)
+{
+  // checks the accuracy of the computed solution and for the existence of NaNs
+
+  // first check solution for 
+  for(int i=0; i<n; i++)
+    if(isnan(x[i])) printf("\nERROR: NaN found in solution of element %i. Exiting.\n",ind);
+
+  // get residual of linear solve by doing
+  // res = Ax-b
+  double *res; 
+  res=(double *)calloc(n,sizeof(double));
+  matmult(A,x,res,n,n,1,debug);
+  for(int i=0;i<n;i++) 
+    res[i] = res[i]-b[i];
+
+  if(debug){
+    printf("\nElem %i\n",ind);
+    for(int i=0;i<n;i++) 
+      printf("\tAx-b[%i] = %.16e\n",i,res[i]);
+  }
+    
+}
+
 void solvec(double **a,double **b,int *iflag,int n,int neq)
 {
   int i,j,k,l,flag,temp1,m;

@@ -720,25 +720,35 @@ printf("\tneigh = %i, eid = %i, blank = %i\n",neigh,eid,iblank[neigh]);
 
 }
 
-void invertMass(double *mass, double *R, int pde, int d , int e, int p,int iscut,int ireg, int debug)
+
+void invertMass(double *mass, double *R, int pde, int d , int e, int p,int iscut,int ireg, int debug, int ielem)
 {
   int i,j,f;
   int nbasis=order2basis[e][p];
   int iflag;
   int nfields=get_nfields[pde](d);
+  double b[nbasis];
+
+  // store residual vector to check solution later
+  for(int i=0;i<nbasis;i++) b[i] = R[i]; 
 
   if(iscut && ireg){
+
  printf("TEST2: R[ir] = %f\n",R[0]);
+
     solvec_copy_reshape_reg(mass,R,&iflag,nbasis,nfields,debug);  
+
 if(debug){
  for(i=0;i<nbasis;i++)
  printf("update[%i] = %f\n",i,R[i]);
 }
   }
   else{
-
     solvec_copy_reshape(mass,R,&iflag,nbasis,nfields);
   }
+
+  // check accuracy of matrix solve
+  checksol(mass,R,b,nbasis,ielem,debug);
 }
 
 
@@ -1011,7 +1021,7 @@ max = 0;
       }
 #endif     
 
-if(imesh==1 & (i==1)){
+if(imesh==1 & (i==0)){
 debug = 1; 
 printf("MESH %i ELEM %i \n", imesh,i);
 //for(int f = 0; f<nfields; f++)
@@ -1037,10 +1047,11 @@ debug = 0;
       for(j=0;j<necut;j++)
         if(abs(i-cut2e[j])==0){
           iscut=1;
+debug = 1; 
 	  break;    
         }
 //printf("Elem %i\n",i);
-      invertMass(mass+im,R+iR,pde,d,e,p,iscut,ireg,debug);
+      invertMass(mass+im,R+iR,pde,d,e,p,iscut,ireg,debug,i);
 
 //if(imesh==0 && (i==3||i==895)){
 //printf("\n");
