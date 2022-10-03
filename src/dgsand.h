@@ -14,7 +14,7 @@ extern "C" {
 		   int *ireg);
   void output_params();
   void readgrid2D(char *gridfile, double **xcoord, int **elem2node,int **ibc,
-		  int *p,  int *nnodes, int *nelem, int *nbnodes);
+		  int *p,  int *nnodes, int *nelem, int *nbnodes, int imesh, double offset);
   void find_faces(int *bface,
 		  int **elem2face,
 		  int **faces,
@@ -186,7 +186,7 @@ class dgsand
   /// generic destructor
   ~dgsand() { free(xcoord); free(elem2node); free(ibc); free(elem2face); free(faces);}
   /// setup the case using input file
-  void setup(char *input_file)
+  void setup(char *input_file, int imesh,double offset)
     {
         /* parse inputs */
 	char grid_file[20];
@@ -194,7 +194,7 @@ class dgsand
 	nfields=number_of_fields(pde,d);
 	
 	/* read a 2D grid */
-	readgrid2D(grid_file,&xcoord,&elem2node,&ibc,&p,&nnodes,&nelem,&nbnodes);
+	readgrid2D(grid_file,&xcoord,&elem2node,&ibc,&p,&nnodes,&nelem,&nbnodes,imesh,offset);
 	nbasis=order_to_basis(etype,p);        // basis for solution
 	nbasisx=order_to_basis(etype,p+(p==0));// basis for grid
 	

@@ -1,7 +1,7 @@
 /* read a 2-D ascii grid of triangles of a given format
    make this adapt to various formats later, perhaps VTK */
 void readgrid2D(char *gridfile, double **xcoord, int **elem2node,int **ibc,
-		int *p,  int *nnodes, int *nelem, int *nbnodes)
+		int *p,  int *nnodes, int *nelem, int *nbnodes, int imesh, double offset)
 {
   int i,j,pg,m,total_n,n;
   int bcnode,bctype;
@@ -17,6 +17,21 @@ void readgrid2D(char *gridfile, double **xcoord, int **elem2node,int **ibc,
       fgets(line,256,fp);
       sscanf(line,"%lf %lf",&((*xcoord)[2*i]),&((*xcoord)[2*i+1]));
     }
+
+  // if second mesh, offset the x coords
+  double xmax = -1; 
+  if(imesh==1){ 
+    // determine x0 = avg between xmax_0 and xmin_1 (or offset)
+/*    for(i=0;i<(*nnodes);i++){
+      if((*xcoord)[2*i]>xmax) xmax = (*xcoord)[2*i];
+    }
+   printf("xmax = %f, offset = %f, x0 = %f\n", xmax, offset,0.5*(xmax + offset)); 
+   (*x0) = 0.5*(xmax+offset); 
+*/
+    // offset the coordinates to make second mesh
+    for(i=0;i<(*nnodes);i++)
+      (*xcoord)[2*i] = (*xcoord)[2*i] + offset;
+  }
 
   pg=order2basis[0][*p+(*p==0)];
   (*elem2node)=(int *)malloc(sizeof(int)*(*nelem)*pg);

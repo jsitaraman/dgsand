@@ -2,8 +2,15 @@
 
 int main(int argc, char *argv[])
 {
-  const int nmesh=argc-1;
+  const int nmesh=argc-3; // # of input files = nmesh
   printf("NMESH = %i \n",nmesh); 
+
+  double offset,x0;
+  sscanf(argv[argc-2],"%lf",&offset); // last input is offset in grid units
+  printf("offset=%f\n",offset);
+  sscanf(argv[argc-1],"%lf",&x0); // last input is offset in grid units
+  printf("x0=%f\n",x0);
+
   if (nmesh == 0) {
    printf("dgsand: Need at least one input file as argument\n");
    printf("e.g. for a two mesh case\n");
@@ -18,15 +25,17 @@ int main(int argc, char *argv[])
   
   int i, B; 
 //  double x0=8.1235;//1.75;
-  double x0=9.218750; // 
+//  double x0=9.218750; // XXX this needs to be dynamically computed based on offset
 //double x0=9.98750; // 
 //  double x0=1.75;
   for(i=0;i<nmesh;i++) {
-    sol[i].setup(argv[i+1]);
+    sol[i].setup(argv[i+1],i,offset);// x0 will come out of here
     sol[i].init(i);
     sol[i].mass_matrix(i);
     sol[i].initTimeStepping(i);
   }
+
+printf("\nx0 = %f, offset = %f\n",x0,offset);
 
   if(nmesh>1){
     for(i=0;i<nmesh;i++) {
