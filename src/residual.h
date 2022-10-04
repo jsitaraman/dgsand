@@ -1,3 +1,131 @@
+double consIntegral(double *bv, double *q, double *detJ,
+                    int pde, int d, int e, int p, int eid, int f1)
+{
+  int b,w,i,j,l,ld,m,f,n;
+  int nbasis=order2basis[e][p];
+  double wgt;
+  double *bvv;
+  int nfields=get_nfields[pde](d);
+  double qv[nfields],qvv;
+  int g=p2g[e][p];
+
+  for(f=0;f<nfields;f++) qv[f]=0;
+
+  for(w=0;w<ngElem[e][p];w++)
+    {
+      wgt=gauss[e][g][(d+1)*w+2]*detJ[w];
+      bvv=bv+w*nbasis;
+      for(f=0;f<nfields;f++)
+        {
+          qvv=bvv[0]*q[f*nbasis];
+          for(b=1;b<nbasis;b++)
+            qvv+=(bvv[b]*q[f*nbasis+b]);
+          qv[f]+=(wgt*qvv);
+        }
+    }
+  return qv[f1];
+}
+
+
+double consFaceIntegral( double *fflux,  int *elem2face,
+			 int *iptrf,double *q, int pf, int pde, int d, int e, int p, int ielem,
+			 int *faces, int eid, int f1)
+{
+  int b,w,i,j,l,ld,m,f,fid,fst,fsgn,neigh;
+  int nbasis=order2basis[e][p];
+  double wgt,v;
+  double *bvv,*bvvd;
+  int nfields=get_nfields[pde](d);
+  double flux[nfields];
+  int g=p2gf[e][p];
+  int nfp=facePerElem[e];
+  double resf[nfields];
+
+  l=ld=m=0;
+  for(f=0;f<nfields;f++)
+    resf[m++]=0; 
+  for(i=0;i<nfp;i++)
+    {
+      fsgn=elem2face[i]/abs(elem2face[i]);
+      fid=abs(elem2face[i])-1;
+      neigh = faces[6*fid+2] == eid ? faces[6*fid+4] : faces[6*fid+2];
+      // make sure to get the right place to take the flux
+      fst=iptrf[pf*(fid+(1-fsgn)/2)+1]-(1-fsgn)*nfields/2+(1+fsgn)*nfields;
+      for(w=0;w<ngGL[e][p];w++)
+	{
+	  wgt=gaussgl[e][g][(d)*w+1]*fsgn;
+	  m=0;
+	  if(neigh == -1){
+	  for(f=0;f<nfields;f++)
+	    {
+	      // measure fluxes only at outer boundaries
+	        //if (f==0) printf("flux=%f\n",flux[f]);
+                flux[f]=fflux[fst+f]*wgt;
+		resf[m]-=(flux[f]);
+		m++;
+	    }
+	  } 
+	  fst+=(3*fsgn*nfields);
+	}
+    }
+  return resf[f1];
+}
+
+double cutFaceCons(double *fflux, 
+		   int pf, int pde, int d, int e, int p, int iorig,
+		   int *cutoverset, int debug, int* cut2neigh, int* iblank, int f1)
+{
+  int b,w,i,j,m,f,floc,z;
+  int nbasis=order2basis[e][p];
+  double wgt,v;
+  double *bvv,*bvvd;
+  int nfields=get_nfields[pde](d);
+  double flux;
+  int g=p2gf[e][p];
+  int nfp=facePerElem[e];
+  int compute;
+  double resf[nfields];
+  double sgn; 
+
+  for(f=0;f<nfields;f++)
+    resf[f]=0;
+
+  m=z=0;
+  floc = 2*nfields; 
+  for(i=0;i<nfp;i++)
+    {
+      //printf("\n"); 
+      for(w=0;w<ngGL[e][p];w++)
+	{
+	  // subtract fluxes if it's the overset boundary
+	  // add if it's a regular cut face
+          if(cutoverset[z]>-1){
+	    sgn = -1; 
+	  }
+	  else{
+	    sgn = 1; 
+	  }
+	  wgt=gaussgl[e][g][(d)*w+1]*sgn; 
+          // get the basis and basis derivative for this gauss point
+	  m=0;
+	  for(f=0;f<nfields;f++)
+	    {
+	      compute=(cut2neigh[i]==-1);
+	      flux=fflux[floc+f]*wgt;
+              //if (f==0) {
+                //printf("cutface_flux : %d %d %e\n",i,cut2neigh[i],flux);
+              //} 
+	      //notice the sign change from the faceIntegral routine
+	      if (compute) resf[m]+=(flux);
+	      m++;
+	    }
+	  floc+=(3*nfields); 
+	  z++; 
+	}
+    }
+  //printf("iorig,resf[f1]=%d %.18e\n",iorig,resf[f1]);
+  return resf[f1];
+}
 
 void volIntegral(double *residual, double *bv, double *bvd, double *q, double *detJ,
 		 int pde, int d, int e, int p, int eid)
@@ -1108,3 +1236,60 @@ void UPDATE_DOFS(double *qdest, double coef, double *qsrc, double *R, int ndof)
   for(i=0;i<ndof;i++)
     qdest[i]=qsrc[i]+coef*R[i];
 }
+
+double COMPUTE_CONSERVATION(double *q, double *detJ, double *bv, int *iptr, int *iblank,
+			    int pc, int pde, int d, int e, int p, int fieldid,int nelem,
+			    int *cut2e,int *iptrc, double *bvcut, double *detJcut, 
+			    int pccut, int necut, double *fcflux, int *cutoverset, int *cut2neigh,
+			    double *fflux, int *elem2face, int *faces, int *iptrf, int pf,double *faceFluxSum,double dt)
+{
+  int i,ix,iq,ibv,idet,iflx,ic2n,ico;
+  int eid;
+  int nfp=facePerElem[e];
+  double cons=0;
+  double fcons=0;
+  double cons1;
+  double ctot=0;
+  for(i=0;i<nelem;i++)
+    {
+     if (iblank[i]!=1) {
+      ix=pc*i;
+      iq=iptr[ix];
+      ibv=iptr[ix+2];
+      idet=iptr[ix+5];
+      cons+=consIntegral(bv+ibv,q+iq,detJ+idet,pde,d,e,p,i,fieldid);
+      fcons+=(consFaceIntegral(fflux,elem2face+nfp*i,iptrf,q,pf,pde,d,e,p,i,faces,i,fieldid));
+     }
+    }
+  //Modify removing contributions from cut cells
+  double fcons1=0;
+  for(i=0;i<necut;i++)
+    {
+      // get original element quantities
+      eid = cut2e[i]; 
+      //printf("eid=%d\n",eid);
+      ix=pc*eid;
+      iq=iptr[ix];	    
+      //cut cell quantities
+      ix=pccut*i; 
+      ibv=iptrc[ix+2];
+      idet=iptrc[ix+5];
+      iflx=iptrc[ix+11];
+      ic2n=iptrc[ix+12];
+      ico=iptrc[ix+13];
+      
+      cons1=consIntegral(bvcut+ibv,q+iq,detJcut+idet,pde,d,e,p,eid,fieldid);      
+      //printf("cons1=%.18e\n",cons1);
+      fcons1+=cutFaceCons(fcflux+iflx,pf,pde,d,e,p,eid,cutoverset+ico,
+      			 0,cut2neigh+ic2n,iblank,fieldid);
+      cons-=cons1;
+    }
+  //printf("fcons1=%f %f %f\n",cons,fcons,fcons1);
+  fcons+=fcons1;
+  (*faceFluxSum)+=fcons;
+  //printf("faceFluxSum=%f\n",*faceFluxSum);
+  cons-=((*faceFluxSum)*dt);
+  //printf("cons=%f\n",cons);
+  return cons;
+}
+

@@ -90,6 +90,18 @@ extern "C" {
                         int* iptrA, int* iptrB, int necutA, int pccut, 
                         int d, int e, int p, int pc, int pde, int imesh);
 
+ double COMPUTE_CONSERVATION(double *q, double *detJ, double *bv, int *iptr, int *iblank,
+                            int pc, int pde, int d, int e, int p, int fieldid,int nelem,
+                            int *cut2e,int *iptrc, double *bvcut, double *detJcut,
+                            int pccut, int necut, double *fcflux, int *cutoverset, int *cut2neigh,
+                            double *fflux, int *elem2face, int *faces, int *iptrf, int pf,
+                            double *faceFluxSum,double dt);
+
+  double L2_ERROR(double *x, double *q, double *qexact, int *iblank,
+                int pc, int *iptr, int pde, int d, int e, int p, int nelem);
+  void move_center(double);
+
+
 }
 
 #include<vector>
@@ -137,9 +149,12 @@ class dgsand
   int pf,ndof,nsteps,nsave;
   double dt;
 
+  /// storage for face flux sum
+  double faceFluxSum;
+
  public:
   /// field quantities
-  std::vector<double> q,qstar,Q,R;
+  std::vector<double> q,qstar,Q,R,qexact,Qexact;
   /// volumetric basis quantities and grid
   std::vector<double> x,bv,bvd,JinvV,detJ;
   /// face basis quantities
@@ -208,6 +223,8 @@ class dgsand
 	qstar.resize(qsize); // modal coefficients		  
 	Q.resize(qsize);	   // values at physical locations  
 	R.resize(qsize);	   //solution residual             
+	qexact.resize(qsize);     // modal coefficients		  
+	Qexact.resize(qsize);     // modal coefficients		  
 	
 	/* geometrical parameters per volume QP of each element */
 	/* TODO: some of these such as bv and JinvV can be optimized or omitted */
@@ -541,4 +558,33 @@ printf("OSFflux size = %i\n",necut*maxseg*ngGL*3*nfields);
     int getNsave()  { return nsave;  };
     int getNecut()  { return necut;  };
     double getDt()  { return dt;};
+
+   double cons_metric(int fieldid) {
+    double cons= COMPUTE_CONSERVATION(q.data(),detJ.data(),bv.data(),iptr.data(),iblank.data(),
+                                      pc,pde,d,etype,p,fieldid,nelem,
+                                      cut2e.data(),iptrc.data(),bvcut.data(),detJcut.data(),
+                                      pccut,necut,fcflux.data(),cutoverset.data(),cut2neigh.data(),
+                                      fflux.data(),elem2face,faces,iptf.data(),pf,&faceFluxSum,dt);
+    return cons;
+   }
+
+   double compute_error(int imesh, int step) {
+      double time=step*dt;
+      if (imesh==0) move_center(time);
+      INIT_FIELDS(xcoord,
+                  elem2node,
+                  Qexact.data(),
+                  x.data(),
+                  qexact.data(),
+                  iptr.data(),
+                  pde,etype,p,d,nbasis,1,nelem,pc,imesh);
+
+      double error=
+        L2_ERROR(x.data(),q.data(),qexact.data(),iblank.data(),pc,iptr.data(),pde,d,etype,p,nelem);
+      error/=nelem;
+      return error;
+   }
+
+
+
 };

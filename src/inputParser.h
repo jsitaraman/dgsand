@@ -1,5 +1,6 @@
 #include<stdio.h>
 double param[6];
+double x0v;
 void parseInputs(char *inputfile, char *gridfile,int *pde, int *itype, int *nsteps, double *dt, int *nsave, int *ireg)
 {
   FILE *fp;
@@ -22,10 +23,17 @@ void parseInputs(char *inputfile, char *gridfile,int *pde, int *itype, int *nste
   fclose(fp);
   printf("INIT PARAMS:\n"); 
   for(int i=0;i<6;i++) printf("%f ",param[i]);
+  x0v=param[4];
 }
 void output_params()
 {
   for(int i=0;i<6;i++) printf("%f ",param[i]);
+}
+void move_center(double time)
+{
+ double dist;
+ dist=param[1]*time;
+ param[4]=x0v+dist;
 }
 /*
 void main(void)
