@@ -95,7 +95,7 @@ extern "C" {
                             int *cut2e,int *iptrc, double *bvcut, double *detJcut,
                             int pccut, int necut, double *fcflux, int *cutoverset, int *cut2neigh,
                             double *fflux, int *elem2face, int *faces, int *iptrf, int pf,
-                            double *faceFluxSum,double dt);
+                            double *faceFluxSum,double dt, double *OSFflux, int *OSFnseg);
 
   double L2_ERROR(double *x, double *q, double *qexact, int *iblank,
                 int pc, int *iptr, int pde, int d, int e, int p, int nelem);
@@ -564,7 +564,7 @@ printf("OSFflux size = %i\n",necut*maxseg*ngGL*3*nfields);
                                       pc,pde,d,etype,p,fieldid,nelem,
                                       cut2e.data(),iptrc.data(),bvcut.data(),detJcut.data(),
                                       pccut,necut,fcflux.data(),cutoverset.data(),cut2neigh.data(),
-                                      fflux.data(),elem2face,faces,iptf.data(),pf,&faceFluxSum,dt);
+                                      fflux.data(),elem2face,faces,iptf.data(),pf,&faceFluxSum,dt,OSFflux.data(),OSFnseg.data());
     return cons;
    }
 

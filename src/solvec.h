@@ -42,13 +42,116 @@ void matmult(double *A, double *B, double *C,int m,int n, int p, int debug){
 
 }
 
+void lu(double* a, double* l, double* u, int n)
+{
+  // modified from
+  // https://www.tutorialspoint.com/cplusplus-program-to-perform-lu-decomposition-of-any-matrix
+
+  int i = 0, j = 0, k = 0;
+  for(int i = 0;i<n*n;i++){
+    u[i] = 0.0;
+    l[i] = 0.0;
+  }
+
+   for (i = 0; i < n; i++) {
+      for (j = 0; j < n; j++) {
+         if (j < i)
+         l[j*n+i] = 0;
+         else {
+            l[j*n+i] = a[j*n+i];
+            for (k = 0; k < i; k++) {
+               l[j*n+i] = l[j*n+i] - l[j*n+k] * u[k*n+i];
+            }
+         }
+      }
+      for (j = 0; j < n; j++) {
+         if (j < i)
+         u[i*n+j] = 0;
+         else if (j == i)
+         u[i*n+j] = 1;
+         else {
+            u[i*n+j] = a[i*n+j] / l[i*n+i];
+            for (k = 0; k < i; k++) {
+               u[i*n+j] = u[i*n+j] - ((l[i*n+k] * u[k*n+j]) / l[i*n+i]);
+            }
+         }
+      }
+   }
+}
+
+void fsub(double* L, double* y, double* b, int n){
+  double sum; 
+  for(int i=0;i<n;i++) y[i] = 0.0; 
+//  for(int i=0;i<n*n;i++)  printf("\tL(%i) = %.16e;\n",i,L[i]);
+
+  for(int i=0;i<n;i++){    
+    y[i] = b[i];
+    sum = 0; 
+    for(int j=0;j<i;j++)
+      sum += L[i*n+j]*y[j];
+    y[i] = (b[i]-sum)/(L[i*n+i]+1e-16);
+  } 
+}
+
+void bsub(double* U, double* x, double* b, int n){
+  double sum; 
+  for(int i=0;i<n;i++) x[i] = 0.0; 
+  
+  for(int i=n;i>=0;i--){
+    x[i] = b[i];
+
+    sum = 0;
+    for(int j=n;j>i;j--)
+      sum +=U[i*n+j]*x[j]; 
+    x[i] = (b[i]-sum)/(U[i*n+i]+1e-16);
+  }
+}
+
+// New solver to hopefully improve accuracy for sliver elements
+void lusolve(double* A, double* b, int n, int neq)
+{
+/*
+  // debug  values
+  int nbasis = 3; 
+
+  double A[9] = { 2.13333328050616e-09 ,  2.63466666666861e-07,   1.06666667259988e-09,   2.63466666667078e-07, 4.89397333335461e-05  , 2.63466666773998e-07,   1.06666667259951e-09 ,  2.63466666774445e-07 ,2.13333347261394e-09};
+  double b[3] = {1.64155875902119e-12 ,  3.45218350433774e-09  , 8.03737632004697e-12};
+  double xref[3] = {3.45218350433774e-09 , -2.63113434178992e-11 , -1.88821385216136e-11};
+
+  double A[9] = {1,2,3,-4,5,-6,7,8,9};
+  double b[3] = {124, 156, 289};
+*/
+
+  double  x[n], y[n], L[n*n], U[n*n], btmp[n];
+//  for(int i=0;i<n*neq;i++)  printf("res(%i) = %.16e;\n",i+1,b[i]);
+  
+  lu(A,L,U,n);
+  for(int i=0;i<neq;i++){
+    for(int j=0;j<n;j++) btmp[j] = b[n*i+j];
+    fsub(L,y,btmp,n);
+    bsub(U,btmp,y,n); // rewriting b (aka res) with final solution
+    for(int j=0;j<n;j++) b[n*i+j] = btmp[j];
+  }
+
+/*
+  for(int i=0;i<n;i++)  printf("y(%i) = %.16e;\n",i+1,y[i]);
+  for(int i=0;i<n;i++)  printf("x(%i) = %.16e;\n",i+1,x[i]);
+
+  exit(1); 
+*/
+}
+
+
 void checksol(double* A, double* x, double* b, int n, int ind, int debug)
 {
   // checks the accuracy of the computed solution and for the existence of NaNs
 
   // first check solution for 
   for(int i=0; i<n; i++)
-    if(isnan(x[i])) printf("\nERROR: NaN found in solution of element %i. Exiting.\n",ind);
+    if(isnan(x[i])){
+      printf("\nERROR: NaN found in solution of element %i. Exiting.\n",ind);
+      exit(1); 
+    }
 
   // get residual of linear solve by doing
   // res = Ax-b
@@ -58,12 +161,27 @@ void checksol(double* A, double* x, double* b, int n, int ind, int debug)
   for(int i=0;i<n;i++) 
     res[i] = res[i]-b[i];
 
+
   if(debug){
     printf("\nElem %i\n",ind);
     for(int i=0;i<n;i++) 
       printf("\tAx-b[%i] = %.16e\n",i,res[i]);
+
+    if(fabs(res[0])>1e-13){
+
+      for(int i = 0;i<n;i++)
+      for(int j = 0;j<n;j++)
+        printf("debugA(%i,%i) = %.16e;\n",i+1,j+1, A[i*n+j]);
+
+      for(int i = 0;i<n;i++)
+        printf("debugx(%i) = %.16e;\n",i+1, x[i]);
+
+      for(int i = 0;i<n;i++)
+        printf("debugb(%i) = %.16e;\n",i+1, b[i]);
+    }
   }
-    
+
+  free(res);  
 }
 
 void solvec(double **a,double **b,int *iflag,int n,int neq)

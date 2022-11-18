@@ -59,7 +59,7 @@ double consFaceIntegral( double *fflux,  int *elem2face,
 	  for(f=0;f<nfields;f++)
 	    {
 	      // measure fluxes only at outer boundaries
-	        //if (f==0) printf("flux=%f\n",flux[f]);
+//	        if (f==0) printf("\t\trho flux=%f\n",flux[f]);
                 flux[f]=fflux[fst+f]*wgt;
 		resf[m]-=(flux[f]);
 		m++;
@@ -68,14 +68,15 @@ double consFaceIntegral( double *fflux,  int *elem2face,
 	  fst+=(3*fsgn*nfields);
 	}
     }
+//  printf("\tSUM rho flux=%f\n",resf[0]);
   return resf[f1];
 }
 
 double cutFaceCons(double *fflux, 
 		   int pf, int pde, int d, int e, int p, int iorig,
-		   int *cutoverset, int debug, int* cut2neigh, int* iblank, int f1)
+		   int *cutoverset, int debug, int* cut2neigh, int* iblank, int f1, int OSFnseg, double *OSFflux)
 {
-  int b,w,i,j,m,f,floc,z;
+  int b,w,i,j,m,n,f,floc,z;
   int nbasis=order2basis[e][p];
   double wgt,v;
   double *bvv,*bvvd;
@@ -90,11 +91,25 @@ double cutFaceCons(double *fflux,
   for(f=0;f<nfields;f++)
     resf[f]=0;
 
-  m=z=0;
+  for(i=0;i<nfp;i++)
+    {
+      if(cutoverset[i]>-1){ // cut overset face
+        for(n=0;n<OSFnseg;n++){
+          for(w=0;w<ngGL[e][p];w++){
+	    wgt=gaussgl[e][g][(d)*w+1]; 
+
+            for(f=0;f<nfields;f++){
+                resf[f]+=wgt*OSFflux[n*ngGL[e][p]*3*nfields+w*3*nfields+2*nfields+f]; 
+            } // loop over fields
+          } // loop over gauss
+        } // loop over segs
+      } // if overset face
+    } // loop over faces
+/*
   floc = 2*nfields; 
   for(i=0;i<nfp;i++)
     {
-      //printf("\n"); 
+      printf("\n"); 
       for(w=0;w<ngGL[e][p];w++)
 	{
 	  // subtract fluxes if it's the overset boundary
@@ -112,9 +127,9 @@ double cutFaceCons(double *fflux,
 	    {
 	      compute=(cut2neigh[i]==-1);
 	      flux=fflux[floc+f]*wgt;
-              //if (f==0) {
-                //printf("cutface_flux : %d %d %e\n",i,cut2neigh[i],flux);
-              //} 
+              if (f==0) {
+                printf("cutface_flux : %d %d %e\n",i,cut2neigh[i],flux);
+              } 
 	      //notice the sign change from the faceIntegral routine
 	      if (compute) resf[m]+=(flux);
 	      m++;
@@ -123,7 +138,8 @@ double cutFaceCons(double *fflux,
 	  z++; 
 	}
     }
-  //printf("iorig,resf[f1]=%d %.18e\n",iorig,resf[f1]);
+*/
+//  printf("iorig,resf[f1]=%d %.18e\n",iorig,resf[f1]);
   return resf[f1];
 }
 
@@ -857,10 +873,11 @@ void invertMass(double *mass, double *R, int pde, int d , int e, int p,int iscut
   int nfields=get_nfields[pde](d);
   double b[nbasis];
 
+// printf("\nelem %i\n",ielem);
   // store residual vector to check solution later
   for(int i=0;i<nbasis;i++) b[i] = R[i]; 
 
-  if(iscut && ireg){
+/*  if(iscut && ireg){
 
  printf("TEST2: R[ir] = %f\n",R[0]);
 
@@ -872,11 +889,38 @@ if(debug){
 }
   }
   else{
-    solvec_copy_reshape(mass,R,&iflag,nbasis,nfields);
-  }
+ for(i=0;i<nbasis;i++)
+ for(j=0;j<nbasis;j++)
+ printf("mass(%i,%i) = %.16e;\n",i+1,j+1,mass[i*nbasis+j]);
+
+ for(i=0;i<nfields;i++){
+ for(j=0;j<nbasis;j++)
+ printf("res(%i) = %.16e;\n",j+1,R[i*nbasis+j]);
+ printf("\n");
+ }
+*/
+
+    // DEBUG XXX
+    lusolve(mass, R, nbasis,nfields); 
+
+/* for(i=0;i<nfields;i++){
+ for(j=0;j<nbasis;j++)
+ printf("dq(%i) = %.16e;\n",j+1,R[i*nbasis+j]);
+ printf("\n");
+ }
+*/
+
+//    solvec_copy_reshape(mass,R,&iflag,nbasis,nfields);
+  //}
 
   // check accuracy of matrix solve
   checksol(mass,R,b,nbasis,ielem,debug);
+
+/*if(debug){
+ for(i=0;i<nbasis;i++)
+ printf("update[%i] = %.16e\n",i,R[i]);
+}
+*/
 }
 
 
@@ -1161,11 +1205,12 @@ printf("\tComplete R(f = %i, b = %i) = %f\n",f,j,R[iR+f*nbasis+j]);
 }
 printf("\n");
 int m = 0; 
-for(int k = 0; k<nbasis; k++)
+/*for(int k = 0; k<nbasis; k++)
 for(int j = 0; j<nbasis; j++){
 printf("mass(%i,%i) = %f\n",k+1,j+1,mass[im+m]);
 m++;
 }
+*/
 }
 else{
 debug = 0; 
@@ -1241,14 +1286,13 @@ double COMPUTE_CONSERVATION(double *q, double *detJ, double *bv, int *iptr, int 
 			    int pc, int pde, int d, int e, int p, int fieldid,int nelem,
 			    int *cut2e,int *iptrc, double *bvcut, double *detJcut, 
 			    int pccut, int necut, double *fcflux, int *cutoverset, int *cut2neigh,
-			    double *fflux, int *elem2face, int *faces, int *iptrf, int pf,double *faceFluxSum,double dt)
+			    double *fflux, int *elem2face, int *faces, int *iptrf, int pf,double *faceFluxSum,double dt, double* OSFflux, int* OSFnseg)
 {
-  int i,ix,iq,ibv,idet,iflx,ic2n,ico;
+  int i,ix,iq,ibv,idet,iflx,ic2n,ico,iflx2;
   int eid;
   int nfp=facePerElem[e];
   double cons=0;
   double fcons=0;
-  double cons1;
   double ctot=0;
   for(i=0;i<nelem;i++)
     {
@@ -1261,13 +1305,14 @@ double COMPUTE_CONSERVATION(double *q, double *detJ, double *bv, int *iptr, int 
       fcons+=(consFaceIntegral(fflux,elem2face+nfp*i,iptrf,q,pf,pde,d,e,p,i,faces,i,fieldid));
      }
     }
+//printf("Temp vol/face cons = %.16e %.16e\n",cons,fcons); 
   //Modify removing contributions from cut cells
-  double fcons1=0;
+  double fcons1=0, cons1=0;
   for(i=0;i<necut;i++)
     {
       // get original element quantities
       eid = cut2e[i]; 
-      //printf("eid=%d\n",eid);
+//      printf("eid=%d\n",eid);
       ix=pc*eid;
       iq=iptr[ix];	    
       //cut cell quantities
@@ -1277,19 +1322,22 @@ double COMPUTE_CONSERVATION(double *q, double *detJ, double *bv, int *iptr, int 
       iflx=iptrc[ix+11];
       ic2n=iptrc[ix+12];
       ico=iptrc[ix+13];
+      iflx2=iptrc[ix+16];
       
-      cons1=consIntegral(bvcut+ibv,q+iq,detJcut+idet,pde,d,e,p,eid,fieldid);      
-      //printf("cons1=%.18e\n",cons1);
-      fcons1+=cutFaceCons(fcflux+iflx,pf,pde,d,e,p,eid,cutoverset+ico,
-      			 0,cut2neigh+ic2n,iblank,fieldid);
-      cons-=cons1;
+      cons1+=consIntegral(bvcut+ibv,q+iq,detJcut+idet,pde,d,e,p,eid,fieldid);      
+//      printf("cons1=%.18e\n",cons1);
+      fcons1+=cutFaceCons(fcflux+iflx,pf,pde,d,e,p,eid,cutoverset+ic2n,
+      			 0,cut2neigh+ic2n,iblank,fieldid,OSFnseg[i],OSFflux+iflx2);
+//      printf("fcons1=%.18e\n",fcons1);
+//      cons-=cons1;
     }
-  //printf("fcons1=%f %f %f\n",cons,fcons,fcons1);
+
+//  printf("f = %i, cons1 = %f, fcons1=%f \n",fieldid,cons1,fcons1);
   fcons+=fcons1;
   (*faceFluxSum)+=fcons;
-  //printf("faceFluxSum=%f\n",*faceFluxSum);
+//  printf("\tfaceFluxSum=%f\n",*faceFluxSum);
   cons-=((*faceFluxSum)*dt);
-  //printf("cons=%f\n",cons);
+//  printf("\tNet cons=%f\n",cons-cons1);
   return cons;
 }
 

@@ -65,9 +65,12 @@ printf("\n=================\nENTERING OVERSET SETUP FOR MESH %i\n===============
     sol[i].output(i,0);
 
   // Compute initial conservation metrics
-  double cons=0.0;
-  for(i=0;i<nmesh;i++)
-   cons+=sol[i].cons_metric(0);
+  double cons=0.0,tmp=0;
+  for(i=0;i<nmesh;i++){
+   tmp=sol[i].cons_metric(0);
+printf("tmp = %f\n");
+   cons+=tmp;
+  }
   printf("cons : %.16e\n",cons);
   double cons0=cons;
 
@@ -138,6 +141,7 @@ printf("==================\nCOMPUTING MESH %i Step %i, RK 3\n===================
     printf("\nCOMPUTING NORMS\n"); 
     int imax;
     double rmax,rnorm;
+    cons=0;
     for(i=0;i<nmesh;i++)
       {
         sol[i].rnorm(imax,rmax,rnorm,rk[3]*dt);
