@@ -78,7 +78,7 @@ printf("tmp = %f\n");
   // ============= 
   // RUN TIMESTEPS 
   // ============= 
-  int euler = 0;  
+  int euler = 0;
   for(int n=1;n<=nsteps;n++) {
     // Euler
     if(euler){

@@ -107,23 +107,48 @@ void bsub(double* U, double* x, double* b, int n){
   }
 }
 
+
 // New solver to hopefully improve accuracy for sliver elements
+void lusolve_reg(double* A, double* b, int n, int neq)
+{
+  double  x[n], y[n], L[n*n], U[n*n], btmp[2*n];
+ 
+  // Fill regularized Areg = [A; lambda*I] and breg = [b; zeros(n,1)]
+  double Areg[2*n*n], AregT[2*n*n], AregA[n*n], breg[2*n], Aregb[n];
+  for(int i=0;i<2*n;i++){
+    for(int j=0;j<n;j++){
+      if(i>n){
+        Areg[i*n+j] = 0.0;
+      }
+      else{
+        Areg[i*n+j] = A[i*n+j];
+      }
+      AregT[j*n+i] = Areg[i*n+j];
+    }
+  }
+  matmult(AregT,Areg,AregA,n,2*n,n,0);
+  
+
+  // Do LU solve
+  lu(AregA,L,U,n);
+  for(int i=0;i<neq;i++){
+    for(int j=0;j<2*n;j++)
+      if(j<n){
+        breg[j] = b[n*i+j];     
+      } 
+      else{
+        breg[j] = 0.0;
+      } 
+    matmult(AregT,breg,Aregb,n,2*n,1,0);
+    fsub(L,y,Aregb,n);
+    bsub(U,btmp,y,n); 
+    for(int j=0;j<n;j++) b[n*i+j] = btmp[j];
+  }
+}
+
 void lusolve(double* A, double* b, int n, int neq)
 {
-/*
-  // debug  values
-  int nbasis = 3; 
-
-  double A[9] = { 2.13333328050616e-09 ,  2.63466666666861e-07,   1.06666667259988e-09,   2.63466666667078e-07, 4.89397333335461e-05  , 2.63466666773998e-07,   1.06666667259951e-09 ,  2.63466666774445e-07 ,2.13333347261394e-09};
-  double b[3] = {1.64155875902119e-12 ,  3.45218350433774e-09  , 8.03737632004697e-12};
-  double xref[3] = {3.45218350433774e-09 , -2.63113434178992e-11 , -1.88821385216136e-11};
-
-  double A[9] = {1,2,3,-4,5,-6,7,8,9};
-  double b[3] = {124, 156, 289};
-*/
-
   double  x[n], y[n], L[n*n], U[n*n], btmp[n];
-//  for(int i=0;i<n*neq;i++)  printf("res(%i) = %.16e;\n",i+1,b[i]);
   
   lu(A,L,U,n);
   for(int i=0;i<neq;i++){
@@ -132,15 +157,7 @@ void lusolve(double* A, double* b, int n, int neq)
     bsub(U,btmp,y,n); // rewriting b (aka res) with final solution
     for(int j=0;j<n;j++) b[n*i+j] = btmp[j];
   }
-
-/*
-  for(int i=0;i<n;i++)  printf("y(%i) = %.16e;\n",i+1,y[i]);
-  for(int i=0;i<n;i++)  printf("x(%i) = %.16e;\n",i+1,x[i]);
-
-  exit(1); 
-*/
 }
-
 
 void checksol(double* A, double* x, double* b, int n, int ind, int debug)
 {
@@ -163,9 +180,8 @@ void checksol(double* A, double* x, double* b, int n, int ind, int debug)
 
 
   if(debug){
-    printf("\nElem %i\n",ind);
     for(int i=0;i<n;i++) 
-      printf("\tAx-b[%i] = %.16e\n",i,res[i]);
+//      printf("\tAx-b[%i] = %.16e\n",i,res[i]);
 
     if(fabs(res[0])>1e-13){
 
@@ -344,20 +360,6 @@ void solvec_copy_reshape_reg(double *a_in,double *b_in,int *iflag,int n,int neq,
   AregA=(double *)calloc(n*n,sizeof(double));
   Aregb=(double *)calloc(n*neq,sizeof(double)); // handle neq dim correctly
 
-/*
-if(debug){
-for(i=0;i<n;i++)
-for(j=0;j<n;j++){
-      ind1 = i*n+j;
-printf("A_in(%i,%i) = %f\n",i+1,j+1,a_in[ind1]);
-}
-printf("\n");
-for(j=0;j<n;j++)
-printf("b_in(%i) = %f\n",j+1,b_in[j]);
-printf("\n");
-}
-*/
-
   for(i=0;i<2*n;i++){
     for(j=0;j<n;j++){
       ind1 = i*n+j;
@@ -385,27 +387,6 @@ printf("\n");
       AregT[ind2] = Areg[ind1]; 
     }
 
-/*
-if(debug){
-for(i=0;i<2*n;i++)
-for(j=0;j<n;j++){
-ind1 = i*n+j;
-printf("A_reg(%i,%i) = %f;\n",i+1,j+1,Areg[ind1]);
-}
-printf("\n");
-for(j=0;j<2*n;j++)
-for(k=0;k<neq;k++){
-ind1 = j*neq+k;
-printf("b_reg(%i,%i) = %f;\n",j+1,k+1,breg[ind1]);
-}
-printf("\n");
-for(i=0;i<n;i++)
-for(j=0;j<2*n;j++){
-ind1 = i*2*n+j;
-printf("A_regT(%i,%i) = %f;\n",i+1,j+1,AregT[ind1]);
-}
-}
-*/
   // Replace matrix with Areg'*Areg and vec with Areg'*b
   debug2=0;
   if(debug) debug2 = 0; 
@@ -420,31 +401,9 @@ for(i=0;i<neq;i++)
     b_in[ind1] = Aregb[ind2]; 
   }
 
-/*
- * if(debug){
-for(i=0;i<n;i++)
-for(j=0;j<n;j++){
-ind1 = n*i+j; 
-printf("AregA(%i,%i) = %f;\n",i+1,j+1,AregA[ind1]);
-}
-printf("\n");
-for(j=0;j<n;j++)
-printf("Aregb(%i) = %f;\n",j+1,Aregb[j]);
-printf("\n");
-}
-*/
-
   a=(double **)malloc(sizeof(double)*n);
   double (*b)[n]=(double(*)[n]) b_in ;
 
-/*
-if(debug){
-for(j=0;j<neq;j++){
-for(i=0;i<n;i++){
-printf("b_rsz(%i,%i) = %f;\n",j+1,i+1,b[j][i]); 
-}}
-}
-*/
   for(i=0;i<n;i++)
     {
       a[i]=(double *)malloc(sizeof(double)*n);
@@ -514,6 +473,7 @@ printf("\n");
   
   for(i=0;i<n;i++) free(a[i]);
   free(a);
+  free(b);
   free(Areg);
   free(breg);
   free(AregA);

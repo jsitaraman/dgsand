@@ -283,6 +283,9 @@ void faceIntegral(double *residual, double *fflux, double *bf, double *bfd, int 
 	  	  {
                     resf[m]-=(flux[f]*bvv[b]);
   		    residual[m]-=(flux[f]*bvv[b]);
+if(isnan(residual[m])){
+printf("faceIntegral NaN: i=%i m=%i fst=%i f=%i b=%i %.16e %.16e %.16e\n",i,m,fst,f,b,wgt,flux[f],bvv[b]);
+}
 		    m++;
 	 	  }
 	        }
@@ -385,8 +388,16 @@ printf("\tcut bvvd[%i] = %f %f\n",b,bvvd[0 + b*d], bvvd[1 + b*d]);
 	  {
 	    for(j=0;j<d;j++){
  	      //notice the sign change from the volIntegral routine
+ 	      if(isnan(bvvd[b*d+j]*flux[j][f]) ||  isnan(residual[m])){
+		printf("Uh Oh 1\n");
+		  int abcd = 1; 
+		}
 	      residual[m]-=(bvvd[b*d+j]*flux[j][f]); /* \grad b . F */
               keep[m]+=(bvvd[b*d+j]*flux[j][f]);
+ 	      if(isnan(bvvd[b*d+j]*flux[j][f]) ||  isnan(residual[m])){
+		printf("Uh Oh 2\n");
+		  int abcd = 1; 
+		}
 	    }
 	    m++;
 	  }
@@ -552,6 +563,10 @@ void setFaceQuantities(double *fnorm,double *fflux,int *elem2face, int *iptrf,
 	    {
 	      floc=fst+f; // increments through fields and gauss pts
 	      if(iblank[neigh]!=1){
+if(eid==160)
+for(b=0;b<nbasis;b++)	    
+printf("setFaceQuantities: q[%i] = %.16e\n",b,q[f*nbasis+b]);
+
   	        fflux[floc]=bvv[0]*q[f*nbasis];
 	        for(b=1;b<nbasis;b++)	    
 	  	  fflux[floc]+=(bvv[b]*q[f*nbasis+b]); 
@@ -649,6 +664,8 @@ void FILL_FACES(double *x, double *fnorm, double *fflux, int *elem2face,int *ipt
       setFaceQuantities(fnorm,fflux,elem2face+nfp*i, iptrf, 
 			faceWeight+ifw, bf+ibf, bfd+ibfd, q+iq,
 			nfields, pf, pde, d, e, p, faces, iblank,i);
+//      printf("FILL_FACE: i = %i, fflux[6336] = %.16e\n",i,fflux[6336]);
+//      if(fflux[6336]<0) exit(1); 
     }
   if(necut>0){
     for(i=0;i<necut;i++){
@@ -725,6 +742,13 @@ void COMPUTE_FACE_FLUXES(double *fnorm, double *fflux,
       ifr=ifl+nfields;
       iflux=ifr+nfields;
       gradient_indep_flux[pde](fflux+ifl,fflux+ifr,fflux+iflux,xnorm,0.0);
+//if(isnan(fflux[6344])){
+//  printf("NAN i = %i, lflux[%i] = %.16e, rflux[%i] = %.16e, net[%i] = %.16e, xnorm = %.16e, fflux[6344] = %.16e\n",i,ifl,fflux[ifl],ifr,fflux[ifr],iflux,fflux[iflux],xnorm,fflux[6344]);
+//  exit(1);
+//}
+//else{
+//  printf("i = %i, fflux[6344] = %.16e\n",i,fflux[6344]);
+//}
 
 /*
 if(i==1){
@@ -753,7 +777,7 @@ if(i==1) printf("\tflx = %f %f %f %f\n\n",fflux[iflux+0],fflux[iflux+1],fflux[if
     iflx=iptrc[i*pccut+16]; 
 
 int debug; 
-if(eid==1 && i==2){
+if(eid==160){
 debug = 1;
 }
 else{
@@ -801,9 +825,12 @@ printf("\tcut2neigh = %i\n",cut2neigh[ic2n+j]);
 //printf("\tifl %i, ifr %i, iflux %i\n",ifl,ifr,iflux);
 //printf("\tLflx = %f %f %f %f\n",fcflux[ifl+0],fcflux[ifl+1],fcflux[ifl+2],fcflux[ifl+3]); 
 //printf("\tRflx = %f %f %f %f\n",fcflux[ifr+0],fcflux[ifr+1],fcflux[ifr+2],fcflux[ifr+3]); 
-printf("\tLflx = %f \n",keep[0]);
-printf("\tRflx = %f \n",keep[1]);
-printf("\tflx = %f \n",keep[2]);
+printf("\tLflx = %f %f %f %f\n",flux[0],flux[1],flux[2],flux[3]); 
+printf("\tRflx = %f %f %f %f\n",flux[4],flux[5],flux[6],flux[7]); 
+printf("\tflx = %f %f %f %f\n",flux[8],flux[9],flux[10],flux[11]); 
+//printf("\tLflx = %f \n",keep[0]);
+//printf("\tRflx = %f \n",keep[1]);
+//printf("\tflx = %f \n",keep[2]);
 printf("\txNorm[%i] = %f %f \n",ixn + n*d*ngGL[e][p] + w*d,xnorm[0],xnorm[1]);
 }
 
@@ -877,41 +904,25 @@ void invertMass(double *mass, double *R, int pde, int d , int e, int p,int iscut
   // store residual vector to check solution later
   for(int i=0;i<nbasis;i++) b[i] = R[i]; 
 
-/*  if(iscut && ireg){
-
- printf("TEST2: R[ir] = %f\n",R[0]);
-
-    solvec_copy_reshape_reg(mass,R,&iflag,nbasis,nfields,debug);  
-
-if(debug){
- for(i=0;i<nbasis;i++)
- printf("update[%i] = %f\n",i,R[i]);
-}
-  }
-  else{
- for(i=0;i<nbasis;i++)
- for(j=0;j<nbasis;j++)
- printf("mass(%i,%i) = %.16e;\n",i+1,j+1,mass[i*nbasis+j]);
-
- for(i=0;i<nfields;i++){
- for(j=0;j<nbasis;j++)
- printf("res(%i) = %.16e;\n",j+1,R[i*nbasis+j]);
- printf("\n");
- }
+// DEBUG Arbitrary cropping of residuals below machine zero
+/*
+  for(int i=0;i<nbasis*nfields;i++){
+    if(fabs(R[i])<1e-15) R[i] = 0.0;
+    printf("R[%i,1] = %.16e\n",i+1,R[i]); 
+  }  
 */
-
-    // DEBUG XXX
+  if(iscut && ireg){
+    // LU solve
     lusolve(mass, R, nbasis,nfields); 
 
-/* for(i=0;i<nfields;i++){
- for(j=0;j<nbasis;j++)
- printf("dq(%i) = %.16e;\n",j+1,R[i*nbasis+j]);
- printf("\n");
- }
-*/
+//    solvec_copy_reshape_reg(mass,R,&iflag,nbasis,nfields,debug);  
+  }
+  else{
+    // LU solve
+    lusolve(mass, R, nbasis,nfields); 
 
 //    solvec_copy_reshape(mass,R,&iflag,nbasis,nfields);
-  //}
+  }
 
   // check accuracy of matrix solve
   checksol(mass,R,b,nbasis,ielem,debug);
@@ -1072,12 +1083,8 @@ if(isnan(R[j])){
 printf("Pre-cut res for elem %i is NaN\n",i);
 exit(1);
 }
-/*
-if(imesh==1 && (i==916)){
-printf("DEBUG: Mesh %i, full cell %i:\n",imesh,i);
-debug = 1;
-}
-else if(imesh==0 && i==3){
+
+if(imesh==1 && (i==160)){
 printf("DEBUG: Mesh %i, full cell %i:\n",imesh,i);
 debug = 1;
 }
@@ -1089,7 +1096,7 @@ for(int f = 0; f<nfields; f++)
 for(int j = 0; j<nbasis; j++)
 printf("\tq weights, q(f = %i, b = %i) = %f\n",f,j,q[iq+f*nbasis+j]);
 }
-*/
+
 
       if(iblank[i]!=1){
         volIntegral(R+iR,bv+ibv,bvd+ibvd,q+iq,detJ+idet, pde,d,e,p,i);
@@ -1099,14 +1106,15 @@ for(int j = 0; j<nbasis; j++)
 printf("\tonly vol R(f = %i, b = %i) = %f\n",f,j,R[iR+f*nbasis+j]);
 }
 */
+
         faceIntegral(R+iR,fflux,bf+ibf,bfd+ibfd,elem2face+nfp*i,iptrf,q,pf,pde,d,e,p,i,faces,iblank,i);
-/*
+
 if(debug){
 for(int f = 0; f<nfields; f++)
 for(int j = 0; j<nbasis; j++)
 printf("\tfull R(f = %i, b = %i) = %f\n",f,j,R[iR+f*nbasis+j]);
 }
-*/
+
 
       }
     }
@@ -1132,7 +1140,8 @@ printf("\tfull R(f = %i, b = %i) = %f\n",f,j,R[iR+f*nbasis+j]);
       ishp=iptrc[ix+15];
       iflx2=iptrc[ix+16];
 
-if(imesh==1 && eid==1){
+
+if(imesh==1 && eid==160){
 printf("DEBUG: Mesh %i, cut cell %i:\n",imesh,i);
 printf("CUT VOL:\n"); 
 debug = 1;
@@ -1193,24 +1202,23 @@ max = 0;
       }
 #endif     
 
-if(imesh==1 & (i==0)){
+if (imesh==1 &&i == 160 ) {
 debug = 1; 
 printf("MESH %i ELEM %i \n", imesh,i);
 //for(int f = 0; f<nfields; f++)
 f=0;
-printf("TEST: R[ir] = %f\n",R[iR]);
 for(int j = 0; j<nbasis; j++){
-//R[iR+f*nbasis+j] = 0.001; 
-printf("\tComplete R(f = %i, b = %i) = %f\n",f,j,R[iR+f*nbasis+j]);
-}
+printf("\tR(%i) = %.16e;\n",j+1,R[iR+f*nbasis+j]);
+
 printf("\n");
+}
 int m = 0; 
-/*for(int k = 0; k<nbasis; k++)
+for(int k = 0; k<nbasis; k++)
 for(int j = 0; j<nbasis; j++){
-printf("mass(%i,%i) = %f\n",k+1,j+1,mass[im+m]);
+printf("mass(%i,%i) = %.16e;\n",k+1,j+1,mass[im+m]);
 m++;
 }
-*/
+
 }
 else{
 debug = 0; 
@@ -1220,19 +1228,18 @@ debug = 0;
       for(j=0;j<necut;j++)
         if(abs(i-cut2e[j])==0){
           iscut=1;
-debug = 1; 
 	  break;    
         }
 //printf("Elem %i\n",i);
       invertMass(mass+im,R+iR,pde,d,e,p,iscut,ireg,debug,i);
 
-//if(imesh==0 && (i==3||i==895)){
-//printf("\n");
-//for(int f = 0; f<nfields; f++)
-//for(int j = 0; j<nbasis; j++)
-//printf("\tUpdate(f = %i, b = %i) = %f\n",f,j,R[iR+f*nbasis+j]);
-//}
-//
+if(debug){
+printf("\n");
+for(int f = 0; f<nfields; f++)
+for(int j = 0; j<nbasis; j++)
+printf("\tUpdate(%i) = %.16e;\n",j+1,R[iR+f*nbasis+j]);
+}
+
     }
 }
 
@@ -1280,6 +1287,7 @@ void UPDATE_DOFS(double *qdest, double coef, double *qsrc, double *R, int ndof)
   int i;
   for(i=0;i<ndof;i++)
     qdest[i]=qsrc[i]+coef*R[i];
+printf("UPDATE_DOFS: coef = %.16e, R[1932] = %.16e\n",coef,R[1932]); 
 }
 
 double COMPUTE_CONSERVATION(double *q, double *detJ, double *bv, int *iptr, int *iblank,
