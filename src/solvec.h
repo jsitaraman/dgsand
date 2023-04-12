@@ -89,7 +89,7 @@ void fsub(double* L, double* y, double* b, int n){
     sum = 0; 
     for(int j=0;j<i;j++)
       sum += L[i*n+j]*y[j];
-    y[i] = (b[i]-sum)/(L[i*n+i]+1e-16);
+    y[i] = (b[i]-sum)/(L[i*n+i]);
   } 
 }
 
@@ -97,13 +97,13 @@ void bsub(double* U, double* x, double* b, int n){
   double sum; 
   for(int i=0;i<n;i++) x[i] = 0.0; 
   
-  for(int i=n;i>=0;i--){
+  for(int i=n-1;i>=0;i--){
     x[i] = b[i];
 
     sum = 0;
     for(int j=n;j>i;j--)
       sum +=U[i*n+j]*x[j]; 
-    x[i] = (b[i]-sum)/(U[i*n+i]+1e-16);
+    x[i] = (b[i]-sum)/(U[i*n+i]);
   }
 }
 
@@ -131,6 +131,17 @@ void lusolve_reg(double* A, double* b, int n, int neq)
 
   // Do LU solve
   lu(AregA,L,U,n);
+
+  for(int i=0;i<n;i++)
+    if(L[i*n+i]==0 || U[i*n+i]==0){
+      printf("\nFAIL: L or U has zero in diagonal!\n");
+      for(int j=0;j<n;j++)
+      for(int k=0;k<n;k++)
+        printf("\nL(%i,%i) = %.16e;\n",j+1,k+1,L[j*n+k]);
+      for(int j=0;j<n;j++)
+      for(int k=0;k<n;k++)
+        printf("\nU(%i,%i) = %.16e;\n",j+1,k+1,U[j*n+k]);
+    }
   for(int i=0;i<neq;i++){
     for(int j=0;j<2*n;j++)
       if(j<n){
@@ -149,8 +160,27 @@ void lusolve_reg(double* A, double* b, int n, int neq)
 void lusolve(double* A, double* b, int n, int neq)
 {
   double  x[n], y[n], L[n*n], U[n*n], btmp[n];
-  
+
   lu(A,L,U,n);
+  for(int i=0;i<n;i++)
+    if(L[i*n+i]==0 || U[i*n+i]==0){
+      printf("\nFAIL: L or U has zero in diagonal!\n");
+      for(int j=0;j<n;j++)
+      for(int k=0;k<n;k++)
+        printf("\nL(%i,%i) = %.16e;\n",j+1,k+1,L[j*n+k]);
+      for(int j=0;j<n;j++)
+      for(int k=0;k<n;k++)
+        printf("\nU(%i,%i) = %.16e;\n",j+1,k+1,U[j*n+k]);
+      exit(1); 
+    }
+  for(int i=0;i<n;i++)
+  for(int j=0;j<n;j++)
+    printf("L(%i,%i) = %.16e;\n",i+1,j+1,L[i*n+j]);
+  for(int i=0;i<n;i++)
+  for(int j=0;j<n;j++)
+    printf("U(%i,%i) = %.16e;\n",i+1,j+1,U[i*n+j]);
+  
+
   for(int i=0;i<neq;i++){
     for(int j=0;j<n;j++) btmp[j] = b[n*i+j];
     fsub(L,y,btmp,n);
