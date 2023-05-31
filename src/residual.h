@@ -59,7 +59,7 @@ double consFaceIntegral( double *fflux,  int *elem2face,
 	  for(f=0;f<nfields;f++)
 	    {
 	      // measure fluxes only at outer boundaries
-//	        if (f==0) printf("\t\trho flux=%f\n",flux[f]);
+//	        if (f==0) printf("\t\trho flux=%.16e\n",flux[f]);
                 flux[f]=fflux[fst+f]*wgt;
 		resf[m]-=(flux[f]);
 		m++;
@@ -68,7 +68,7 @@ double consFaceIntegral( double *fflux,  int *elem2face,
 	  fst+=(3*fsgn*nfields);
 	}
     }
-//  printf("\tSUM rho flux=%f\n",resf[0]);
+//  printf("\tSUM rho flux=%.16e\n",resf[0]);
   return resf[f1];
 }
 
@@ -144,7 +144,7 @@ double cutFaceCons(double *fflux,
 }
 
 void volIntegral(double *residual, double *bv, double *bvd, double *q, double *detJ,
-		 int pde, int d, int e, int p, int eid)
+		 int pde, int d, int e, int p, int eid, int debug)
 {
   int b,w,i,j,l,ld,m,f,n;
   int nbasis=order2basis[e][p];
@@ -156,6 +156,8 @@ void volIntegral(double *residual, double *bv, double *bvd, double *q, double *d
   int g=p2g[e][p];
   
   l=ld=0;
+if(debug)
+printf("VOL INTEGRAL: EID = %i\n"); 
 
   // for all gauss-quadrature points 
   for(w=0;w<ngElem[e][p];w++)
@@ -183,20 +185,19 @@ void volIntegral(double *residual, double *bv, double *bvd, double *q, double *d
       for(j=0;j<d;j++)
 	flux_function[pde](flux[j],qv,qvd,j);
 
-/*if(eid==2){
+if(debug){
 printf("\n");
 for(f=0;f<nfields;f++){
-printf("wgt = %f\n",wgt); 
-printf("w = %i, qv = %f, qvd[%i] = %f %f\n",w,f,qv[f],qvd[f][0],qvd[f][1]);
+printf("wgt = %.16e\n",wgt); 
+printf("w = %i, qv = %.16e, qvd[%i] = %.16e %.16e\n",w,f,qv[f],qvd[f][0],qvd[f][1]);
 }
 for(f=0;f<nfields;f++){
-printf("flux[%i] = %f %f\n",f,flux[0][f],flux[1][f]);
+printf("flux[%i] = %.16e %.16e\n",f,flux[0][f],flux[1][f]);
 }
 for(b=0;b<nbasis;b++){
-printf("bvvd[%i] = %f %f\n",b,bvvd[0 + b*d], bvvd[1 + b*d]);
+printf("bvvd[%i] = %.16e %.16e\n",b,bvvd[0 + b*d], bvvd[1 + b*d]);
 }
 }
-*/
 
       m=0;
       n=0;
@@ -214,26 +215,25 @@ printf("bvvd[%i] = %f %f\n",b,bvvd[0 + b*d], bvvd[1 + b*d]);
 	  }
         }
 
-/*if(eid==2){
+if(debug){
 printf("\n");
 m=0;
 n=0; 
 for(f=0;f<nfields;f++){
 	 for(b=0;b<nbasis;b++){
 	 for(j=0;j<d;j++){
-	   printf("f %i, b %i, d %i, N %f, flux %f, vol res input = %f\n",f, b, j,bvvd[b*d+j], flux[j][f], keep[n++]);
+	   printf("f %i, b %i, d %i, N %.16e, flux %.16e, vol res input = %.16e\n",f, b, j,bvvd[b*d+j], flux[j][f], keep[n++]);
 }
 }
 printf("\n");
 }
 for(f=0;f<nfields;f++){
 	 for(b=0;b<nbasis;b++)
-		printf("w = %i, Rvol[%i] = %f\n",w,m,residual[m++]);
+		printf("w = %i, Rvol[%i] = %.16e\n",w,m,residual[m++]);
 printf("\n");
 }
 
 }
-*/
     }
 }
 
@@ -296,7 +296,7 @@ printf("\n");
 m = 0; 
   for(f=0;f<nfields;f++)
     for(b=0;b<nbasis;b++){
-        printf("face %i, w %i, flux[%i] = %f, bvv[%i] = %f\n\tresf[%i]=%f\n",i, w,f,flux[f],b,bvv[b],m,flux[f]*bvv[b]); 
+        printf("face %i, w %i, flux[%i] = %.16e, bvv[%i] = %.16e\n\tresf[%i]=%.16e\n",i, w,f,flux[f],b,bvv[b],m,flux[f]*bvv[b]); 
 	m++;
      }
 }
@@ -311,7 +311,7 @@ printf("\n");
 m = 0; 
   for(f=0;f<nfields;f++)
     for(b=0;b<nbasis;b++){
-        printf("f = %i, b = %i, face res =%f\n",f,b,resf[m]);
+        printf("f = %i, b = %i, face res =%.16e\n",f,b,resf[m]);
 	m++;
      }
 }
@@ -370,14 +370,14 @@ void cutVol(double *residual, double *bv, double *bvd, double *q, double *detJ,
  if(debug){
 printf("\n");
 for(f=0;f<nfields;f++){
-printf("\tcut wgt = %f\n",wgt); 
-printf("\tcut w = %i, qv = %f, qvd[%i] = %f %f\n",w,f,qv[f],qvd[f][0],qvd[f][1]);
+printf("\tcut wgt = %.16e\n",wgt); 
+printf("\tcut w = %i, qv = %.16e, qvd[%i] = %.16e %.16e\n",w,f,qv[f],qvd[f][0],qvd[f][1]);
 }
 for(f=0;f<nfields;f++){
-printf("\tcut flux[%i] = %f %f\n",f,flux[0][f],flux[1][f]);
+printf("\tcut flux[%i] = %.16e %.16e\n",f,flux[0][f],flux[1][f]);
 }
 for(b=0;b<nbasis;b++){
-printf("\tcut bvvd[%i] = %f %f\n",b,bvvd[0 + b*d], bvvd[1 + b*d]);
+printf("\tcut bvvd[%i] = %.16e %.16e\n",b,bvvd[0 + b*d], bvvd[1 + b*d]);
 }
 }
 
@@ -408,7 +408,7 @@ if(debug){
 printf("\n");
   for(f=0;f<nfields;f++){
   for(b=0;b<nbasis;b++)
-  printf("\tR_volcut[%i] = %f\n",f*nbasis+b,keep[f*nbasis+b]);
+  printf("\tR_volcut[%i] = %.16e\n",f*nbasis+b,keep[f*nbasis+b]);
   printf("\n");
   }
   }
@@ -454,7 +454,7 @@ m=0;
 printf("\n");
             for(f=0;f<nfields;f++){
               for(b=0;b<nbasis;b++){
-printf("\tstarting res[%i] = %f\n",m,residual[m]);
+printf("\tstarting res[%i] = %.16e\n",m,residual[m]);
 m++;
 }
 printf("\n");
@@ -475,7 +475,7 @@ if(debug)	  printf("\tcutoverset = %i, iblank neigh = %i, cut2face = %i\n",cutov
               for(b=0;b<nbasis;b++){
 		keep[m]+=(wgt*flux[f]*bvv[b]);
                 residual[m]-=(wgt*flux[f]*bvv[b]); // note minus sign b/c we're adding flux through overset face
-if(f==0 && debug)		  printf("\tside %i, cut overset = 1\n\t seg %i, w = %f , field %i, basis %i, m = %i,\n\tOSFflux[%i] = %f, bvv[%i] = %f, res inc = %f, curr res = %f\n",i,n,wgt,f,b,m,n*ngGL[e][p]*3*nfields+w*3*nfields+2*nfields+f,flux[f],n*ngGL[e][p]*nbasis+w*nbasis+b,bvv[b],flux[f]*bvv[b]*wgt,residual[m]);
+if(f==0 && debug)		  printf("\tside %i, cut overset = 1\n\t seg %i, w = %.16e , field %i, basis %i, m = %i,\n\tOSFflux[%i] = %.16e, bvv[%i] = %.16e, res inc = %.16e, curr res = %.16e\n",i,n,wgt,f,b,m,n*ngGL[e][p]*3*nfields+w*3*nfields+2*nfields+f,flux[f],n*ngGL[e][p]*nbasis+w*nbasis+b,bvv[b],flux[f]*bvv[b]*wgt,residual[m]);
                 m++;
 	      }
             } // loop over fields
@@ -502,7 +502,7 @@ if(f==0 && debug)		  printf("\tside %i, cut overset = 1\n\t seg %i, w = %f , fie
 	  	    {
 		      keep[m]+=(wgt*flux[f]*bvv[b]);
   		      residual[m]+=(wgt*flux[f]*bvv[b]); // note plus sign b/c we're subtracting cut flux from entire edge flux
-if(debug && f ==0)		  printf("\tside %i, cut overset = %i\n\tw %i = %f, field %i, basis %i, m %i,\n\tflux[%i] = %f, bvv = %f, res inc = %f, curr res = %f\n",i,cutoverset[i],w,wgt,f,b,m,floc+f,flux[f],bvv[b],flux[f]*bvv[b]*wgt,residual[m]);
+if(debug && f ==0)		  printf("\tside %i, cut overset = %i\n\tw %i = %.16e, field %i, basis %i, m %i,\n\tflux[%i] = %.16e, bvv = %.16e, res inc = %.16e, curr res = %.16e\n",i,cutoverset[i],w,wgt,f,b,m,floc+f,flux[f],bvv[b],flux[f]*bvv[b]*wgt,residual[m]);
 		      m++;
 		    }
 	          }
@@ -519,7 +519,7 @@ printf("\n");
 m=0;
   for(f=0;f<nfields;f++){
   for(b=0;b<nbasis;b++){
-  printf("\tR_facecut[%i] = %f\n",f*nbasis+b,keep[m]);
+  printf("\tR_facecut[%i] = %.16e\n",f*nbasis+b,keep[m]);
   m++ ;
   }
   printf("\n");
@@ -742,6 +742,17 @@ void COMPUTE_FACE_FLUXES(double *fnorm, double *fflux,
       ifr=ifl+nfields;
       iflux=ifr+nfields;
       gradient_indep_flux[pde](fflux+ifl,fflux+ifr,fflux+iflux,xnorm,0.0);
+
+      for(int j=1;j<nfields;j++){
+        double tmpL = fflux[ifl+j];
+        double tmpR = fflux[ifr+j];
+        double tmpF = fflux[ifl+j];
+
+        if(isnan(tmpL) || isnan(tmpR) ||isnan(tmpF)){
+          printf("Flux NaN on face %i field %i: %.16e %.16e %.16e %.16e %.16e\n",i,j,fflux+ifl,fflux+ifr,fflux+iflux,xnorm);
+          exit(1); 
+        }
+      }
 //if(isnan(fflux[6344])){
 //  printf("NAN i = %i, lflux[%i] = %.16e, rflux[%i] = %.16e, net[%i] = %.16e, xnorm = %.16e, fflux[6344] = %.16e\n",i,ifl,fflux[ifl],ifr,fflux[ifr],iflux,fflux[iflux],xnorm,fflux[6344]);
 //  exit(1);
@@ -754,13 +765,13 @@ void COMPUTE_FACE_FLUXES(double *fnorm, double *fflux,
 if(i==1){
 printf("FULL i %i, j %i, w %i\n",i,j,w);
 printf("\tifl %i, ifr %i, iflux %i\n",ifl,ifr,iflux);
-printf("\tLflx = %f %f %f %f\n",fflux[ifl+0],fflux[ifl+1],fflux[ifl+2],fflux[ifl+3]); 
-printf("\tRflx = %f %f %f %f\n",fflux[ifr+0],fflux[ifr+1],fflux[ifr+2],fflux[ifr+3]); 
-printf("\txNorm = %f %f \n",xnorm[0],xnorm[1]);
+printf("\tLflx = %.16e %.16e %.16e %.16e\n",fflux[ifl+0],fflux[ifl+1],fflux[ifl+2],fflux[ifl+3]); 
+printf("\tRflx = %.16e %.16e %.16e %.16e\n",fflux[ifr+0],fflux[ifr+1],fflux[ifr+2],fflux[ifr+3]); 
+printf("\txNorm = %.16e %.16e \n",xnorm[0],xnorm[1]);
 }
 
 
-if(i==1) printf("\tflx = %f %f %f %f\n\n",fflux[iflux+0],fflux[iflux+1],fflux[iflux+2],fflux[iflux+3]); 
+if(i==1) printf("\tflx = %.16e %.16e %.16e %.16e\n\n",fflux[iflux+0],fflux[iflux+1],fflux[iflux+2],fflux[iflux+3]); 
 */
     }
 //printf("\n======================\ngetting cut face fluxes\n============================\n");
@@ -799,6 +810,7 @@ debug = 0;
 	    flux=OSFflux + iflx + n*ngGL[e][p]*3*nfields + w*3*nfields;
 
             gradient_indep_flux[pde](flux,flux+nfields,flux+2*nfields,xnorm,0.0);
+
 	    keep[0] = flux[0];
 	    keep[1] = flux[0+nfields];
 	    keep[2] = flux[0+2*nfields];
@@ -807,33 +819,33 @@ printf("\tflux index:\n\t\tiflux = %i\n\t\tseg ind = %i\n\t\tcur gauss = %i\n",i
 printf("\nORIG %i, CUT i %i, j %i, seg %i, w %i\n",eid,i,j,n,w);
 printf("\tcutoverset = %i\n",cutoverset[ico+j]);
 printf("\tcut2neigh = %i\n",cut2neigh[ic2n+j]);
-printf("\tLflx = %f %f %f %f\n",flux[0],flux[1],flux[2],flux[3]); 
-printf("\tRflx = %f %f %f %f\n",flux[4],flux[5],flux[6],flux[7]); 
-//printf("\tLflx = %f \n",keep[0]);
-//printf("\tRflx = %f \n",keep[1]);
-printf("\txNorm[%i] = %f %f \n",ixn + n*d*ngGL[e][p] + w*d,xnorm[0],xnorm[1]);
+printf("\tLflx = %.16e %.16e %.16e %.16e\n",flux[0],flux[1],flux[2],flux[3]); 
+printf("\tRflx = %.16e %.16e %.16e %.16e\n",flux[4],flux[5],flux[6],flux[7]); 
+//printf("\tLflx = %.16e \n",keep[0]);
+//printf("\tRflx = %.16e \n",keep[1]);
+printf("\txNorm[%i] = %.16e %.16e \n",ixn + n*d*ngGL[e][p] + w*d,xnorm[0],xnorm[1]);
 
-printf("\tflx = %f \n",keep[2]);
+printf("\tflx = %.16e \n",keep[2]);
 exit(1);
 }
-
+/*
 if(debug){
 printf("\tflux index:\n\t\tiflux = %i\n\t\tseg ind = %i\n\t\tcur gauss = %i\n",iflx,n*ngGL[e][p]*3*nfields,w*3*nfields);
 printf("\nORIG %i, CUT i %i, j %i, seg %i, w %i\n",eid,i,j,n,w);
 printf("\tcutoverset = %i\n",cutoverset[ico+j]); 
 printf("\tcut2neigh = %i\n",cut2neigh[ic2n+j]); 
 //printf("\tifl %i, ifr %i, iflux %i\n",ifl,ifr,iflux);
-//printf("\tLflx = %f %f %f %f\n",fcflux[ifl+0],fcflux[ifl+1],fcflux[ifl+2],fcflux[ifl+3]); 
-//printf("\tRflx = %f %f %f %f\n",fcflux[ifr+0],fcflux[ifr+1],fcflux[ifr+2],fcflux[ifr+3]); 
-printf("\tLflx = %f %f %f %f\n",flux[0],flux[1],flux[2],flux[3]); 
-printf("\tRflx = %f %f %f %f\n",flux[4],flux[5],flux[6],flux[7]); 
-printf("\tflx = %f %f %f %f\n",flux[8],flux[9],flux[10],flux[11]); 
-//printf("\tLflx = %f \n",keep[0]);
-//printf("\tRflx = %f \n",keep[1]);
-//printf("\tflx = %f \n",keep[2]);
-printf("\txNorm[%i] = %f %f \n",ixn + n*d*ngGL[e][p] + w*d,xnorm[0],xnorm[1]);
+//printf("\tLflx = %.16e %.16e %.16e %.16e\n",fcflux[ifl+0],fcflux[ifl+1],fcflux[ifl+2],fcflux[ifl+3]); 
+//printf("\tRflx = %.16e %.16e %.16e %.16e\n",fcflux[ifr+0],fcflux[ifr+1],fcflux[ifr+2],fcflux[ifr+3]); 
+printf("\tLflx = %.16e %.16e %.16e %.16e\n",flux[0],flux[1],flux[2],flux[3]); 
+printf("\tRflx = %.16e %.16e %.16e %.16e\n",flux[4],flux[5],flux[6],flux[7]); 
+printf("\tflx = %.16e %.16e %.16e %.16e\n",flux[8],flux[9],flux[10],flux[11]); 
+//printf("\tLflx = %.16e \n",keep[0]);
+//printf("\tRflx = %.16e \n",keep[1]);
+//printf("\tflx = %.16e \n",keep[2]);
+printf("\txNorm[%i] = %.16e %.16e \n",ixn + n*d*ngGL[e][p] + w*d,xnorm[0],xnorm[1]);
 }
-
+*/
 
 
           }// loop over gauss pts
@@ -867,12 +879,12 @@ printf("\nORIG %i, CUT i %i, j %i, w %i\n",eid,i,j,w);
 printf("\tcutoverset = %i\n",cutoverset[ico+j]); 
 printf("\tcut2neigh = %i\n",cut2neigh[ic2n+j]); 
 //printf("\tifl %i, ifr %i, iflux %i\n",ifl,ifr,iflux);
-//printf("\tLflx = %f %f %f %f\n",fcflux[ifl+0],fcflux[ifl+1],fcflux[ifl+2],fcflux[ifl+3]); 
-//printf("\tRflx = %f %f %f %f\n",fcflux[ifr+0],fcflux[ifr+1],fcflux[ifr+2],fcflux[ifr+3]); 
-printf("\tLflx = %f \n",keep[0]);
-printf("\tRflx = %f \n",keep[1]);
-printf("\tflx = %f \n",keep[2]);
-printf("\txNorm[%i] = %f %f \n",wloc,xnorm[0],xnorm[1]);
+//printf("\tLflx = %.16e %.16e %.16e %.16e\n",fcflux[ifl+0],fcflux[ifl+1],fcflux[ifl+2],fcflux[ifl+3]); 
+//printf("\tRflx = %.16e %.16e %.16e %.16e\n",fcflux[ifr+0],fcflux[ifr+1],fcflux[ifr+2],fcflux[ifr+3]); 
+printf("\tLflx = %.16e \n",keep[0]);
+printf("\tRflx = %.16e \n",keep[1]);
+printf("\tflx = %.16e \n",keep[2]);
+printf("\txNorm[%i] = %.16e %.16e \n",wloc,xnorm[0],xnorm[1]);
 }
 */
         } // if gauss pt
@@ -882,7 +894,7 @@ printf("\txNorm[%i] = %f %f \n",wloc,xnorm[0],xnorm[1]);
 
 /*
 if(debug){
-printf("\tflx%i = [%f %f %f %f]\n",(j*ngGL[e][p]+w),fcflux[iflux+0],fcflux[iflux+1],fcflux[iflux+2],fcflux[iflux+3]); 
+printf("\tflx%i = [%.16e %.16e %.16e %.16e]\n",(j*ngGL[e][p]+w),fcflux[iflux+0],fcflux[iflux+1],fcflux[iflux+2],fcflux[iflux+3]); 
 printf("\tneigh = %i, eid = %i, blank = %i\n",neigh,eid,iblank[neigh]);
 }
 */
@@ -892,7 +904,7 @@ printf("\tneigh = %i, eid = %i, blank = %i\n",neigh,eid,iblank[neigh]);
 }
 
 
-void invertMass(double *mass, double *R, int pde, int d , int e, int p,int iscut,int ireg, int debug, int ielem)
+void invertMass(double *mass, double *R, int pde, int d , int e, int p,int iscut,int ireg, int ielem)
 {
   int i,j,f;
   int nbasis=order2basis[e][p];
@@ -900,20 +912,13 @@ void invertMass(double *mass, double *R, int pde, int d , int e, int p,int iscut
   int nfields=get_nfields[pde](d);
   double b[nbasis];
 
-// printf("\nelem %i\n",ielem);
+  printf("\nelem %i\n",ielem);
   // store residual vector to check solution later
   for(int i=0;i<nbasis;i++) b[i] = R[i]; 
 
-// DEBUG Arbitrary cropping of residuals below machine zero
-/*
-  for(int i=0;i<nbasis*nfields;i++){
-    if(fabs(R[i])<1e-15) R[i] = 0.0;
-    printf("R[%i,1] = %.16e\n",i+1,R[i]); 
-  }  
-*/
   if(iscut && ireg){
     // LU solve
-    lusolve(mass, R, nbasis,nfields); 
+    lusolve_reg(mass, R, nbasis,nfields); 
 
 //    solvec_copy_reshape_reg(mass,R,&iflag,nbasis,nfields,debug);  
   }
@@ -925,13 +930,8 @@ void invertMass(double *mass, double *R, int pde, int d , int e, int p,int iscut
   }
 
   // check accuracy of matrix solve
-  checksol(mass,R,b,nbasis,ielem,debug);
+  checksol(mass,R,b,nbasis,ielem);
 
-/*if(debug){
- for(i=0;i<nbasis;i++)
- printf("update[%i] = %.16e\n",i,R[i]);
-}
-*/
 }
 
 
@@ -1084,7 +1084,7 @@ printf("Pre-cut res for elem %i is NaN\n",i);
 exit(1);
 }
 
-if(imesh==1 && (i==160)){
+if(imesh==1 && i==20){
 printf("DEBUG: Mesh %i, full cell %i:\n",imesh,i);
 debug = 1;
 }
@@ -1094,25 +1094,25 @@ debug = 0;
 if(debug){ // print out node weights
 for(int f = 0; f<nfields; f++)
 for(int j = 0; j<nbasis; j++)
-printf("\tq weights, q(f = %i, b = %i) = %f\n",f,j,q[iq+f*nbasis+j]);
+printf("\tq weights, q(f = %i, b = %i) = %.16e\n",f,j,q[iq+f*nbasis+j]);
 }
 
 
       if(iblank[i]!=1){
-        volIntegral(R+iR,bv+ibv,bvd+ibvd,q+iq,detJ+idet, pde,d,e,p,i);
-/*if(debug){
+        volIntegral(R+iR,bv+ibv,bvd+ibvd,q+iq,detJ+idet, pde,d,e,p,i,debug);
+if(debug){
 for(int f = 0; f<nfields; f++)
 for(int j = 0; j<nbasis; j++)
-printf("\tonly vol R(f = %i, b = %i) = %f\n",f,j,R[iR+f*nbasis+j]);
+printf("\tonly vol R(f = %i, b = %i) = %.16e\n",f,j,R[iR+f*nbasis+j]);
 }
-*/
+
 
         faceIntegral(R+iR,fflux,bf+ibf,bfd+ibfd,elem2face+nfp*i,iptrf,q,pf,pde,d,e,p,i,faces,iblank,i);
 
 if(debug){
 for(int f = 0; f<nfields; f++)
 for(int j = 0; j<nbasis; j++)
-printf("\tfull R(f = %i, b = %i) = %f\n",f,j,R[iR+f*nbasis+j]);
+printf("\tfull R(f = %i, b = %i) = %.16e\n",f,j,R[iR+f*nbasis+j]);
 }
 
 
@@ -1202,11 +1202,11 @@ max = 0;
       }
 #endif     
 
-if (imesh==1 &&i == 160 ) {
+if (imesh==1 &&i == 20 ) {
 debug = 1; 
 printf("MESH %i ELEM %i \n", imesh,i);
 //for(int f = 0; f<nfields; f++)
-f=0;
+for(int f = 0; f<nfields; f++)
 for(int j = 0; j<nbasis; j++){
 printf("\tR(%i) = %.16e;\n",j+1,R[iR+f*nbasis+j]);
 
@@ -1230,10 +1230,10 @@ debug = 0;
           iscut=1;
 	  break;    
         }
-//printf("Elem %i\n",i);
-      invertMass(mass+im,R+iR,pde,d,e,p,iscut,ireg,debug,i);
 
-if(debug){
+      invertMass(mass+im,R+iR,pde,d,e,p,iscut,ireg,i);
+
+if(imesh==1 && i==20){
 printf("\n");
 for(int f = 0; f<nfields; f++)
 for(int j = 0; j<nbasis; j++)
@@ -1340,12 +1340,12 @@ double COMPUTE_CONSERVATION(double *q, double *detJ, double *bv, int *iptr, int 
 //      cons-=cons1;
     }
 
-//  printf("f = %i, cons1 = %f, fcons1=%f \n",fieldid,cons1,fcons1);
+//  printf("f = %i, cons1 = %.16e, fcons1=%.16e \n",fieldid,cons1,fcons1);
   fcons+=fcons1;
   (*faceFluxSum)+=fcons;
-//  printf("\tfaceFluxSum=%f\n",*faceFluxSum);
+//  printf("\tfaceFluxSum=%.16e\n",*faceFluxSum);
   cons-=((*faceFluxSum)*dt);
-//  printf("\tNet cons=%f\n",cons-cons1);
+//  printf("\tNet cons=%.16e\n",cons-cons1);
   return cons;
 }
 

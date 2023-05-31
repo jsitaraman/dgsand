@@ -1,8 +1,13 @@
+#include<math.h>
 #define invmat2x2(mat,jac,det) { det=mat[0][0]*mat[1][1]-mat[0][1]*mat[1][0];     \
                                  jac[0][0]=mat[1][1]/det;jac[0][1]=-mat[0][1]/det; \
                                  jac[1][0]=-mat[1][0]/det;jac[1][1]=mat[0][0]/det; }
 
-void matmult(double *A, double *B, double *C,int m,int n, int p, int debug){
+double roundeps(double in,double eps) {
+ return round(in/eps)*eps;
+}
+
+void matmult(double *A, double *B, double *C,int m,int n, int p){
 // computes C = A*B where A(m,n) and B(n,p) and C(m,p)
 
   int i, j, k;
@@ -112,7 +117,7 @@ void bsub(double* U, double* x, double* b, int n){
 void lusolve_reg(double* A, double* b, int n, int neq)
 {
   double  x[n], y[n], L[n*n], U[n*n], btmp[2*n];
- 
+
   // Fill regularized Areg = [A; lambda*I] and breg = [b; zeros(n,1)]
   double Areg[2*n*n], AregT[2*n*n], AregA[n*n], breg[2*n], Aregb[n];
   for(int i=0;i<2*n;i++){
@@ -126,12 +131,12 @@ void lusolve_reg(double* A, double* b, int n, int neq)
       AregT[j*n+i] = Areg[i*n+j];
     }
   }
-  matmult(AregT,Areg,AregA,n,2*n,n,0);
+  matmult(AregT,Areg,AregA,n,2*n,n);
   
 
   // Do LU solve
   lu(AregA,L,U,n);
-
+/*
   for(int i=0;i<n;i++)
     if(L[i*n+i]==0 || U[i*n+i]==0){
       printf("\nFAIL: L or U has zero in diagonal!\n");
@@ -142,6 +147,7 @@ void lusolve_reg(double* A, double* b, int n, int neq)
       for(int k=0;k<n;k++)
         printf("\nU(%i,%i) = %.16e;\n",j+1,k+1,U[j*n+k]);
     }
+*/
   for(int i=0;i<neq;i++){
     for(int j=0;j<2*n;j++)
       if(j<n){
@@ -150,7 +156,7 @@ void lusolve_reg(double* A, double* b, int n, int neq)
       else{
         breg[j] = 0.0;
       } 
-    matmult(AregT,breg,Aregb,n,2*n,1,0);
+    matmult(AregT,breg,Aregb,n,2*n,1);
     fsub(L,y,Aregb,n);
     bsub(U,btmp,y,n); 
     for(int j=0;j<n;j++) b[n*i+j] = btmp[j];
@@ -160,8 +166,10 @@ void lusolve_reg(double* A, double* b, int n, int neq)
 void lusolve(double* A, double* b, int n, int neq)
 {
   double  x[n], y[n], L[n*n], U[n*n], btmp[n];
+  double eps = 1e-15; 
 
   lu(A,L,U,n);
+/*
   for(int i=0;i<n;i++)
     if(L[i*n+i]==0 || U[i*n+i]==0){
       printf("\nFAIL: L or U has zero in diagonal!\n");
@@ -179,9 +187,10 @@ void lusolve(double* A, double* b, int n, int neq)
   for(int i=0;i<n;i++)
   for(int j=0;j<n;j++)
     printf("U(%i,%i) = %.16e;\n",i+1,j+1,U[i*n+j]);
-  
+  */
 
   for(int i=0;i<neq;i++){
+//    for(int j=0;j<n;j++) btmp[j] = roundeps(b[n*i+j],eps);
     for(int j=0;j<n;j++) btmp[j] = b[n*i+j];
     fsub(L,y,btmp,n);
     bsub(U,btmp,y,n); // rewriting b (aka res) with final solution
@@ -189,7 +198,7 @@ void lusolve(double* A, double* b, int n, int neq)
   }
 }
 
-void checksol(double* A, double* x, double* b, int n, int ind, int debug)
+void checksol(double* A, double* x, double* b, int n, int ind)
 {
   // checks the accuracy of the computed solution and for the existence of NaNs
 
@@ -204,11 +213,11 @@ void checksol(double* A, double* x, double* b, int n, int ind, int debug)
   // res = Ax-b
   double *res; 
   res=(double *)calloc(n,sizeof(double));
-  matmult(A,x,res,n,n,1,debug);
+  matmult(A,x,res,n,n,1);
   for(int i=0;i<n;i++) 
     res[i] = res[i]-b[i];
 
-
+/*
   if(debug){
     for(int i=0;i<n;i++) 
 //      printf("\tAx-b[%i] = %.16e\n",i,res[i]);
@@ -226,6 +235,7 @@ void checksol(double* A, double* x, double* b, int n, int ind, int debug)
         printf("debugb(%i) = %.16e;\n",i+1, b[i]);
     }
   }
+*/
 
   free(res);  
 }
@@ -420,9 +430,9 @@ void solvec_copy_reshape_reg(double *a_in,double *b_in,int *iflag,int n,int neq,
   // Replace matrix with Areg'*Areg and vec with Areg'*b
   debug2=0;
   if(debug) debug2 = 0; 
-  matmult(AregT,Areg,AregA,n,2*n,n,debug2);
+  matmult(AregT,Areg,AregA,n,2*n,n);
   if(debug) debug2 = 1; 
-  matmult(AregT,breg,Aregb,n,2*n,neq,debug2);
+  matmult(AregT,breg,Aregb,n,2*n,neq);
 
 for(i=0;i<neq;i++)
   for(j=0;j<n;j++){
