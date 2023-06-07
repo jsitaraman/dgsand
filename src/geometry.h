@@ -808,3 +808,103 @@ printf("Mesh %i, cell %i, cut %i detJ = %f\n",imesh,eid,i,detJcut[id]);
   }
 }
 
+void findCentroid(double* x, double* centroid, int nbasis, int npf, int e, int d, int p)
+{
+  double bv,u[2];
+
+  centroid[0] = 0.0; 
+  centroid[1] = 0.0; 
+  // get bases at rst = [0 0 ; 1 0; 0 1]
+  for(int i=0;i<npf;i++){ // loop over vertices
+    u[0]=eloc[e][1][d*i];
+    u[1]=eloc[e][1][d*i+1];
+
+    // get the vertex global coordinates of the original trying
+    // by doing x = sum(Ni * xi)
+    for(int j=0;j<nbasis;j++){ // accumulate bases and vertex coords
+      bv = basis[e][j](u);
+      centroid[0] += bv*x[j]/npf;
+      centroid[1] += bv*x[j+nbasis]/npf;
+    }         
+  }
+}
+
+void FIND_PARENTS(double* x, int* iptr, int* elem2face, int* faces,
+                  int* iblank, int* iscut, int* elemParent,
+                  int d, int e, int p, int nelem, int pc, int imesh)
+{
+  double centroid[2],ncentroid[2],u[2]; 
+  double dist,ndist,ndist2; 
+  int npf = facePerElem[e];
+  int nbasis=order2basis[e][p];
+  int ix;
+  int keep,neigh,cneigh,eid,fid;
+  int maxiter,iter;
+
+  printf("\n===================\n");
+  printf("Mesh %i Parents\n",imesh);
+  printf("\n===================\n");
+
+  for(int i=0;i<nelem;i++){
+    elemParent[i] = -1; 
+    cneigh = -1; 
+    if(iscut[i]==2){ // severely cut element that needs merging
+      ix=iptr[pc*i+1];
+      findCentroid(x+ix,centroid,nbasis,npf,e,d,p);
+
+      // loop face neighbors
+      maxiter = 2; // max number of levels of face neighbors to check
+      iter = 1;     
+      eid = i; // start with current element
+      while(elemParent[i]==1 && iter<=maxiter){ 
+        keep = -1; 
+        ndist = 1e16; 
+        ndist2 = ndist;
+        for(int j=0;j<npf;j++){
+          //get faceID and neighbor elem id
+          fid = elem2face[3*eid+j];
+          neigh = faces[6*fid+2] == eid ? faces[6*fid+4] : faces[6*fid+2];
+
+          //get neighbor elemID   
+          findCentroid(x+iptr[pc*neigh+1],ncentroid,nbasis,npf,e,d,p);
+          dist =  (ncentroid[0]-centroid[0])*(ncentroid[0]-centroid[0]);
+          dist += (ncentroid[1]-centroid[1])*(ncentroid[1]-centroid[1]);
+
+	  //find nearest unblanked, stable element 
+          if(iscut[neigh]!=2 && dist<ndist && iblank[neigh]!=1){
+	    ndist = dist; 
+	    keep = neigh;
+          }
+
+	  // save closest unblanked neighbor in case this doesn't work
+	  if(iblank[neigh]!=1 && dist<ndist2){
+	    ndist2 = dist;
+	    cneigh = neigh;
+          }
+        }// loop face neighbors
+
+	// check to see if this level worked
+	if(keep != -1) elemParent[i] = keep;
+
+        // if not, update eid and try again 
+        eid = cneigh;
+        iter++;
+      } // loop through levels of face neighbors
+
+      // if all face neighbors are STILL cut severely or blanked, give up
+      if(elemParent[i]==-1){ 
+	printf("\nERROR: Bad hole cutting. Cannot find good parent element. Exiting.\n");
+        exit(1); 
+      }
+    }
+    else{ // elem is not severely cut
+      elemParent[i] = i; 
+    }
+
+    //Debug outputs
+    printf("Element %i, Parent is %i\n",i,elemParent[i]);
+  } // loop nelem
+}
+
+
+

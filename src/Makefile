@@ -4,7 +4,7 @@ ALL: default
 
 SHELL       = /bin/sh
 ARCH        = LINUX
-CC          = gcc
+CC          = /opt/gcc/bin/gcc
 CPP         = g++
 F90         = gfortran
 CLINKER     = $(CC)

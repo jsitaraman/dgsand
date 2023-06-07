@@ -13,9 +13,8 @@ void JacP1Tri( double *jac, double *xtmp, double* det){
 
 int FIND_NECUT(double x0, double *x,int* iptr, int d, int e, int p, int nelem, int pc, int imesh)
 {
-//Hack just to find ne cut. Only need this for debugging cases, 
-//we'll actually get this from PUNDIT later, we just need necut 
-//so we can allocate all the other matrices
+//Hack just to find necut. Only need this for debugging cases, 
+//We just need necut so we can allocate all the other matrices
 //
   // Define the cutting boundary as x = x0 (cutting away x < x0)
 
@@ -80,7 +79,7 @@ printf("NECUT = %i\n",necut);
   return necut; 
 }
 
-void CUT_CELLS(double x0, double *x, double* xcut, int* iptr, int* cut2e, int d, int e, int p, int nelem, int pc, int *cut2face, int* cut2neigh, int* elem2face, int* faces, int* iblank, int* cutoverset, int imesh, int ng)
+void CUT_CELLS(double x0, double *x, double* xcut, int* iptr, int* cut2e, int d, int e, int p, int nelem, int pc, int *cut2face, int* cut2neigh, int* elem2face, int* faces, int* iblank, int* cutoverset, int* iscut, int imesh, int ng)
 // This routine cuts the cells according to some arbitrary vertical line. 
 // This is for testing purposes and will eventually be replaced with 
 // an actual cutting routine.
@@ -140,6 +139,7 @@ void CUT_CELLS(double x0, double *x, double* xcut, int* iptr, int* cut2e, int d,
         vcut[j]=-1;
         vorig[j]=-1;
       }
+      iscut[i] = 0;
       if(sum>0 && sum<nfp){
         for(j=0;j<nfp;j++){ 
           if(tally[j]==1){
@@ -148,6 +148,7 @@ void CUT_CELLS(double x0, double *x, double* xcut, int* iptr, int* cut2e, int d,
             vorig[j] = j;
           }
         }
+        iscut[i] = 1;
       }
       else if(sum==nfp){
         iblank[i] = 1;

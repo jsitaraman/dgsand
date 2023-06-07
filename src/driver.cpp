@@ -30,8 +30,6 @@ int main(int argc, char *argv[])
   for(i=0;i<nmesh;i++) {
     sol[i].setup(argv[i+1],i,offset);// x0 will come out of here
     sol[i].init(i);
-    sol[i].mass_matrix(i);
-    sol[i].initTimeStepping(i);
   }
 
 printf("\nx0 = %f, offset = %f\n",x0,offset);
@@ -40,6 +38,7 @@ printf("\nx0 = %f, offset = %f\n",x0,offset);
     for(i=0;i<nmesh;i++) {
 printf("\n=================\nCUTTING MESH %i\n=================\n",i);
       sol[i].cut(x0,i);
+      sol[i].findParents(i);
       sol[i].cut_metrics(x0,i);
     }
     for(i=0;i<nmesh;i++) {
@@ -55,7 +54,13 @@ printf("\n=================\nENTERING OVERSET SETUP FOR MESH %i\n===============
 			  sol[B].nelem);
 
     }
-  }	  
+  }
+
+  for(i=0;i<nmesh;i++) {
+    sol[i].mass_matrix(i);
+    sol[i].initTimeStepping(i);
+  }
+	  
 
   int nsteps=sol[0].getNsteps();
   int nsave=sol[0].getNsave();

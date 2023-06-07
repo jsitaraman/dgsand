@@ -919,21 +919,17 @@ void invertMass(double *mass, double *R, int pde, int d , int e, int p,int iscut
   if(iscut && ireg){
     // LU solve
     lusolve_reg(mass, R, nbasis,nfields); 
-
-//    solvec_copy_reshape_reg(mass,R,&iflag,nbasis,nfields,debug);  
+    //    solvec_copy_reshape_reg(mass,R,&iflag,nbasis,nfields,debug);  
   }
   else{
     // LU solve
     lusolve(mass, R, nbasis,nfields); 
-
-//    solvec_copy_reshape(mass,R,&iflag,nbasis,nfields);
+    //    solvec_copy_reshape(mass,R,&iflag,nbasis,nfields);
   }
 
   // check accuracy of matrix solve
   checksol(mass,R,b,nbasis,ielem);
-
 }
-
 
 void checkGradients(double *x, double *q, double *bv, double *bvd, double *bf,
 		    double *bfd, int pde, int d, int e, int p)
@@ -1172,7 +1168,7 @@ exit(1);
     }
 
   //Solve each element
-max = 0; 
+  max = 0; 
   for(i=0;i<nelem;i++)
     {
       ix=pc*i;
@@ -1202,28 +1198,6 @@ max = 0;
       }
 #endif     
 
-if (imesh==1 &&i == 20 ) {
-debug = 1; 
-printf("MESH %i ELEM %i \n", imesh,i);
-//for(int f = 0; f<nfields; f++)
-for(int f = 0; f<nfields; f++)
-for(int j = 0; j<nbasis; j++){
-printf("\tR(%i) = %.16e;\n",j+1,R[iR+f*nbasis+j]);
-
-printf("\n");
-}
-int m = 0; 
-for(int k = 0; k<nbasis; k++)
-for(int j = 0; j<nbasis; j++){
-printf("mass(%i,%i) = %.16e;\n",k+1,j+1,mass[im+m]);
-m++;
-}
-
-}
-else{
-debug = 0; 
-}
-
       int iscut = 0; 
       for(j=0;j<necut;j++)
         if(abs(i-cut2e[j])==0){
@@ -1232,14 +1206,6 @@ debug = 0;
         }
 
       invertMass(mass+im,R+iR,pde,d,e,p,iscut,ireg,i);
-
-if(imesh==1 && i==20){
-printf("\n");
-for(int f = 0; f<nfields; f++)
-for(int j = 0; j<nbasis; j++)
-printf("\tUpdate(%i) = %.16e;\n",j+1,R[iR+f*nbasis+j]);
-}
-
     }
 }
 

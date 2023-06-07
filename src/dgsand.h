@@ -12,9 +12,12 @@
 extern "C" {
   void parseInputs(char *inputfile,char *gridfile,int *pde, int *itype, int *nsteps, double *dt, int *nsave,
 		   int *ireg);
+
   void output_params();
+
   void readgrid2D(char *gridfile, double **xcoord, int **elem2node,int **ibc,
 		  int *p,  int *nnodes, int *nelem, int *nbnodes, int imesh, double offset);
+
   void find_faces(int *bface,
 		  int **elem2face,
 		  int **faces,
@@ -26,24 +29,39 @@ extern "C" {
 		  int nvmax); 
   
   void init_data(double *x,double *q, double *X, double *Q, int d, int nfields, int e, int p);  
+
   void INIT_FIELDS(double *xcoord,int *e2n, 
 		   double *Q, double *x, double *q, // data populated here
 		   int *iptr, int pde, int e, int p,
 		   int d, int nbasis, int itype, int nelem, int pc,int imesh);  
+
   int number_of_fields(int pde,int d);
+
   int order_to_basis(int etype, int p);
+
   int get_ngElem(int etype, int p);
+
   int get_ngGL(int etype, int p);
+
   int face_per_elem(int etype);
   
   int FIND_NECUT(double x0, double *x,int* iptr, int d, int e, int p, int nelem, int pc, int imesh);
-
   
+  void findCentroid(double* x, double* centroid, int nbasis, int npf, int e, int d, int p);
+
+
+  void FIND_PARENTS(double* x, int* iptr, int* elem2face, int* faces,
+                  int* iblank, int* iscut, int* elemParent,
+                  int d, int e, int p, int nelem, int pc, int imesh);
+
   double total_area(double *detJ, int etype, int p, int d, int nelem);
+
   void CUT_CELLS(double x0, double *x, double* xcut, int* iptr, int* cut2e, int d, int e, int p,
 		 int nelem, int pc, int *cut2face, int* cut2neigh, int* elem2face, int* faces,
-		 int* iblank, int* cutoverset, int imesh, int ng);
+		 int* iblank, int* cutoverset, int* iscut, int imesh, int ng);
+
   void MASS_MATRIX(double *mass,double *x, int *iptr, int d, int e, int p, int nelem, int pc, int imesh);
+
   void CUT_MASS_MATRIX(double *mass,double *x, double *Jinv, int *iptr, double *xcut,
 		       double *detJcut, int *iptrc, int d, int e, int p, int nelem,
 		       int pc, int pccut, int necut, int* cut2e, int imesh);
@@ -69,9 +87,11 @@ extern "C" {
 		 int pc, int pf, int pccut, int pde, int d , int e, int p, int nfaces, int nelem,
                  double *bvcut, double *bvdcut,double *detJcut,
                  double *bfcutL, double *bfcutR,double *fwcut, double *fcflux,
-                 int* OSFnseg, int* OSFeID, double* OSFxn, double* OSFshpL, double* OSFshpR, double* OSFflux,
+                 int* OSFnseg, int* OSFeID, double* OSFxn, double* OSFshpL, 
+		 double* OSFshpR, double* OSFflux,
 		 int *iptrc, int necut, int* cut2e, int *cut2face, int* cut2neigh, int* iblank, int ireg,
 		 int *cutoverset,int imesh);
+
   void UPDATE_DOFS(double *qdest, double coef, double *qsrc, double *R, int ndof);
 
   void OUTPUT_TECPLOT(int meshid, int step,double *x, double *q,
@@ -99,13 +119,12 @@ extern "C" {
 
   double L2_ERROR(double *x, double *q, double *qexact, int *iblank,
                 int pc, int *iptr, int pde, int d, int e, int p, int nelem);
-  void move_center(double);
 
+  void move_center(double);
 
 }
 
 #include<vector>
-
 class dgsand
 {
  private:
@@ -144,6 +163,7 @@ class dgsand
   int *elem2node;
   /// element to face connectivity
   int *elem2face;
+
   
   /* class local variables */
   int pf,ndof,nsteps,nsave;
@@ -168,6 +188,8 @@ class dgsand
   int nbasis;
   /// number of bases for grid
   int nbasisx;
+  /// elementParents and iscut
+  std::vector<int> elemParent,iscut;
 
   /// Cut quantities
   /// cut face information
@@ -237,6 +259,9 @@ class dgsand
 	JinvV.resize((d*d*ngElem*nelem));    // J^{-1} at volume QP		     
 	detJ.resize((ngElem*nelem));	       // |J| at volume QP		     
 	iblank.resize(nelem);			       // iblank array                    
+	elemParent.resize(nelem);			       // parents array
+        iscut.resize(nelem); 
+
 	/* geometrical parameters per face QP of each element */
 	/* TODO : some these such as bf and JinvF can optimized/omitted */
 	int fpe = face_per_elem(etype);
@@ -369,7 +394,8 @@ printf("OSFflux size = %i\n",necut*maxseg*ngGL*3*nfields);
 		  cut2e.data(),
 		  d, etype, p, nelem, pc,
 		  cut2face.data(),cut2neigh.data(),
-		  elem2face, faces, iblank.data(),cutoverset.data(),imesh,ngGL);
+		  elem2face, faces, iblank.data(),
+		  cutoverset.data(),iscut.data(),imesh,ngGL);
 	
 	for(int i=0;i<necut;i++)
 	  printf("cut elem %i: neigh = %i %i %i\n",
@@ -419,6 +445,17 @@ printf("OSFflux size = %i\n",necut*maxseg*ngGL*3*nfields);
 			cut2e.data(),imesh);
       }
     };
+
+    void findParents(int imesh){
+      FIND_PARENTS(x.data(),
+		   iptr.data(),
+                   elem2face, 
+		   faces,
+		   iblank.data(),
+		   iscut.data(),
+		   elemParent.data(),
+		   d,etype,p,nelem,pc,imesh);
+    }
 
     void initTimeStepping(int imesh) {
       /* compute some statistics of the mesh and report them */
