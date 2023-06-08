@@ -79,7 +79,7 @@ printf("NECUT = %i\n",necut);
   return necut; 
 }
 
-void CUT_CELLS(double x0, double *x, double* xcut, int* iptr, int* cut2e, int d, int e, int p, int nelem, int pc, int *cut2face, int* cut2neigh, int* elem2face, int* faces, int* iblank, int* cutoverset, int* iscut, int imesh, int ng)
+void CUT_CELLS(double x0, double *x, double* xcut, int* iptr, int* cut2e, int d, int e, int p, int nelem, int pc, int *cut2face, int* cut2neigh, int* elem2face, int* faces, int* iblank, int* cutoverset, int imesh, int ng)
 // This routine cuts the cells according to some arbitrary vertical line. 
 // This is for testing purposes and will eventually be replaced with 
 // an actual cutting routine.
@@ -139,7 +139,6 @@ void CUT_CELLS(double x0, double *x, double* xcut, int* iptr, int* cut2e, int d,
         vcut[j]=-1;
         vorig[j]=-1;
       }
-      iscut[i] = 0;
       if(sum>0 && sum<nfp){
         for(j=0;j<nfp;j++){ 
           if(tally[j]==1){
@@ -148,7 +147,6 @@ void CUT_CELLS(double x0, double *x, double* xcut, int* iptr, int* cut2e, int d,
             vorig[j] = j;
           }
         }
-        iscut[i] = 1;
       }
       else if(sum==nfp){
         iblank[i] = 1;
@@ -449,4 +447,60 @@ for(int f = 0;f<nfp;f++){
 printf("\norig %i, el %i, side %i = %i\n",cut2e[aa],aa,f);
 printf("\tcutoverset[%i] = %i\n",aa*nfp+f,cutoverset[aa*nfp+f]);
 }
+}
+
+void FIND_ISCUT(double* x, double* bv, double* detJ, int* iptr, 
+                double* xcut, double* bvcut, double* detJcut, int* iptrc,
+		int* cut2e, int* iscut,
+		int d, int e, int p, int nelem, int pc, int necut, int pccut, int imesh)
+{
+  double area[nelem], area_cut[nelem];
+  double wgt,*J,*bvv; 
+  int eid,ix;
+  int g=p2g[e][p];
+  int nbasis=order2basis[e][p];
+
+  // Loop through ALL elements and get area
+  for(int i=0;i<nelem;i++){
+    //initialize everything
+    area[i] = 0;
+    area_cut[i] = 0;
+    iscut[i] = 0;
+
+    // loop through and collect the area
+    ix = pc*i; 
+    J=detJ+iptr[ix+5];
+    for(int w=0;w<ngElem[e][p];w++){
+      bvv=bv+iptr[ix+2]+w*nbasis;
+      wgt=gauss[e][g][(d+1)*w+2]*J[w];	  
+      for(int b=0;b<nbasis;b++){
+        area[i]+=bvv[b]*wgt;
+      } 
+    } 
+  } 
+
+  // Loop through cut elements and subtract out cut area
+  for(int i=0;i<necut;i++){
+    // get full element id
+    eid = cut2e[i];
+    iscut[eid] = 1;
+
+    // accumulate cut area
+    ix = pccut*i;
+    J=detJcut+iptrc[ix+5];
+    for(int w=0;w<ngElem[e][p];w++){
+      bvv=bvcut+iptrc[ix+2]+w*nbasis;
+      wgt=gauss[e][g][(d+1)*w+2]*J[w];	  
+      for(int b=0;b<nbasis;b++){
+        area_cut[eid]+=bvv[b]*wgt;
+      }
+    }
+    if(area_cut[eid]/area[eid] > 0.5) iscut[eid] = 2; // severely cut element
+  }
+
+  // Output debug stuff
+  printf("MESH %i\n",imesh);
+  for(int i=0;i<nelem;i++)
+    printf("\t%i: Area = %f\tCut Area = %f\t Pct Cut = %f\tiscut = %i\n",i,area[i],area_cut[i],area_cut[i]/area[i],iscut[i]);
+
 }

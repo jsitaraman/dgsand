@@ -503,7 +503,7 @@ void SETUP_OVERSET(int* cut2e, int* cut2eB, int* cutoversetA, int* iptrA, int* i
 	    exit(1); 
 	  }
 
-if(debug) printf("cut elem %i, face %i, xseg = [%f %f; %f %f]\n",i,j,xseg[0],xseg[1],xseg[2],xseg[3]);
+	  if(debug) printf("cut elem %i, face %i, xseg = [%f %f; %f %f]\n",i,j,xseg[0],xseg[1],xseg[2],xseg[3]);
         } // if overset
       } // loop faces
 

@@ -31,19 +31,25 @@ int main(int argc, char *argv[])
     sol[i].setup(argv[i+1],i,offset);// x0 will come out of here
     sol[i].init(i);
   }
-
-printf("\nx0 = %f, offset = %f\n",x0,offset);
+  printf("\nx0 = %f, offset = %f\n",x0,offset);
 
   if(nmesh>1){
     for(i=0;i<nmesh;i++) {
-printf("\n=================\nCUTTING MESH %i\n=================\n",i);
-      sol[i].cut(x0,i);
-      sol[i].findParents(i);
-      sol[i].cut_metrics(x0,i);
+      printf("\n=================\nCUTTING MESH %i\n=================\n",i);
+      // setup conservative overset cut cells
+      sol[i].cut(x0,i);		// find cut cells
+      sol[i].cut_metrics(x0,i); // find cut bases and etc
+     
+      // cell merging routines
+      sol[i].findIsCut(i); 	 // check to see if any cells need merging
+      sol[i].findParents(i);	 // find parents for merged cells
+//      sol[i].cellagg_metrics(i); // recompute bases for merged cells
     }
-    for(i=0;i<nmesh;i++) {
+
+    // setup overset gauss pts and bases
+    for(i=0;i<nmesh;i++){
       B = 1-i; 
-printf("\n=================\nENTERING OVERSET SETUP FOR MESH %i\n=================\n",i);      
+      printf("\n=================\nENTERING OVERSET SETUP FOR MESH %i\n=================\n",i);      
       sol[i].setupOverset(sol[B].iptr,
 		          sol[B].iptrc,
 		   	  sol[B].x,
@@ -52,16 +58,15 @@ printf("\n=================\nENTERING OVERSET SETUP FOR MESH %i\n===============
 			  sol[B].cut2e,
 		          sol[B].necut,
 			  sol[B].nelem);
-
     }
   }
 
+  // Compute mass matrix (including merged cells)
   for(i=0;i<nmesh;i++) {
     sol[i].mass_matrix(i);
     sol[i].initTimeStepping(i);
   }
 	  
-
   int nsteps=sol[0].getNsteps();
   int nsave=sol[0].getNsave();
   double dt=sol[0].getDt();
@@ -73,12 +78,11 @@ printf("\n=================\nENTERING OVERSET SETUP FOR MESH %i\n===============
   double cons=0.0,tmp=0;
   for(i=0;i<nmesh;i++){
    tmp=sol[i].cons_metric(0);
-printf("tmp = %f\n");
+   printf("tmp = %f\n");
    cons+=tmp;
   }
   printf("cons : %.16e\n",cons);
   double cons0=cons;
-
   
   // ============= 
   // RUN TIMESTEPS 
@@ -90,11 +94,13 @@ printf("tmp = %f\n");
       for(i=0;i<nmesh;i++){
       
         if(nmesh>1){
-printf("==================\nEXCHANGING OVERSET FOR MESH %i Step %i, Euler \n===================\n",i,n);
+        printf("================================================\n");
+        printf("EXCHANGING OVERSET FOR MESH %i Step %i, Euler \n",i,n); 
+        printf("================================================\n");
           B = 1-i; 
           sol[i].exchangeOverset(sol[B].q, sol[B].iptr,i); 
         }
-printf("==================\nCOMPUTING MESH %i Step %i, Euler \n===================\n",i,n);
+	printf("==================\nCOMPUTING MESH %i Step %i, Euler \n===================\n",i,n);
         sol[i].computeRHS(sol[i].q,i);
       }
       for(i=0;i<nmesh;i++)      
@@ -108,7 +114,7 @@ printf("==================\nCOMPUTING MESH %i Step %i, Euler \n=================
           B = 1-i; 
           sol[i].exchangeOverset(sol[B].q, sol[B].iptr,i); 
         }
-printf("==================\nCOMPUTING MESH %i Step %i, RK 1\n===================\n",i,n);
+	printf("==================\nCOMPUTING MESH %i Step %i, RK 1\n===================\n",i,n);
         sol[i].computeRHS(sol[i].q,i);
       }
       for(i=0;i<nmesh;i++)
@@ -123,11 +129,10 @@ printf("==================\nCOMPUTING MESH %i Step %i, RK 1\n===================
           B = 1-i; 
           sol[i].exchangeOverset(sol[B].qstar, sol[B].iptr, i); 
         }
-printf("==================\nCOMPUTING MESH %i Step %i, RK 2 \n===================\n",i,n);
+	printf("==================\nCOMPUTING MESH %i Step %i, RK 2 \n===================\n",i,n);
         sol[i].computeRHS(sol[i].qstar,i);
       }
-      for(i=0;i<nmesh;i++)
-        sol[i].update(sol[i].qstar,sol[i].q,rk[2]*dt);
+      for(i=0;i<nmesh;i++) sol[i].update(sol[i].qstar,sol[i].q,rk[2]*dt);
 
       //RK step 3
       for(i=0;i<nmesh;i++){
@@ -135,11 +140,10 @@ printf("==================\nCOMPUTING MESH %i Step %i, RK 2 \n==================
           B = 1-i; 
           sol[i].exchangeOverset(sol[B].q, sol[B].iptr, i); 
         }
-printf("==================\nCOMPUTING MESH %i Step %i, RK 3\n===================\n",i,n);
+	printf("==================\nCOMPUTING MESH %i Step %i, RK 3\n===================\n",i,n);
         sol[i].computeRHS(sol[i].qstar,i);
       }
-      for(i=0;i<nmesh;i++)
-        sol[i].update(sol[i].q,sol[i].q,rk[3]*dt);
+      for(i=0;i<nmesh;i++) sol[i].update(sol[i].q,sol[i].q,rk[3]*dt);
     } // euler or rk
     
     // compute norms

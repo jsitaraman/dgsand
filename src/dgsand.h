@@ -49,6 +49,10 @@ extern "C" {
   
   void findCentroid(double* x, double* centroid, int nbasis, int npf, int e, int d, int p);
 
+  void FIND_ISCUT(double* x, double* bv, double* detJ, int* iptr,                                          
+                double* xcut, double* bvcut, double* detJcut, int* iptrc,                                
+                int* cut2e, int* iscut,
+                int d, int e, int p, int nelem, int pc, int necut, int pccut, int imesh);               
 
   void FIND_PARENTS(double* x, int* iptr, int* elem2face, int* faces,
                   int* iblank, int* iscut, int* elemParent,
@@ -58,7 +62,7 @@ extern "C" {
 
   void CUT_CELLS(double x0, double *x, double* xcut, int* iptr, int* cut2e, int d, int e, int p,
 		 int nelem, int pc, int *cut2face, int* cut2neigh, int* elem2face, int* faces,
-		 int* iblank, int* cutoverset, int* iscut, int imesh, int ng);
+		 int* iblank, int* cutoverset, int imesh, int ng);
 
   void MASS_MATRIX(double *mass,double *x, int *iptr, int d, int e, int p, int nelem, int pc, int imesh);
 
@@ -395,7 +399,7 @@ printf("OSFflux size = %i\n",necut*maxseg*ngGL*3*nfields);
 		  d, etype, p, nelem, pc,
 		  cut2face.data(),cut2neigh.data(),
 		  elem2face, faces, iblank.data(),
-		  cutoverset.data(),iscut.data(),imesh,ngGL);
+		  cutoverset.data(),imesh,ngGL);
 	
 	for(int i=0;i<necut;i++)
 	  printf("cut elem %i: neigh = %i %i %i\n",
@@ -445,6 +449,21 @@ printf("OSFflux size = %i\n",necut*maxseg*ngGL*3*nfields);
 			cut2e.data(),imesh);
       }
     };
+
+    void findIsCut(int imesh){
+      FIND_ISCUT(x.data(),
+		 bv.data(),
+		 detJ.data(),
+		 iptr.data(),
+		 xcut.data(),
+		 bvcut.data(),
+		 detJcut.data(),
+		 iptrc.data(),
+		 cut2e.data(),
+                 iscut.data(),
+		 d,etype,p,nelem,pc,
+		 necut,pccut,imesh);
+    }
 
     void findParents(int imesh){
       FIND_PARENTS(x.data(),
