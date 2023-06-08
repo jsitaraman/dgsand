@@ -904,7 +904,7 @@ printf("\tneigh = %i, eid = %i, blank = %i\n",neigh,eid,iblank[neigh]);
 }
 
 
-void invertMass(double *mass, double *R, int pde, int d , int e, int p,int iscut,int ireg, int ielem)
+void invertMass(double *mass, double *R, int pde, int d , int e, int p,int cellmerge,int ireg, int ielem)
 {
   int i,j,f;
   int nbasis=order2basis[e][p];
@@ -915,17 +915,21 @@ void invertMass(double *mass, double *R, int pde, int d , int e, int p,int iscut
   printf("\nelem %i\n",ielem);
   // store residual vector to check solution later
   for(int i=0;i<nbasis;i++) b[i] = R[i]; 
-
-  if(iscut && ireg){
-    // LU solve
-    lusolve_reg(mass, R, nbasis,nfields); 
-    //    solvec_copy_reshape_reg(mass,R,&iflag,nbasis,nfields,debug);  
-  }
-  else{
-    // LU solve
-    lusolve(mass, R, nbasis,nfields); 
-    //    solvec_copy_reshape(mass,R,&iflag,nbasis,nfields);
-  }
+  if(cellmerge<2) lusolve(mass, R, nbasis,nfields); 
+  
+/* Removing the regularization stuff
+ *
+    if(ireg){
+      // LU solve
+      lusolve_reg(mass, R, nbasis,nfields); 
+      //    solvec_copy_reshape_reg(mass,R,&iflag,nbasis,nfields,debug);  
+    }
+    else{
+      // LU solve
+      lusolve(mass, R, nbasis,nfields); 
+      //    solvec_copy_reshape(mass,R,&iflag,nbasis,nfields);
+    }
+*/
 
   // check accuracy of matrix solve
   checksol(mass,R,b,nbasis,ielem);
@@ -1048,7 +1052,7 @@ void COMPUTE_RESIDUAL(double *R, double *mass, double *q, double *detJ, double *
 		      double *bfcutL, double *bfcutR,
                       int *iptrc, int necut, int* cut2e, int* cut2neigh, int* cut2face, int* iblank, int ireg, 
 		      int *cutoverset,int imesh,int* faces,
-                      double* OSFflux, double* OSFshpL, double* OSFxn, int* OSFnseg)
+                      double* OSFflux, double* OSFshpL, double* OSFxn, int* OSFnseg, int* cellmerge)
 {
   int i,j,k,ix,idet,im,iR,iq,ibv,ibvd,ibf,ibfd,eid,iflx,ic2n,ixn,ishp,iflx2;
   int nfp=facePerElem[e];
@@ -1198,14 +1202,7 @@ exit(1);
       }
 #endif     
 
-      int iscut = 0; 
-      for(j=0;j<necut;j++)
-        if(abs(i-cut2e[j])==0){
-          iscut=1;
-	  break;    
-        }
-
-      invertMass(mass+im,R+iR,pde,d,e,p,iscut,ireg,i);
+      invertMass(mass+im,R+iR,pde,d,e,p,cellmerge[i],ireg,i);
     }
 }
 
@@ -1219,7 +1216,7 @@ void COMPUTE_RHS(double *R,double *mass,double *bv, double *bvd, double *JinvV, 
                  int* OSFnseg, int* OSFeID, double* OSFxn, double* OSFshpL, double* OSFshpR, 
                  double* OSFflux, int *iptrc,
                  int necut, int* cut2e, int *cut2face, int* cut2neigh, int* iblank, int ireg,
-		 int* cutoverset, int imesh)
+		 int* cutoverset, int* cellmerge, int imesh)
 {
 
   FILL_FACES(x, fnorm, fflux, elem2face, iptr, iptrf, 
@@ -1245,7 +1242,7 @@ void COMPUTE_RHS(double *R,double *mass,double *bv, double *bvd, double *JinvV, 
                    bvcut, bvdcut, bfcutL,  
 		   bfcutR, 
                    iptrc, necut, cut2e, cut2neigh, cut2face,iblank,ireg,cutoverset,imesh,faces,
-		   OSFflux, OSFshpL, OSFxn, OSFnseg); 
+		   OSFflux, OSFshpL, OSFxn, OSFnseg, cellmerge); 
 }
 
 void UPDATE_DOFS(double *qdest, double coef, double *qsrc, double *R, int ndof)

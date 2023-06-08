@@ -41,7 +41,7 @@ int main(int argc, char *argv[])
       sol[i].cut_metrics(x0,i); // find cut bases and etc
      
       // cell merging routines
-      sol[i].findIsCut(i); 	 // check to see if any cells need merging
+      sol[i].findCellMerge(i); 	 // check to see if any cells need merging
       sol[i].findParents(i);	 // find parents for merged cells
 //      sol[i].cellagg_metrics(i); // recompute bases for merged cells
     }

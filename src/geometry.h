@@ -830,7 +830,7 @@ void findCentroid(double* x, double* centroid, int nbasis, int npf, int e, int d
 }
 
 void FIND_PARENTS(double* x, int* iptr, int* elem2face, int* faces,
-                  int* iblank, int* iscut, int* elemParent,
+                  int* iblank, int* cellmerge, int* elemParent,
                   int d, int e, int p, int nelem, int pc, int imesh)
 {
   double centroid[2],ncentroid[2],u[2]; 
@@ -848,7 +848,7 @@ void FIND_PARENTS(double* x, int* iptr, int* elem2face, int* faces,
   for(int i=0;i<nelem;i++){
     elemParent[i] = -1; 
     cneigh = -1; 
-    if(iscut[i]==2){ // severely cut element that needs merging
+    if(cellmerge[i]==2){ // severely cut element that needs merging
       ix=iptr[pc*i+1];
       findCentroid(x+ix,centroid,nbasis,npf,e,d,p);
 
@@ -871,7 +871,7 @@ void FIND_PARENTS(double* x, int* iptr, int* elem2face, int* faces,
           dist += (ncentroid[1]-centroid[1])*(ncentroid[1]-centroid[1]);
 
 	  //find nearest unblanked, stable element 
-          if(iscut[neigh]!=2 && dist<ndist && iblank[neigh]!=1){
+          if(cellmerge[neigh]!=2 && dist<ndist && iblank[neigh]!=1){
 	    ndist = dist; 
 	    keep = neigh;
           }
@@ -906,5 +906,63 @@ void FIND_PARENTS(double* x, int* iptr, int* elem2face, int* faces,
   } // loop nelem
 }
 
+void FIND_CELLMERGE(double* x, double* bv, double* detJ, int* iptr, 
+                double* xcut, double* bvcut, double* detJcut, int* iptrc,
+		int* cut2e, int* cellmerge,
+		int d, int e, int p, int nelem, int pc, int necut, int pccut, int imesh)
+//
+// cellmerge = 0 : cell is uncut
+// cellmerge = 1 : cell is cut but does not require merging
+// cellmerge = 2 : cell is cut severely and requires merging
+//
+{
+  double area[nelem], area_cut[nelem];
+  double wgt,*J,*bvv; 
+  int eid,ix;
+  int g=p2g[e][p];
+  int nbasis=order2basis[e][p];
 
+  // Loop through ALL elements and get area
+  for(int i=0;i<nelem;i++){
+    //initialize everything
+    area[i] = 0;
+    area_cut[i] = 0;
+    cellmerge[i] = 0;
 
+    // loop through and collect the area
+    ix = pc*i; 
+    J=detJ+iptr[ix+5];
+    for(int w=0;w<ngElem[e][p];w++){
+      bvv=bv+iptr[ix+2]+w*nbasis;
+      wgt=gauss[e][g][(d+1)*w+2]*J[w];	  
+      for(int b=0;b<nbasis;b++){
+        area[i]+=bvv[b]*wgt;
+      } 
+    } 
+  } 
+
+  // Loop through cut elements and subtract out cut area
+  for(int i=0;i<necut;i++){
+    // get full element id
+    eid = cut2e[i];
+    cellmerge[eid] = 1;
+
+    // accumulate cut area
+    ix = pccut*i;
+    J=detJcut+iptrc[ix+5];
+    for(int w=0;w<ngElem[e][p];w++){
+      bvv=bvcut+iptrc[ix+2]+w*nbasis;
+      wgt=gauss[e][g][(d+1)*w+2]*J[w];	  
+      for(int b=0;b<nbasis;b++){
+        area_cut[eid]+=bvv[b]*wgt;
+      }
+    }
+    if(area_cut[eid]/area[eid] > 0.5) cellmerge[eid] = 2; // severely cut element
+  }
+
+  // Output debug stuff
+  printf("MESH %i\n",imesh);
+  for(int i=0;i<nelem;i++)
+    printf("\t%i: Area = %f\tCut Area = %f\t Pct Cut = %f\tcellmerge = %i\n",i,area[i],area_cut[i],area_cut[i]/area[i],cellmerge[i]);
+
+}

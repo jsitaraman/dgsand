@@ -49,13 +49,13 @@ extern "C" {
   
   void findCentroid(double* x, double* centroid, int nbasis, int npf, int e, int d, int p);
 
-  void FIND_ISCUT(double* x, double* bv, double* detJ, int* iptr,                                          
+  void FIND_CELLMERGE(double* x, double* bv, double* detJ, int* iptr,                                          
                 double* xcut, double* bvcut, double* detJcut, int* iptrc,                                
-                int* cut2e, int* iscut,
+                int* cut2e, int* cellmerge,
                 int d, int e, int p, int nelem, int pc, int necut, int pccut, int imesh);               
 
   void FIND_PARENTS(double* x, int* iptr, int* elem2face, int* faces,
-                  int* iblank, int* iscut, int* elemParent,
+                  int* iblank, int* cellmerge, int* elemParent,
                   int d, int e, int p, int nelem, int pc, int imesh);
 
   double total_area(double *detJ, int etype, int p, int d, int nelem);
@@ -94,7 +94,7 @@ extern "C" {
                  int* OSFnseg, int* OSFeID, double* OSFxn, double* OSFshpL, 
 		 double* OSFshpR, double* OSFflux,
 		 int *iptrc, int necut, int* cut2e, int *cut2face, int* cut2neigh, int* iblank, int ireg,
-		 int *cutoverset,int imesh);
+		 int *cutoverset, int* cellmerge, int imesh);
 
   void UPDATE_DOFS(double *qdest, double coef, double *qsrc, double *R, int ndof);
 
@@ -192,8 +192,8 @@ class dgsand
   int nbasis;
   /// number of bases for grid
   int nbasisx;
-  /// elementParents and iscut
-  std::vector<int> elemParent,iscut;
+  /// elementParents and cellmerge
+  std::vector<int> elemParent,cellmerge;
 
   /// Cut quantities
   /// cut face information
@@ -264,7 +264,7 @@ class dgsand
 	detJ.resize((ngElem*nelem));	       // |J| at volume QP		     
 	iblank.resize(nelem);			       // iblank array                    
 	elemParent.resize(nelem);			       // parents array
-        iscut.resize(nelem); 
+        cellmerge.resize(nelem); 
 
 	/* geometrical parameters per face QP of each element */
 	/* TODO : some these such as bf and JinvF can optimized/omitted */
@@ -450,8 +450,8 @@ printf("OSFflux size = %i\n",necut*maxseg*ngGL*3*nfields);
       }
     };
 
-    void findIsCut(int imesh){
-      FIND_ISCUT(x.data(),
+    void findCellMerge(int imesh){
+      FIND_CELLMERGE(x.data(),
 		 bv.data(),
 		 detJ.data(),
 		 iptr.data(),
@@ -460,7 +460,7 @@ printf("OSFflux size = %i\n",necut*maxseg*ngGL*3*nfields);
 		 detJcut.data(),
 		 iptrc.data(),
 		 cut2e.data(),
-                 iscut.data(),
+                 cellmerge.data(),
 		 d,etype,p,nelem,pc,
 		 necut,pccut,imesh);
     }
@@ -471,7 +471,7 @@ printf("OSFflux size = %i\n",necut*maxseg*ngGL*3*nfields);
                    elem2face, 
 		   faces,
 		   iblank.data(),
-		   iscut.data(),
+		   cellmerge.data(),
 		   elemParent.data(),
 		   d,etype,p,nelem,pc,imesh);
     }
@@ -583,7 +583,8 @@ printf("OSFflux size = %i\n",necut*maxseg*ngGL*3*nfields);
 		  cut2face.data(),
 		  cut2neigh.data(),
 		  iblank.data(),
-		  ireg,cutoverset.data(),imesh);
+		  ireg,cutoverset.data(),
+                  cellmerge.data(),imesh);
     }
 
     void update(std::vector<double>&qdest, std::vector<double>&qsrc, double dtfac)
