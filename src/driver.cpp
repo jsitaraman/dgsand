@@ -38,12 +38,8 @@ int main(int argc, char *argv[])
       printf("\n=================\nCUTTING MESH %i\n=================\n",i);
       // setup conservative overset cut cells
       sol[i].cut(x0,i);		// find cut cells
-      sol[i].cut_metrics(x0,i); // find cut bases and etc
-     
-      // cell merging routines
-      sol[i].findCellMerge(i); 	 // check to see if any cells need merging
       sol[i].findParents(i);	 // find parents for merged cells
-//      sol[i].cellagg_metrics(i); // recompute bases for merged cells
+      sol[i].cut_metrics(x0,i); // find cut bases and etc
     }
 
     // setup overset gauss pts and bases

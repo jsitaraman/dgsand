@@ -1250,7 +1250,6 @@ void UPDATE_DOFS(double *qdest, double coef, double *qsrc, double *R, int ndof)
   int i;
   for(i=0;i<ndof;i++)
     qdest[i]=qsrc[i]+coef*R[i];
-printf("UPDATE_DOFS: coef = %.16e, R[1932] = %.16e\n",coef,R[1932]); 
 }
 
 double COMPUTE_CONSERVATION(double *q, double *detJ, double *bv, int *iptr, int *iblank,

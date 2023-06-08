@@ -79,7 +79,7 @@ printf("NECUT = %i\n",necut);
   return necut; 
 }
 
-void CUT_CELLS(double x0, double *x, double* xcut, int* iptr, int* cut2e, int d, int e, int p, int nelem, int pc, int *cut2face, int* cut2neigh, int* elem2face, int* faces, int* iblank, int* cutoverset, int imesh, int ng)
+void CUT_CELLS(double x0, double *x, double* xcut, int* iptr, int* cut2e, int d, int e, int p, int nelem, int pc, int *cut2face, int* cut2neigh, int* elem2face, int* faces, int* iblank, int* cutoverset, int imesh, int ng, int* cellmerge)
 // This routine cuts the cells according to some arbitrary vertical line. 
 // This is for testing purposes and will eventually be replaced with 
 // an actual cutting routine.
@@ -89,6 +89,7 @@ void CUT_CELLS(double x0, double *x, double* xcut, int* iptr, int* cut2e, int d,
 //  cut2e - map between cut cell id and original elem id
 //  cut2neigh - map between cut face and R side element neighbor
 //  cutoverset - tag list of cell faces that have overset boundaries
+//  cellmerge - 0: cell uncut, 1: cell cut but not severly, 2: cell cut and needs merging
 {
 
   // Define the cutting boundary as x = x0 (cutting away x < x0)
@@ -104,11 +105,13 @@ void CUT_CELLS(double x0, double *x, double* xcut, int* iptr, int* cut2e, int d,
 
   int nbasis=order2basis[e][p]; // first order bases are interpolative at nodes so it's ok to do this?
   double bv[nbasis*nfp];
+  double area, area_cut;
 //  int ng = ngGL[e][p]; 
 
   n = 0; 
   for(i=0;i<nelem;i++){
       iblank[i] = 0; 
+      cellmerge[i] = 0;
       ix=iptr[pc*i+1];
       // get bases at rst = [0 0 ; 1 0; 0 1]
       for(j=0;j<nfp;j++){ // loop over vertices
@@ -130,6 +133,11 @@ void CUT_CELLS(double x0, double *x, double* xcut, int* iptr, int* cut2e, int d,
 	if(imesh==0) if(xvert[2*j]>x0) tally[j]=1;
 	if(imesh==1) if(xvert[2*j]<x0) tally[j]=1;
       }
+
+      // compute area of complete triangle
+      JacP1Tri(jac,xvert,&area); 
+      area = 0.5*area; 
+      area_cut = 0.0; 
 
       // check if element has vertices on both sides of x=x0 then 
       // track which vertices will be cut and which kept
@@ -205,6 +213,7 @@ void CUT_CELLS(double x0, double *x, double* xcut, int* iptr, int* cut2e, int d,
         // double check for positive jacobian
         // and save out info in correct order
         JacP1Tri(jac,xtmp,&det); 
+        area_cut += abs(det);
         if(det>0){
           xcut[n*3*2]   = xtmp[0];
           xcut[n*3*2+1] = xtmp[1];
@@ -310,6 +319,7 @@ printf("\tcut2face = %i %i %i\n",cut2face[3*n],cut2face[3*n+1],cut2face[3*n+2]);
 
         // double check for positive jacobian 
         JacP1Tri(jac,xtmp,&det); 
+        area_cut += abs(det);
         if(det>0){
           xcut[n*3*2]   = xtmp[0];
           xcut[n*3*2+1] = xtmp[1];
@@ -357,7 +367,7 @@ printf("\tfull vtxcoords: (%f, %f), (%f, %f), (%f, %f)\n", xvert[0],xvert[1],xve
 printf("\tcut vtx coords: (%f, %f), (%f, %f), (%f, %f)\n",xcut[n*3*2], xcut[n*3*2+3], xcut[n*3*2+1], xcut[n*3*2+4], xcut[n*3*2+2], xcut[n*3*2+5]);
 printf("\tcut elem neigh(%i, %i, %i) = %i %i %i\n",3*n,3*n+1,3*n+2,cut2neigh[3*n],cut2neigh[3*n+1],cut2neigh[3*n+2]);
 printf("\tcut2face = %i %i %i\n",cut2face[3*n],cut2face[3*n+1],cut2face[3*n+2]);
-        n++; 
+        n++; // end of first triangle
 
 	//Second triangle (cut node 1, both intersect nodes)
         xtmp[0] = x0; 
@@ -390,6 +400,7 @@ printf("\tcut2face = %i %i %i\n",cut2face[3*n],cut2face[3*n+1],cut2face[3*n+2]);
 
         // double check for positive jacobian 
         JacP1Tri(jac,xtmp,&det); 
+        area_cut += abs(det);
         if(det>0){
           xcut[n*3*2]   = xtmp[0];
           xcut[n*3*2+1] = xtmp[1];
@@ -438,14 +449,23 @@ printf("\tfull vtxcoords: (%f, %f), (%f, %f), (%f, %f)\n", xvert[0],xvert[1],xve
 printf("\tcut vtx coords: (%f, %f), (%f, %f), (%f, %f)\n",xcut[n*3*2], xcut[n*3*2+3], xcut[n*3*2+1], xcut[n*3*2+4], xcut[n*3*2+2], xcut[n*3*2+5]);
 printf("\tcut elem neigh(%i, %i, %i) = %i %i %i\n",3*n,3*n+1,3*n+2,cut2neigh[3*n],cut2neigh[3*n+1],cut2neigh[3*n+2]);
 printf("\tcut2face = %i %i %i\n",cut2face[3*n],cut2face[3*n+1],cut2face[3*n+2]);
-        n++; 
-      }
-  }
+        n++; // end of second triangle
 
-for(int aa = 0;aa<n;aa++)
-for(int f = 0;f<nfp;f++){
-printf("\norig %i, el %i, side %i = %i\n",cut2e[aa],aa,f);
-printf("\tcutoverset[%i] = %i\n",aa*nfp+f,cutoverset[aa*nfp+f]);
-}
+        // Check if cell needs merging
+        if(area_cut/area < 0.5){
+	  cellmerge[i] = 1; // cut but doesn't require cell merging
+	}
+	else{
+	  cellmerge[i] = 2; // requires cell merging
+	}
+      } // if cut cell
+  } // nelem loop
+
+  // Debug
+  for(int aa = 0;aa<n;aa++)
+    for(int f = 0;f<nfp;f++){
+      printf("\norig %i, el %i, side %i = %i\n",cut2e[aa],aa,f);
+      printf("\tcutoverset[%i] = %i\n",aa*nfp+f,cutoverset[aa*nfp+f]);
+    }
 }
 
