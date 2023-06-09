@@ -14,11 +14,12 @@ int main(int argc, char *argv[])
   if (nmesh == 0) {
    printf("dgsand: Need at least one input file as argument\n");
    printf("e.g. for a two mesh case\n");
-   printf("$../src/dgsand input.dgsand1 input.dgsand2 \n");
+   printf("Usage: ../src/dgsand input.dgsand1 input.dgsand2 mesh2offset x_cut\n");
    exit(0);
   }
   else if(nmesh>2){
     printf("dgsand: Only a maximum of 2 grids are supported\n"); 
+   printf("Usage: ../src/dgsand input.dgsand1 input.dgsand2 mesh2offset x_cut\n");
     exit(0);
   }
   dgsand *sol=new dgsand[nmesh];

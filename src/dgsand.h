@@ -77,7 +77,7 @@ extern "C" {
 			   double *detJcut, double *bfcutL, double *bfdcutL,  
 			   double *bfcutR, double *bfdcutR,  
 			   double *fwcut, int* iptrc, int necut, int* cut2e,
-			   int* cut2neigh, int imesh, int* cutoverset);
+			   int* cut2neigh, int imesh, int* cutoverset, int* cellmerge);
   
   void COMPUTE_RHS(double *R,double *mass,double *bv, double *bvd, double *JinvV, double *detJ,
 		 double *bf, double *bfd, double *JinvF,
@@ -430,7 +430,8 @@ printf("OSFflux size = %i\n",necut*maxseg*ngGL*3*nfields);
 			    necut,
 			    cut2e.data(),
 			    cut2neigh.data(),imesh,
-			    cutoverset.data());
+			    cutoverset.data(),
+			    cellmerge.data());
 	
 	CUT_MASS_MATRIX(mass.data(),
 			x.data(),

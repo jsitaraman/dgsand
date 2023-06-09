@@ -105,7 +105,7 @@ void CUT_CELLS(double x0, double *x, double* xcut, int* iptr, int* cut2e, int d,
 
   int nbasis=order2basis[e][p]; // first order bases are interpolative at nodes so it's ok to do this?
   double bv[nbasis*nfp];
-  double area, area_cut;
+  double area=0, area_cut=0;
 //  int ng = ngGL[e][p]; 
 
   n = 0; 
@@ -135,8 +135,16 @@ void CUT_CELLS(double x0, double *x, double* xcut, int* iptr, int* cut2e, int d,
       }
 
       // compute area of complete triangle
-      JacP1Tri(jac,xvert,&area); 
-      area = 0.5*area; 
+      // need to reorder xvert b/c I wrote this is in a stupid way
+      // and changed convention
+      xtmp[0] = xvert[0];
+      xtmp[1] = xvert[2];
+      xtmp[2] = xvert[4];
+      xtmp[3] = xvert[1];
+      xtmp[4] = xvert[3];
+      xtmp[5] = xvert[5];
+      JacP1Tri(jac,xtmp,&area); 
+      area = 0.5*fabs(area); 
       area_cut = 0.0; 
 
       // check if element has vertices on both sides of x=x0 then 
@@ -213,7 +221,8 @@ void CUT_CELLS(double x0, double *x, double* xcut, int* iptr, int* cut2e, int d,
         // double check for positive jacobian
         // and save out info in correct order
         JacP1Tri(jac,xtmp,&det); 
-        area_cut += abs(det);
+//printf("%i cut area = %f\n",i,fabs(det)/2); 
+        area_cut += fabs(det)/2;
         if(det>0){
           xcut[n*3*2]   = xtmp[0];
           xcut[n*3*2+1] = xtmp[1];
@@ -256,20 +265,20 @@ void CUT_CELLS(double x0, double *x, double* xcut, int* iptr, int* cut2e, int d,
         }
         cut2e[n]=i; //store id of orig elem
 
-printf("\norig elem %i, cut cell %i, det %f:\n",i,n,det);
-if(fabs(det)<1e-13){
-printf("\nERROR: det %f %f \n jac = %f %f %f %f\nxtmp = %f %f %f %f %f %f\n",det,fabs(det),jac[0],jac[1],jac[2],jac[3],xtmp[0],xtmp[1],xtmp[2],xtmp[3],xtmp[4],xtmp[5]);
-for(f=0;f<nfp;f++){
-for(j=0;j<nbasis;j++){
-printf("f = %i,  bv[%i] = %f\n",f,j,bv[f*nbasis+j]);
-}
-}
-}
+	printf("\norig elem %i, cut cell %i, det %f:\n",i,n,det);
+	if(fabs(det)<1e-13){
+	printf("\nERROR: det %f %f \n jac = %f %f %f %f\nxtmp = %f %f %f %f %f %f\n",det,fabs(det),jac[0],jac[1],jac[2],jac[3],xtmp[0],xtmp[1],xtmp[2],xtmp[3],xtmp[4],xtmp[5]);
+	for(f=0;f<nfp;f++){
+	for(j=0;j<nbasis;j++){
+	printf("f = %i,  bv[%i] = %f\n",f,j,bv[f*nbasis+j]);
+	}
+	}
+	}
 
-printf("\tfull vtxcoords: (%f, %f), (%f, %f), (%f, %f)\n", xvert[0],xvert[1],xvert[2],xvert[3],xvert[4],xvert[5]);
-printf("\tcut vtx coords: (%f, %f), (%f, %f), (%f, %f)\n",xcut[n*3*2], xcut[n*3*2+3], xcut[n*3*2+1], xcut[n*3*2+4], xcut[n*3*2+2], xcut[n*3*2+5]);
-printf("\tcut elem neigh(%i, %i, %i) = %i %i %i\n",3*n,3*n+1,3*n+2,cut2neigh[3*n],cut2neigh[3*n+1],cut2neigh[3*n+2]);
-printf("\tcut2face = %i %i %i\n",cut2face[3*n],cut2face[3*n+1],cut2face[3*n+2]);
+	printf("\tfull vtxcoords: (%f, %f), (%f, %f), (%f, %f)\n", xvert[0],xvert[1],xvert[2],xvert[3],xvert[4],xvert[5]);
+	printf("\tcut vtx coords: (%f, %f), (%f, %f), (%f, %f)\n",xcut[n*3*2], xcut[n*3*2+3], xcut[n*3*2+1], xcut[n*3*2+4], xcut[n*3*2+2], xcut[n*3*2+5]);
+	printf("\tcut elem neigh(%i, %i, %i) = %i %i %i\n",3*n,3*n+1,3*n+2,cut2neigh[3*n],cut2neigh[3*n+1],cut2neigh[3*n+2]);
+	printf("\tcut2face = %i %i %i\n",cut2face[3*n],cut2face[3*n+1],cut2face[3*n+2]);
         n++; 
       }
 
@@ -319,7 +328,7 @@ printf("\tcut2face = %i %i %i\n",cut2face[3*n],cut2face[3*n+1],cut2face[3*n+2]);
 
         // double check for positive jacobian 
         JacP1Tri(jac,xtmp,&det); 
-        area_cut += abs(det);
+        area_cut += fabs(det)/2;
         if(det>0){
           xcut[n*3*2]   = xtmp[0];
           xcut[n*3*2+1] = xtmp[1];
@@ -354,19 +363,19 @@ printf("\tcut2face = %i %i %i\n",cut2face[3*n],cut2face[3*n+1],cut2face[3*n+2]);
         }
  
         cut2e[n]=i; //store id of orig elem
-printf("\norig elem %i, cut cell %i, det %f:\n",i,n,det);
-if(fabs(det)<1e-13){
-printf("\nERROR: det %f %f \n jac = %f %f %f %f\nxtmp = %f %f %f %f %f %f\n",det,fabs(det),jac[0],jac[1],jac[2],jac[3],xtmp[0],xtmp[1],xtmp[2],xtmp[3],xtmp[4],xtmp[5]);
-for(f=0;f<nfp;f++){
-for(j=0;j<nbasis;j++){
-printf("f = %i,  bv[%i] = %f\n",f,j,bv[f*nbasis+j]);
-}
-}
-}
-printf("\tfull vtxcoords: (%f, %f), (%f, %f), (%f, %f)\n", xvert[0],xvert[1],xvert[2],xvert[3],xvert[4],xvert[5]);
-printf("\tcut vtx coords: (%f, %f), (%f, %f), (%f, %f)\n",xcut[n*3*2], xcut[n*3*2+3], xcut[n*3*2+1], xcut[n*3*2+4], xcut[n*3*2+2], xcut[n*3*2+5]);
-printf("\tcut elem neigh(%i, %i, %i) = %i %i %i\n",3*n,3*n+1,3*n+2,cut2neigh[3*n],cut2neigh[3*n+1],cut2neigh[3*n+2]);
-printf("\tcut2face = %i %i %i\n",cut2face[3*n],cut2face[3*n+1],cut2face[3*n+2]);
+	printf("\norig elem %i, cut cell %i, det %f:\n",i,n,det);
+	if(fabs(det)<1e-13){
+	printf("\nERROR: det %f %f \n jac = %f %f %f %f\nxtmp = %f %f %f %f %f %f\n",det,fabs(det),jac[0],jac[1],jac[2],jac[3],xtmp[0],xtmp[1],xtmp[2],xtmp[3],xtmp[4],xtmp[5]);
+	for(f=0;f<nfp;f++){
+	for(j=0;j<nbasis;j++){
+	printf("f = %i,  bv[%i] = %f\n",f,j,bv[f*nbasis+j]);
+	}
+	}
+	}
+	printf("\tfull vtxcoords: (%f, %f), (%f, %f), (%f, %f)\n", xvert[0],xvert[1],xvert[2],xvert[3],xvert[4],xvert[5]);
+	printf("\tcut vtx coords: (%f, %f), (%f, %f), (%f, %f)\n",xcut[n*3*2], xcut[n*3*2+3], xcut[n*3*2+1], xcut[n*3*2+4], xcut[n*3*2+2], xcut[n*3*2+5]);
+	printf("\tcut elem neigh(%i, %i, %i) = %i %i %i\n",3*n,3*n+1,3*n+2,cut2neigh[3*n],cut2neigh[3*n+1],cut2neigh[3*n+2]);
+	printf("\tcut2face = %i %i %i\n",cut2face[3*n],cut2face[3*n+1],cut2face[3*n+2]);
         n++; // end of first triangle
 
 	//Second triangle (cut node 1, both intersect nodes)
@@ -400,7 +409,7 @@ printf("\tcut2face = %i %i %i\n",cut2face[3*n],cut2face[3*n+1],cut2face[3*n+2]);
 
         // double check for positive jacobian 
         JacP1Tri(jac,xtmp,&det); 
-        area_cut += abs(det);
+        area_cut += fabs(det)/2;
         if(det>0){
           xcut[n*3*2]   = xtmp[0];
           xcut[n*3*2+1] = xtmp[1];
@@ -436,29 +445,32 @@ printf("\tcut2face = %i %i %i\n",cut2face[3*n],cut2face[3*n+1],cut2face[3*n+2]);
 	cutoverset[3*n + 0] = 1; 
 
         cut2e[n]=i; //store id of orig elem
-printf("\norig elem %i, cut cell %i, det %f:\n",i,n,det);
-if(fabs(det)<1e-13){
-printf("\nERROR: det %f %f \n jac = %f %f %f %f\nxtmp = %f %f %f %f %f %f\n",det,fabs(det),jac[0],jac[1],jac[2],jac[3],xtmp[0],xtmp[1],xtmp[2],xtmp[3],xtmp[4],xtmp[5]);
-for(f=0;f<nfp;f++){
-for(j=0;j<nbasis;j++){
-printf("f = %i,  bv[%i] = %f\n",f,j,bv[f*nbasis+j]);
-}
-}
-}
-printf("\tfull vtxcoords: (%f, %f), (%f, %f), (%f, %f)\n", xvert[0],xvert[1],xvert[2],xvert[3],xvert[4],xvert[5]);
-printf("\tcut vtx coords: (%f, %f), (%f, %f), (%f, %f)\n",xcut[n*3*2], xcut[n*3*2+3], xcut[n*3*2+1], xcut[n*3*2+4], xcut[n*3*2+2], xcut[n*3*2+5]);
-printf("\tcut elem neigh(%i, %i, %i) = %i %i %i\n",3*n,3*n+1,3*n+2,cut2neigh[3*n],cut2neigh[3*n+1],cut2neigh[3*n+2]);
-printf("\tcut2face = %i %i %i\n",cut2face[3*n],cut2face[3*n+1],cut2face[3*n+2]);
+	printf("\norig elem %i, cut cell %i, det %f:\n",i,n,det);
+	if(fabs(det)<1e-13){
+	printf("\nERROR: det %f %f \n jac = %f %f %f %f\nxtmp = %f %f %f %f %f %f\n",det,fabs(det),jac[0],jac[1],jac[2],jac[3],xtmp[0],xtmp[1],xtmp[2],xtmp[3],xtmp[4],xtmp[5]);
+	for(f=0;f<nfp;f++){
+	for(j=0;j<nbasis;j++){
+	printf("f = %i,  bv[%i] = %f\n",f,j,bv[f*nbasis+j]);
+	}
+	}
+	}
+	printf("\tfull vtxcoords: (%f, %f), (%f, %f), (%f, %f)\n", xvert[0],xvert[1],xvert[2],xvert[3],xvert[4],xvert[5]);
+	printf("\tcut vtx coords: (%f, %f), (%f, %f), (%f, %f)\n",xcut[n*3*2], xcut[n*3*2+3], xcut[n*3*2+1], xcut[n*3*2+4], xcut[n*3*2+2], xcut[n*3*2+5]);
+	printf("\tcut elem neigh(%i, %i, %i) = %i %i %i\n",3*n,3*n+1,3*n+2,cut2neigh[3*n],cut2neigh[3*n+1],cut2neigh[3*n+2]);
+	printf("\tcut2face = %i %i %i\n",cut2face[3*n],cut2face[3*n+1],cut2face[3*n+2]);
         n++; // end of second triangle
-
-        // Check if cell needs merging
-        if(area_cut/area < 0.5){
-	  cellmerge[i] = 1; // cut but doesn't require cell merging
-	}
-	else{
-	  cellmerge[i] = 2; // requires cell merging
-	}
       } // if cut cell
+      // Check if cell needs merging
+      if(area_cut<1e-14){
+	cellmerge[i] = 0;
+      }
+      else if(area_cut/area < 0.5){
+        cellmerge[i] = 1; // cut but doesn't require cell merging
+      }
+      else{
+        cellmerge[i] = 2; // requires cell merging
+      }
+      printf("\n\telem %i, area_cut = %f, area = %f, cellmerge = %i\n",i,area_cut,area,cellmerge[i]);
   } // nelem loop
 
   // Debug

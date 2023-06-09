@@ -695,7 +695,7 @@ void COMPUTE_CUT_METRICS(double *x, double *JinvV,
 			 double *detJcut, double *bfcutL, double *bfdcutL,  
 			 double *bfcutR, double *bfdcutR,  
 			 double *fwcut, int* iptrc, int necut, int* cut2e,
-			 int* cut2neigh, int imesh, int* cutoverset)
+			 int* cut2neigh, int imesh, int* cutoverset, int* cellmerge)
 {
   int i,j,b,eid;
   int ip,ix,ij,idetj,ijf;
@@ -849,6 +849,7 @@ void FIND_PARENTS(double* x, int* iptr, int* elem2face, int* faces,
     elemParent[i] = -1; 
     cneigh = -1; 
     if(cellmerge[i]==2){ // severely cut element that needs merging
+
       ix=iptr[pc*i+1];
       findCentroid(x+ix,centroid,nbasis,npf,e,d,p);
 
@@ -856,31 +857,33 @@ void FIND_PARENTS(double* x, int* iptr, int* elem2face, int* faces,
       maxiter = 2; // max number of levels of face neighbors to check
       iter = 1;     
       eid = i; // start with current element
-      while(elemParent[i]==1 && iter<=maxiter){ 
+      while(elemParent[i]==-1 && iter<=maxiter){ 
         keep = -1; 
         ndist = 1e16; 
         ndist2 = ndist;
         for(int j=0;j<npf;j++){
           //get faceID and neighbor elem id
-          fid = elem2face[3*eid+j];
+          fid = abs(elem2face[3*eid+j])-1;
           neigh = faces[6*fid+2] == eid ? faces[6*fid+4] : faces[6*fid+2];
 
-          //get neighbor elemID   
-          findCentroid(x+iptr[pc*neigh+1],ncentroid,nbasis,npf,e,d,p);
-          dist =  (ncentroid[0]-centroid[0])*(ncentroid[0]-centroid[0]);
-          dist += (ncentroid[1]-centroid[1])*(ncentroid[1]-centroid[1]);
+          if(neigh>=0 && neigh != i){
+            //get neighbor elemID   
+            findCentroid(x+iptr[pc*neigh+1],ncentroid,nbasis,npf,e,d,p);
+            dist =  (ncentroid[0]-centroid[0])*(ncentroid[0]-centroid[0]);
+            dist += (ncentroid[1]-centroid[1])*(ncentroid[1]-centroid[1]);
 
-	  //find nearest unblanked, stable element 
-          if(cellmerge[neigh]!=2 && dist<ndist && iblank[neigh]!=1){
-	    ndist = dist; 
-	    keep = neigh;
-          }
+	    //find nearest unblanked, stable element 
+            if(cellmerge[neigh]!=2 && dist<ndist && iblank[neigh]!=1){
+  	      ndist = dist; 
+  	      keep = neigh;
+            }
 
-	  // save closest unblanked neighbor in case this doesn't work
-	  if(iblank[neigh]!=1 && dist<ndist2){
-	    ndist2 = dist;
-	    cneigh = neigh;
-          }
+  	    // save closest unblanked neighbor in case this doesn't work
+	    if(iblank[neigh]!=1 && dist<ndist2){
+	      ndist2 = dist;
+	      cneigh = neigh;
+            }
+	  } 
         }// loop face neighbors
 
 	// check to see if this level worked
