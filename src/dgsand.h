@@ -59,11 +59,12 @@ extern "C" {
 		 int nelem, int pc, int *cut2face, int* cut2neigh, int* elem2face, int* faces,
 		 int* iblank, int* cutoverset, int imesh, int ng, int* cellmerge);
 
-  void MASS_MATRIX(double *mass,double *x, int *iptr, int d, int e, int p, int nelem, int pc, int imesh);
+  void MASS_MATRIX(double *mass,double *x, int *iptr, int d, int e, int p, int nelem, int pc, int imesh,
+ 		   int* elemParent, double* Jinv, double* detJ);
 
   void CUT_MASS_MATRIX(double *mass,double *x, double *Jinv, int *iptr, double *xcut,
 		       double *detJcut, int *iptrc, int d, int e, int p, int nelem,
-		       int pc, int pccut, int necut, int* cut2e, int imesh);
+		       int pc, int pccut, int necut, int* cut2e, int imesh, int* elemParent );
 
   void COMPUTE_GRID_METRICS(double *x, double *bv, double *bvd,double *JinvV, 
 			    double *detJ,double *bf, double *bfd, double *JinvF, double *faceWeight,
@@ -77,7 +78,7 @@ extern "C" {
 			   double *detJcut, double *bfcutL, double *bfdcutL,  
 			   double *bfcutR, double *bfdcutR,  
 			   double *fwcut, int* iptrc, int necut, int* cut2e,
-			   int* cut2neigh, int imesh, int* cutoverset, int* cellmerge);
+			   int* cut2neigh, int imesh, int* cutoverset, int* elemParent);
   
   void COMPUTE_RHS(double *R,double *mass,double *bv, double *bvd, double *JinvV, double *detJ,
 		 double *bf, double *bfd, double *JinvF,
@@ -404,7 +405,8 @@ printf("OSFflux size = %i\n",necut*maxseg*ngGL*3*nfields);
 
     void mass_matrix(int imesh) {
       MASS_MATRIX(mass.data(),x.data(),
-		  iptr.data(),d,etype,p,nelem,pc, imesh);
+		  iptr.data(),d,etype,p,nelem,pc, imesh,
+		  elemParent.data(), JinvV.data(), detJ.data());
     }
 
     void cut_metrics(double x0, int imesh) {
@@ -431,7 +433,7 @@ printf("OSFflux size = %i\n",necut*maxseg*ngGL*3*nfields);
 			    cut2e.data(),
 			    cut2neigh.data(),imesh,
 			    cutoverset.data(),
-			    cellmerge.data());
+			    elemParent.data());
 	
 	CUT_MASS_MATRIX(mass.data(),
 			x.data(),
@@ -442,7 +444,8 @@ printf("OSFflux size = %i\n",necut*maxseg*ngGL*3*nfields);
 			iptrc.data(),
 			d,etype,p,nelem,
 			pc,pccut,necut,
-			cut2e.data(),imesh);
+			cut2e.data(),imesh,
+			elemParent.data());
       }
     };
 
