@@ -53,6 +53,7 @@ int main(int argc, char *argv[])
 		   	  sol[B].xcut,
 			  sol[B].JinvV,
 			  sol[B].cut2e,
+			  sol[B].elemParent,
 		          sol[B].necut,
 			  sol[B].nelem);
     }

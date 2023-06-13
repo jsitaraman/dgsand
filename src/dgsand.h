@@ -101,6 +101,7 @@ extern "C" {
 		     int* iptrA, int* iptrB, int* iptrcA, int* iptrcB, 
 		     double* xA, double* xB, double* xcutA, double* xcutB,
                      double* bfcutLA, double* bfcutRA, double* JinvA, double* JinvB,
+ 		     int* elemParentA, int* elemParentB,
 		     int* OSFnseg, int* OSFeID, double* OSFxn, double* OSFshpL, double* OSFshpR,
 		     int d, int e, int p, int pc, int pccut, int necutA, int necutB, int nelemB); 
 
@@ -483,6 +484,7 @@ printf("OSFflux size = %i\n",necut*maxseg*ngGL*3*nfields);
 		      std::vector<double>& xcutB,
 		      std::vector<double>& JinvB,
 		      std::vector<int>& cut2eB,
+		      std::vector<int>& elemParentB,
 		      int necutB, int nelemB)
     {
     SETUP_OVERSET(cut2e.data(),
@@ -500,6 +502,8 @@ printf("OSFflux size = %i\n",necut*maxseg*ngGL*3*nfields);
                   bfcutR.data(),
 		  JinvV.data(),
 		  JinvB.data(),
+		  elemParent.data(),
+                  elemParentB.data(),
 		  OSFnseg.data(),
 		  OSFeID.data(),
 		  OSFxn.data(),

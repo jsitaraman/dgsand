@@ -807,8 +807,7 @@ void MASS_MATRIX(double *mass,double *x, int *iptr, int d, int e, int p, int nel
       }
   }
 
-  for(i=0;i<nelem;i++)
-    {
+  for(i=0;i<nelem;i++){
 /*
       if(imesh==1 && i==1){
         debug = 1; 
@@ -816,22 +815,24 @@ void MASS_MATRIX(double *mass,double *x, int *iptr, int d, int e, int p, int nel
       }
       else{ debug = 0;}
 */
-
+      debug = 1;
       pid=elemParent[i];
       ix=iptr[pc*i+1]; // current element x
       im=iptr[pc*pid+10]; // parent mass matrix
       mass_matrix(mass,x,Jinv,detJ,d,e,p,debug,i,pid,iptr,pc); 
-/*
-      if(debug){
+
+    }
+
+  if(debug){
+    for(i=0;i<nelem;i++){
         m = 0; 
         for(int j=0;j<nbasis;j++)
           for(int k=0;k<nbasis;k++){
             printf("Mesh %i, cell %i, full mass[%i] = %f\n",imesh,i,m,mass[im+m]);
             m++;
           }
-      }
-*/
     }
+  }
 }
 
 void CUT_MASS_MATRIX(double *mass,double *x, double *Jinv, int *iptr, double *xcut, double *detJcut, int *iptrc, int d, int e, int p, int nelem, int pc, int pccut, int necut, int* cut2e, int imesh,int* elemParent)
