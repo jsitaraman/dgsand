@@ -1,7 +1,8 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<math.h>
-void setOversetFluxes(double *OSFflux, int OSFnseg, int* OSFeID, double* OSFshpL, double* OSFshpR, double* qA, double* qB, int* iptrB, int d, int e, int p, int pc, int pde, int debug)
+
+void setOversetFluxes(double *OSFflux, int OSFnseg, int* OSFeID, double* OSFshpL, double* OSFshpR, double* qA, double* qB, int* iptrB, int* elemParentB, int d, int e, int p, int pc, int pde, int debug)
 // computes R q values at cut cell interface
 // using q from other mesh
 {
@@ -9,9 +10,9 @@ void setOversetFluxes(double *OSFflux, int OSFnseg, int* OSFeID, double* OSFshpL
   int nbasis = order2basis[e][p];
   int ngauss = ngGL[e][p]; 
   int nfields=get_nfields[pde](d);
-  int eid, iq;   
+  int eid, pid, iq;   
 
-if(debug) printf("in setOversetFluxes\n"); 
+  if(debug) printf("in setOversetFluxes\n"); 
 
   // loop over segments
   int floc = 0; 
@@ -19,10 +20,12 @@ if(debug) printf("in setOversetFluxes\n");
   for(int i=0;i<OSFnseg;i++){
     for(int j=0;j<ngauss;j++){
       eid = OSFeID[i*ngauss+j];
-      iq = iptrB[pc*eid]; 
+      pid = elemParentB[eid];
+      iq = iptrB[pc*pid]; 
 
-if(debug) printf("seg %i, gauss %i\n",i,j); 
-	if(debug) for(int b=0;b<nbasis;b++) printf("\t\tdebug: OSFshpL[%i] = %f, OSFshpR[%i] = %f\n",bloc+b,OSFshpR[bloc+b],bloc+b,OSFshpL[bloc+b]);
+      if(debug) printf("seg %i, gauss %i\n",i,j); 
+      if(debug) for(int b=0;b<nbasis;b++) printf("\t\tdebug: OSFshpL[%i] = %f, OSFshpR[%i] = %f\n",
+                                                  bloc+b,OSFshpR[bloc+b],bloc+b,OSFshpL[bloc+b]);
 
       for(int f=0;f<nfields;f++){
         // L state
@@ -36,21 +39,21 @@ if(debug) printf("seg %i, gauss %i\n",i,j);
 	  OSFflux[floc + nfields + f] += OSFshpR[bloc+b]*qB[iq+f*nbasis+b];	  
       }// loop over fields
 
-if(debug){
-for(int f=0;f<nfields;f++)
-for(int b=0;b<nbasis;b++) 
-printf("qA[%i] = %f, qB[%i] = %f\n",f*nbasis+b,qA[f*nbasis+b],iq+f*nbasis+b,qB[iq+f*nbasis+b]);
-for(int f=0;f<nfields;f++)
-printf("L state = %f, R state = %f\n",OSFflux[floc + f],OSFflux[floc + nfields + f]);
-}
-for(int aa = 0; aa<3*nfields; aa++){
-if(isnan(OSFflux[floc+aa])){
-printf("\nERROR: nan in OSFflx:\n");
-for(int bb = 0; bb<3*nfields; bb++) printf("\tOSFflx[%i] = %.16e\n",bb,OSFflux[floc+bb]);
-exit(1);
-}
-}
-
+      if(debug){
+        for(int f=0;f<nfields;f++)
+        for(int b=0;b<nbasis;b++) 
+          printf("qA[%i] = %f, qB[%i] = %f\n",f*nbasis+b,qA[f*nbasis+b],
+                 iq+f*nbasis+b,qB[iq+f*nbasis+b]);
+        for(int f=0;f<nfields;f++)
+          printf("L state = %f, R state = %f\n",OSFflux[floc + f],OSFflux[floc + nfields + f]);
+      }
+      for(int aa = 0; aa<3*nfields; aa++){
+        if(isnan(OSFflux[floc+aa])){
+          printf("\nERROR: nan in OSFflx:\n");
+            for(int bb = 0; bb<3*nfields; bb++) printf("\tOSFflx[%i] = %.16e\n",bb,OSFflux[floc+bb]);
+            exit(1);
+        }
+      } 
 
       floc = floc + 3*nfields;
       bloc = bloc + nbasis; 
@@ -58,11 +61,14 @@ exit(1);
   } // loop over segments
 }
 
-void EXCHANGE_OVERSET(double* OSFflux, double* OSFshpL, double* OSFshpR, int* OSFnseg, int* OSFeID, int* cut2eA, double* qA, double* qB, int* cutoverset, int* iptrcA, int* iptrA, int* iptrB, int necutA, int pccut, int d, int e, int p, int pc, int pde, int imesh)
+void EXCHANGE_OVERSET(double* OSFflux, double* OSFshpL, double* OSFshpR, int* OSFnseg, int* OSFeID, 
+                      int* cut2eA, double* qA, double* qB, int* cutoverset, 
+                      int* iptrcA, int* iptrA, int* iptrB, int* elemParentA, int* elemParentB, 
+                      int necutA, int pccut, int d, int e, int p, int pc, int pde, int imesh)
 {
   int iel,ishp, ip, ix, iq, ibf, ic2n, iflx, ico;
   int nfp = facePerElem[e];
-  int eid, flag, debug, m;
+  int eid, pid, flag, debug, m;
   int nbasis=order_to_basis(e,p);        // basis for solution
   // Loop over cut cells in mesh A
   for(int i = 0; i<necutA; i++){
@@ -72,24 +78,23 @@ void EXCHANGE_OVERSET(double* OSFflux, double* OSFshpL, double* OSFshpR, int* OS
     iel  = iptrcA[ip+14]; 
     ishp = iptrcA[ip+15]; 
     iflx = iptrcA[ip+16];
-    eid = cut2eA[i];
-    iq = iptrA[eid*pc];
 
-  if(i==2 && eid == 1){
-    debug = 1;
-  } else{
-    debug=0;
-  }
-  if(debug) printf("In Exchange\n");
+    eid = cut2eA[i];
+    pid = elemParentA[eid];
+    iq = iptrA[pid*pc]; // using parent's q values
+
+    if(i==2 && eid == 1){
+      debug = 1;
+    } else{
+      debug=0;
+    }
+    if(debug) printf("In Exchange\n");
 
     // does this cut cell have an overset boundary?
     if(cutoverset[ico] + cutoverset[ico+1] + cutoverset[ico+2]>-nfp){
-
       // interpolate q fluxes from mesh B
-//      printf("\tDEBUG: iflx = %i, OSFflux[iflx] = %f\n",iflx,OSFflux[iflx]);
-      
-
-      setOversetFluxes(OSFflux+iflx, OSFnseg[i],OSFeID+iel, OSFshpL+ishp, OSFshpR+ishp, qA+iq, qB, iptrB, d, e, p, pc, pde, debug);
+      setOversetFluxes(OSFflux+iflx, OSFnseg[i],OSFeID+iel, OSFshpL+ishp, OSFshpR+ishp, 
+                       qA+iq, qB, iptrB, elemParentB, d, e, p, pc, pde, debug);
     } // if cut overset
   } // cut cells A loop
 }
@@ -419,7 +424,7 @@ if(debug) printf("pre Ja = %f %f %f %f\n",Ja[0],Ja[1],Ja[2],Ja[3]);
       axb(JinvB+ij,pt2,u,2);
 
       // if finished loop and still not found, something is wrong
-      if(inside==0 || (n!=elemParentB[n] && (u[0]<0 || u[0]>1 || u[1]<0 || u[1]>1))){
+      if(inside==0 || (n==elemParentB[n] && (u[0]<0 || u[0]>1 || u[1]<0 || u[1]>1))){
         printf("ERROR! Can't find mesh B element for mesh A point (%f, %f)!\n",xloc,yloc); 
         printf("\tu = %f %f, inside = %i\n",u[0],u[1],inside);
         if(inside) printf("\tTri coords: (%f, %f), (%f, %f), (%f, %f)\n",

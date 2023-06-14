@@ -92,13 +92,13 @@ int main(int argc, char *argv[])
       for(i=0;i<nmesh;i++){
       
         if(nmesh>1){
-        printf("================================================\n");
-        printf("EXCHANGING OVERSET FOR MESH %i Step %i, Euler \n",i,n); 
-        printf("================================================\n");
+          printf("================================================\n");
+          printf("EXCHANGING OVERSET FOR MESH %i Step %i, Euler \n",i,n); 
+          printf("================================================\n");
           B = 1-i; 
           sol[i].exchangeOverset(sol[B].q, sol[B].iptr,i); 
         }
-	printf("==================\nCOMPUTING MESH %i Step %i, Euler \n===================\n",i,n);
+      	printf("==================\nCOMPUTING MESH %i Step %i, Euler \n===================\n",i,n);
         sol[i].computeRHS(sol[i].q,i);
       }
       for(i=0;i<nmesh;i++)      
@@ -112,13 +112,13 @@ int main(int argc, char *argv[])
           B = 1-i; 
           sol[i].exchangeOverset(sol[B].q, sol[B].iptr,i); 
         }
-	printf("==================\nCOMPUTING MESH %i Step %i, RK 1\n===================\n",i,n);
+	      printf("==================\nCOMPUTING MESH %i Step %i, RK 1\n===================\n",i,n);
         sol[i].computeRHS(sol[i].q,i);
       }
       for(i=0;i<nmesh;i++)
         {
-	  sol[i].update(sol[i].qstar,sol[i].q,rk[1]*dt);
-  	  sol[i].update(sol[i].q,sol[i].q,rk[0]*dt);
+	      sol[i].update(sol[i].qstar,sol[i].q,rk[1]*dt);
+  	    sol[i].update(sol[i].q,sol[i].q,rk[0]*dt);
         }
 
       // RK step 2
@@ -127,7 +127,7 @@ int main(int argc, char *argv[])
           B = 1-i; 
           sol[i].exchangeOverset(sol[B].qstar, sol[B].iptr, i); 
         }
-	printf("==================\nCOMPUTING MESH %i Step %i, RK 2 \n===================\n",i,n);
+      	printf("==================\nCOMPUTING MESH %i Step %i, RK 2 \n===================\n",i,n);
         sol[i].computeRHS(sol[i].qstar,i);
       }
       for(i=0;i<nmesh;i++) sol[i].update(sol[i].qstar,sol[i].q,rk[2]*dt);
@@ -138,7 +138,7 @@ int main(int argc, char *argv[])
           B = 1-i; 
           sol[i].exchangeOverset(sol[B].q, sol[B].iptr, i); 
         }
-	printf("==================\nCOMPUTING MESH %i Step %i, RK 3\n===================\n",i,n);
+      	printf("==================\nCOMPUTING MESH %i Step %i, RK 3\n===================\n",i,n);
         sol[i].computeRHS(sol[i].qstar,i);
       }
       for(i=0;i<nmesh;i++) sol[i].update(sol[i].q,sol[i].q,rk[3]*dt);

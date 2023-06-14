@@ -427,6 +427,7 @@ void cut_mass_matrix(double *M, double *x, double *Jinv, double *xcut, double *d
       M[0]-=0.5*detJcut[0];
   }
 }
+
 void mass_matrix(double *M, double *x, double* Jinv, double* detJ, int d, int e, int p, int debug, int eid, int pid, int* iptr, int pc)
 {
   int i,j,ij,w,b,ii,jj;
@@ -547,11 +548,9 @@ void Jacobian(double *x,double *bv, double *bvd, double *Jinv,
 	}
       if (p==0) bv[l++]=1;
 
-      for(b=0;b<nbasis;b++)
-        for(i=0;i<d;i++)
+      //for(b=0;b<nbasis;b++)
+        //for(i=0;i<d;i++)
 
-      for(b=0;b<nbasis;b++){
-}
       //build jacobian dx/dr
       for(i=0;i<d;i++)
 	{
@@ -845,9 +844,9 @@ void CUT_MASS_MATRIX(double *mass,double *x, double *Jinv, int *iptr, double *xc
   for(i=0;i<necut;i++){
       eid = cut2e[i]; // find original element id 
       pid = elemParent[eid]; // find original element id 
-      ix=iptr[pc*eid+1];
-      ij=iptr[pc*eid+4];
-      im=iptr[pc*eid+10];
+      ix=iptr[pc*pid+1];
+      ij=iptr[pc*pid+4];
+      im=iptr[pc*pid+10];
 
       ixc=iptrc[pccut*i+1];
       id=iptrc[pccut*i+5]; 
@@ -856,15 +855,15 @@ void CUT_MASS_MATRIX(double *mass,double *x, double *Jinv, int *iptr, double *xc
       if(pid!=eid) ismerged=1; 
       cut_mass_matrix(&(mass[im]),&(x[ix]),&(Jinv[ij]),&(xcut[ixc]),&(detJcut[id]),d,e,p,ismerged);
 
-if(imesh==1 && eid==225){
-int m = 0; 
-for(int j=0;j<nbasis;j++)
-for(int k=0;k<nbasis;k++){
- printf("Mesh %i, cell %i, cut mass[%i] = %f\n",imesh,i,im+m,mass[im+m]);
-m++;
-}
-printf("Mesh %i, cell %i, cut %i detJ = %f\n",imesh,eid,i,detJcut[id]); 
-}
+      if(imesh==1 && eid==225){
+        int m = 0; 
+	for(int j=0;j<nbasis;j++)
+	  for(int k=0;k<nbasis;k++){
+	     printf("Mesh %i, cell %i, cut mass[%i] = %f\n",imesh,i,im+m,mass[im+m]);
+	     m++;
+	  }
+        printf("Mesh %i, cell %i, cut %i detJ = %f\n",imesh,eid,i,detJcut[id]); 
+      }
   }
 }
 

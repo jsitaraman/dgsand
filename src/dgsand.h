@@ -90,7 +90,7 @@ extern "C" {
                  int* OSFnseg, int* OSFeID, double* OSFxn, double* OSFshpL, 
 		 double* OSFshpR, double* OSFflux,
 		 int *iptrc, int necut, int* cut2e, int *cut2face, int* cut2neigh, int* iblank, int ireg,
-		 int *cutoverset, int* cellmerge, int imesh);
+		 int *cutoverset, int* elemParent, int imesh);
 
   void UPDATE_DOFS(double *qdest, double coef, double *qsrc, double *R, int ndof);
 
@@ -261,7 +261,7 @@ class dgsand
 	detJ.resize((ngElem*nelem));	       // |J| at volume QP		     
 	iblank.resize(nelem);			       // iblank array                    
 	elemParent.resize(nelem);			       // parents array
-        cellmerge.resize(nelem); 
+  cellmerge.resize(nelem); 
 
 	/* geometrical parameters per face QP of each element */
 	/* TODO : some these such as bf and JinvF can optimized/omitted */
@@ -572,7 +572,7 @@ printf("OSFflux size = %i\n",necut*maxseg*ngGL*3*nfields);
 		  cut2neigh.data(),
 		  iblank.data(),
 		  ireg,cutoverset.data(),
-                  cellmerge.data(),imesh);
+		  elemParent.data(),imesh);
     }
 
     void update(std::vector<double>&qdest, std::vector<double>&qsrc, double dtfac)
