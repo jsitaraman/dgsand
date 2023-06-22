@@ -48,14 +48,14 @@ int main(int argc, char *argv[])
       B = 1-i; 
       printf("\n=================\nENTERING OVERSET SETUP FOR MESH %i\n=================\n",i);      
       sol[i].setupOverset(sol[B].iptr,
-		          sol[B].iptrc,
-		   	  sol[B].x,
-		   	  sol[B].xcut,
-			  sol[B].JinvV,
-			  sol[B].cut2e,
-			  sol[B].elemParent,
-		          sol[B].necut,
-			  sol[B].nelem);
+              	          sol[B].iptrc,
+                  	   	  sol[B].x,
+                  	   	  sol[B].xcut,
+                    		  sol[B].JinvV,
+                    		  sol[B].cut2e,
+                    		  sol[B].elemParent,
+              	          sol[B].necut,
+                    		  sol[B].nelem);
     }
   }
 
@@ -81,7 +81,10 @@ int main(int argc, char *argv[])
   }
   printf("cons : %.16e\n",cons);
   double cons0=cons;
-  
+ 
+// 
+exit(1); 
+// 
   // ============= 
   // RUN TIMESTEPS 
   // ============= 

@@ -333,74 +333,74 @@ class dgsand
       int maxseg = 20; 
       necut = FIND_NECUT(x0,x.data(),iptr.data(),d,etype,p,nelem,pc,imesh);
       if (necut > 0)  {
-	//create all the cut cell pointers
-	xcut.resize(d*3*necut);
-	cut2e.resize(necut);       
-	cut2face.resize(necut*3);  // map between cut face and orig face id                       
-	cut2neigh.resize(necut*3); // map between cut face and R side neighbor
-	cutoverset.resize(necut*3);        // cutoverset array 
+        //create all the cut cell pointers
+        xcut.resize(d*3*necut);
+        cut2e.resize(necut);       
+        cut2face.resize(necut*3);  // map between cut face and orig face id                       
+        cut2neigh.resize(necut*3); // map between cut face and R side neighbor
+        cutoverset.resize(necut*3);        // cutoverset array 
 
-	bvcut.resize(necut*nbasis*ngElem);         // basis value at volume QP	   
-	bvdcut.resize(necut*d*nbasis*ngElem);// basis derivative value at volume QP
-	JinvVcut.resize(necut*d*d*ngElem);   // J^{-1} at volume QP		   
-	JinvFcut.resize(necut*d*d*ngElem);   // J^{-1} at volume QP		   
-	detJcut.resize(necut*ngElem);	       // |J| at volume QP                   
+        bvcut.resize(necut*nbasis*ngElem);         // basis value at volume QP	   
+        bvdcut.resize(necut*d*nbasis*ngElem);// basis derivative value at volume QP
+        JinvVcut.resize(necut*d*d*ngElem);   // J^{-1} at volume QP		   
+        JinvFcut.resize(necut*d*d*ngElem);   // J^{-1} at volume QP		   
+        detJcut.resize(necut*ngElem);	       // |J| at volume QP                   
 
-	int fpe=face_per_elem(etype);
-	bfcutL.resize(nbasis*ngGL*fpe*necut);       // basis value at face QP      
-	bfdcutL.resize(d*nbasis*ngGL*fpe*necut);    // basis der. value at face QP 
-	bfcutR.resize(nbasis*ngGL*fpe*necut);	      // basis value at face QP      
-	bfdcutR.resize(d*nbasis*ngGL*fpe*necut);    // basis der. value at face QP 
-	fwcut.resize(d*ngGL*fpe*necut);	      // faceNormals at face QP      
-	fcflux.resize(3*nfields*ngGL*fpe*necut);    // face fields and flux        
+        int fpe=face_per_elem(etype);
+        bfcutL.resize(nbasis*ngGL*fpe*necut);       // basis value at face QP      
+        bfdcutL.resize(d*nbasis*ngGL*fpe*necut);    // basis der. value at face QP 
+        bfcutR.resize(nbasis*ngGL*fpe*necut);	      // basis value at face QP      
+        bfdcutR.resize(d*nbasis*ngGL*fpe*necut);    // basis der. value at face QP 
+        fwcut.resize(d*ngGL*fpe*necut);	      // faceNormals at face QP      
+        fcflux.resize(3*nfields*ngGL*fpe*necut);    // face fields and flux        
 
-	// overset face quantities
+        // overset face quantities
         OSFnseg.resize(necut);
         OSFeID.resize(necut*maxseg*ngGL); 		// neigh mesh cell ID for each overset QP
         OSFxn.resize(necut*maxseg*ngGL*d); 		// L*norm for each overset QP
         OSFshpL.resize(necut*maxseg*ngGL*nbasis); 	// neigh mesh basis value at each overset QP
         OSFshpR.resize(necut*maxseg*ngGL*nbasis); 	// neigh mesh basis value at each overset QP
         OSFflux.resize(necut*maxseg*ngGL*3*nfields);	// flux container for each overset QP
-printf("OSFflux size = %i\n",necut*maxseg*ngGL*3*nfields); 	
-	pccut = 17; 
-	printf("nbasisx = %i\n",nbasisx); 
-	iptrc.resize(pccut*necut);
+        printf("OSFflux size = %i\n",necut*maxseg*ngGL*3*nfields); 	
+        pccut = 17; 
+        printf("nbasisx = %i\n",nbasisx); 
+        iptrc.resize(pccut*necut);
 	
-	for(int i=0;i<necut;i++){
-	  int ix=pccut*i;
-	  iptrc[ix]+=i*(nfields*nbasis);               // q, Q, R
-	  iptrc[ix+1]+=i*(d*3);                // x
-	  iptrc[ix+2]+=i*(nbasis*ngElem);   // bv (this is NOT same per element type)
-	  iptrc[ix+3]+=i*(d*nbasis*ngElem);  // bvd
-	  iptrc[ix+4]+=i*(d*d*ngElem);       // JinvV
-	  iptrc[ix+5]+=i*(ngElem);           // detJ
+        for(int i=0;i<necut;i++){
+          int ix=pccut*i;
+          iptrc[ix]+=i*(nfields*nbasis);               // q, Q, R
+          iptrc[ix+1]+=i*(d*3);                // x
+          iptrc[ix+2]+=i*(nbasis*ngElem);   // bv (this is NOT same per element type)
+          iptrc[ix+3]+=i*(d*nbasis*ngElem);  // bvd
+          iptrc[ix+4]+=i*(d*d*ngElem);       // JinvV
+          iptrc[ix+5]+=i*(ngElem);           // detJ
 	  
-	  iptrc[ix+6]+=i*(nbasis*ngGL*fpe); // bf (this is NOT same per element type)
-	  iptrc[ix+7]+=i*(d*nbasis*ngGL*fpe);// bfd
-	  iptrc[ix+8]+=i*(d*d*ngGL*fpe);     // JinvF
-	  iptrc[ix+9]+=i*(d*ngGL*fpe);       // faceWeight
-	  iptrc[ix+10]+=i*(nbasis*nbasis);             // mass 
+          iptrc[ix+6]+=i*(nbasis*ngGL*fpe); // bf (this is NOT same per element type)
+          iptrc[ix+7]+=i*(d*nbasis*ngGL*fpe);// bfd
+          iptrc[ix+8]+=i*(d*d*ngGL*fpe);     // JinvF
+          iptrc[ix+9]+=i*(d*ngGL*fpe);       // faceWeight
+          iptrc[ix+10]+=i*(nbasis*nbasis);             // mass 
 
-	  iptrc[ix+11]+=i*(fpe*3*nfields*ngGL);  //faceFlux
-	  iptrc[ix+12]+=i*fpe; 			   // cut2neigh & cut2face & cutoverset
+          iptrc[ix+11]+=i*(fpe*3*nfields*ngGL);  //faceFlux
+          iptrc[ix+12]+=i*fpe; 			   // cut2neigh & cut2face & cutoverset
           iptrc[ix+13]+=i*(maxseg*ngGL*d);	// OSFxn
           iptrc[ix+14]+=i*(maxseg*ngGL);	// OSFeID 
           iptrc[ix+15]+=i*(maxseg*ngGL*nbasis);	// OSFshpL, OSFshpR
           iptrc[ix+16]+=i*(maxseg*ngGL*3*nfields); // OSFflux
-	}
+        }
 
-	CUT_CELLS(x0,
-		  x.data(),
-		  xcut.data(), iptr.data(),
-		  cut2e.data(),
-		  d, etype, p, nelem, pc,
-		  cut2face.data(),cut2neigh.data(),
-		  elem2face, faces, iblank.data(),
-		  cutoverset.data(),imesh,ngGL,cellmerge.data());
+        CUT_CELLS(x0,
+        	  x.data(),
+        	  xcut.data(), iptr.data(),
+        	  cut2e.data(),
+        	  d, etype, p, nelem, pc,
+        	  cut2face.data(),cut2neigh.data(),
+        	  elem2face, faces, iblank.data(),
+        	  cutoverset.data(),imesh,ngGL,cellmerge.data());
 	
-	for(int i=0;i<necut;i++)
-	  printf("cut elem %i: neigh = %i %i %i\n",
-		 i,cut2neigh[3*i+0],cut2neigh[3*i+1],cut2neigh[3*i+2]);
+        for(int i=0;i<necut;i++)
+          printf("cut elem %i: neigh = %i %i %i\n",
+                 i,cut2neigh[3*i+0],cut2neigh[3*i+1],cut2neigh[3*i+2]);
       }
     };
 
@@ -412,7 +412,7 @@ printf("OSFflux size = %i\n",necut*maxseg*ngGL*3*nfields);
 
     void cut_metrics(double x0, int imesh) {
       if (necut > 0) {
-	COMPUTE_CUT_METRICS(x.data(),
+        COMPUTE_CUT_METRICS(x.data(),
 			    JinvV.data(),
 			    detJ.data(),
 			    JinvF.data(),
@@ -436,29 +436,29 @@ printf("OSFflux size = %i\n",necut*maxseg*ngGL*3*nfields);
 			    cutoverset.data(),
 			    elemParent.data());
 	
-	CUT_MASS_MATRIX(mass.data(),
-			x.data(),
-			JinvV.data(),
-			iptr.data(),
-			xcut.data(),
-			detJcut.data(),
-			iptrc.data(),
-			d,etype,p,nelem,
-			pc,pccut,necut,
-			cut2e.data(),imesh,
-			elemParent.data());
+        CUT_MASS_MATRIX(mass.data(),
+      		x.data(),
+      		JinvV.data(),
+      		iptr.data(),
+      		xcut.data(),
+      		detJcut.data(),
+      		iptrc.data(),
+      		d,etype,p,nelem,
+      		pc,pccut,necut,
+      		cut2e.data(),imesh,
+      		elemParent.data());
       }
     };
 
     void findParents(int imesh){
       FIND_PARENTS(x.data(),
-		   iptr.data(),
-                   elem2face, 
-		   faces,
-		   iblank.data(),
-		   cellmerge.data(),
-		   elemParent.data(),
-		   d,etype,p,nelem,pc,imesh);
+		    iptr.data(),
+        elem2face, 
+        faces,
+        iblank.data(),
+		    cellmerge.data(),
+		    elemParent.data(),
+ 	 	    d,etype,p,nelem,pc,imesh);
     }
 
     void initTimeStepping(int imesh) {

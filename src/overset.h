@@ -29,14 +29,14 @@ void setOversetFluxes(double *OSFflux, int OSFnseg, int* OSFeID, double* OSFshpL
 
       for(int f=0;f<nfields;f++){
         // L state
-	OSFflux[floc + f] = OSFshpL[bloc]*qA[f*nbasis];
-	for(int b=1;b<nbasis;b++) 
-	  OSFflux[floc + f] += OSFshpL[bloc+b]*qA[f*nbasis+b];
+        OSFflux[floc + f] = OSFshpL[bloc]*qA[f*nbasis];
+        for(int b=1;b<nbasis;b++) 
+          OSFflux[floc + f] += OSFshpL[bloc+b]*qA[f*nbasis+b];
 
         // R state 
-	OSFflux[floc + nfields + f] = OSFshpR[bloc]*qB[iq+f*nbasis];
-	for(int b=1;b<nbasis;b++) 
-	  OSFflux[floc + nfields + f] += OSFshpR[bloc+b]*qB[iq+f*nbasis+b];	  
+        OSFflux[floc + nfields + f] = OSFshpR[bloc]*qB[iq+f*nbasis];
+        for(int b=1;b<nbasis;b++) 
+          OSFflux[floc + nfields + f] += OSFshpR[bloc+b]*qB[iq+f*nbasis+b];	  
       }// loop over fields
 
       if(debug){
@@ -194,7 +194,7 @@ void orderCoords(double* in, double* out, int n)
 void createOversetGauss(double* xA, double* xB, double* xseg, double* JinvA, double* JinvB, 
                         int necutB, double *xcutA, double* xcutB, int* cut2eB, 
                         int* iptrB, int* iptrcB, int* elemParentB,
-			int* OSFeID, int* OSFnseg, 
+                        int* OSFeID, int* OSFnseg, 
                         double* OSFxn, double* OSFshpL, double* OSFshpR, 
                         int pc, int pccut,int e, int p, int d, int nelemB, 
                         int debug,int iface, int ixn, int ismerge)
@@ -214,7 +214,7 @@ void createOversetGauss(double* xA, double* xB, double* xseg, double* JinvA, dou
   double xcpy[maxseg*ngGL*d]; // tmp copy of xseg
   double x0[2],xN[2],xloc,yloc; 
   
-  // get x0 for the full element
+  // get x0 for the full parent element
   x0[0] = 0.0;
   x0[1] = 0.0;
   u[0] = 0.0;
@@ -264,7 +264,7 @@ void createOversetGauss(double* xA, double* xB, double* xseg, double* JinvA, dou
           OSFnseg[0]++;                   	  	  
           xcpy[2*(OSFnseg[0])]   = pt[0];
           xcpy[2*(OSFnseg[0])+1] = pt[1];
-	  if(debug) printf("\tPoint is unique, now nseg = %i\n",OSFnseg[0]);
+          if(debug) printf("\tPoint is unique, now nseg = %i\n",OSFnseg[0]);
         }
       } // found vertex in between
     } // loop over edges B
@@ -280,16 +280,17 @@ void createOversetGauss(double* xA, double* xB, double* xseg, double* JinvA, dou
   // Reorder list of segment end pts if necessary
   if(OSFnseg[0]>1){
     orderCoords(xcpy,xseg,OSFnseg[0]+1);
-  } else{
+  }
+  else{
     xseg=xcpy; 
     OSFnseg[0] = 1;
   }
 
   // debug
   if(debug){
-  printf("\n\tOrdered list\n"); 
-  for(i=0;i<OSFnseg[0]+1;i++)
-    printf("\t\t%f %f\n",xseg[2*i],xseg[2*i+1]);
+    printf("\n\tOrdered list\n"); 
+    for(i=0;i<OSFnseg[0]+1;i++)
+      printf("\t\t%f %f\n",xseg[2*i],xseg[2*i+1]);
   }
 
   // Distribute gauss pts between each of the segments
@@ -322,21 +323,22 @@ void createOversetGauss(double* xA, double* xB, double* xseg, double* JinvA, dou
       // rst = [JinvA][xy]
       pt2[0] = xloc-x0[0];
       pt2[1] = yloc-x0[1];
+
       // Using JinvA from parent element of msh A
       axb(JinvA,pt2,u,d);
       printf("===============\n");
       for(k=0;k<nbasis;k++){
-	OSFshpL[m+k] = basis[e][k](u);
+        OSFshpL[m+k] = basis[e][k](u);
         if(ismerge==0 && OSFshpL[m+k]<0 && fabs(OSFshpL[m+k])>1e-14){
-	  printf("ERROR: OSFshpL less than 0. Exiting\n");
-	  printf("\tOSFshpL = %.16e\n",OSFshpL[m+k]);
-	  printf("\txloc = %f %f\n",xloc,yloc);
-	  printf("\tx0 = %f %f\n",x0[0],x0[1]);
-	  printf("\tpt2 = %f %f\n",pt2[0],pt2[1]);
-	  printf("\tJinvA = %f %f; %f %f\n",JinvA[0],JinvA[1],JinvA[2],JinvA[3]);
-	  printf("\tu = %.16e %.16e\n",u[0],u[1]);
-	  exit(1);
-	}
+          printf("ERROR: OSFshpL less than 0. Exiting\n");
+          printf("\tOSFshpL = %.16e\n",OSFshpL[m+k]);
+          printf("\txloc = %f %f\n",xloc,yloc);
+          printf("\tx0 = %f %f\n",x0[0],x0[1]);
+          printf("\tpt2 = %f %f\n",pt2[0],pt2[1]);
+          printf("\tJinvA = %f %f; %f %f\n",JinvA[0],JinvA[1],JinvA[2],JinvA[3]);
+          printf("\tu = %.16e %.16e\n",u[0],u[1]);
+          exit(1);
+        }
         if(debug) printf("\t\t\tOSFshpL %i = %f\n",k,OSFshpL[m+k]);
       }
 
@@ -356,15 +358,15 @@ void createOversetGauss(double* xA, double* xB, double* xseg, double* JinvA, dou
         for(bb=0;bb<d;bb++)
           Ja[aa]+=(mat[aa][bb]*face2elem[e][d*iface+bb]); // face2elem goes from edge coord to rst elem coord
       } // aa loop over d
-if(debug) printf("pre Ja = %f %f %f %f\n",Ja[0],Ja[1],Ja[2],Ja[3]);
+      if(debug) printf("pre Ja = %f %f %f %f\n",Ja[0],Ja[1],Ja[2],Ja[3]);
 
       // scale Ja to be segment length
       double norm = 0.0;
       for(aa=0;aa<3;aa++)
-	norm+=Ja[aa]*Ja[aa];
+        norm+=Ja[aa]*Ja[aa];
       norm=sqrt(norm);
       for(aa=0;aa<3;aa++)
-	Ja[aa] = Ja[aa]*L/norm;
+        Ja[aa] = Ja[aa]*L/norm;
 
       // do Weighted normal = Ja x zhat
       // This gives me the normal vector
@@ -373,19 +375,20 @@ if(debug) printf("pre Ja = %f %f %f %f\n",Ja[0],Ja[1],Ja[2],Ja[3]);
 
       if(isnan(OSFxn[d*i*ngGL + d*j]) || isnan(OSFxn[d*i*ngGL + d*j +1] ||
          fabs(OSFxn[d*i*ngGL + d*j]) + fabs(OSFxn[d*i*ngGL + d*j+1]) < 1e-12)){
-	printf("\nERROR: normal %i is nan: %f %f\n",ixn+d*i*ngGL+d*j,OSFxn[d*i*ngGL + d*j], OSFxn[d*i*ngGL + d*j +1]);
-	printf("Ja = %f %f %f\n",Ja[0],Ja[1],Ja[2]);
-	printf("mat = %f %f %f %f\n",mat[0][0],mat[0][1],mat[1][0],mat[1][1]);
-	printf("face2elem %f %f\n",face2elem[e][d*iface],face2elem[e][d*iface+1]);
-	exit(1);
+        printf("\nERROR: normal %i is nan: %f %f\n",ixn+d*i*ngGL+d*j,
+               OSFxn[d*i*ngGL + d*j], OSFxn[d*i*ngGL + d*j +1]);
+        printf("Ja = %f %f %f\n",Ja[0],Ja[1],Ja[2]);
+        printf("mat = %f %f %f %f\n",mat[0][0],mat[0][1],mat[1][0],mat[1][1]);
+        printf("face2elem %f %f\n",face2elem[e][d*iface],face2elem[e][d*iface+1]);
+        exit(1);
       }
 
       // Normal vector needs to be flipped 
       // to be outward from remaining triangle
       for(aa=0;aa<d;aa++) OSFxn[d*i*ngGL+d*j+aa] = -OSFxn[d*i*ngGL+d*j+aa];
       if(debug){
-	printf("\t\tgauss pt %i at [%f %f] normal %i %f %f\n",i*ngGL+j,
-	       xloc,yloc,ixn+d*i*ngGL+d*j,OSFxn[d*i*ngGL + d*j], OSFxn[d*i*ngGL + d*j +1]);
+        printf("\t\tgauss pt %i at [%f %f] normal %i %f %f\n",i*ngGL+j,
+	      xloc,yloc,ixn+d*i*ngGL+d*j,OSFxn[d*i*ngGL + d*j], OSFxn[d*i*ngGL + d*j +1]);
       }
 
       //=====================
@@ -397,27 +400,42 @@ if(debug) printf("pre Ja = %f %f %f %f\n",Ja[0],Ja[1],Ja[2],Ja[3]);
       for(n=0; n<nelemB;n++){
         ixB = iptrB[pc*n+1]; 
 
-        // get 3 vertices of the current mesh B triangle
+        // get 3 vertices of the current mesh B triangle, NOT the parent
         for(int f=0;f<nfp;f++){
           u[0]=eloc[e][1][d*f];
           u[1]=eloc[e][1][d*f+1];
 
-	  xvert[2*f] = 0.0;
-	  xvert[2*f+1] = 0.0;
+          xvert[2*f] = 0.0;
+          xvert[2*f+1] = 0.0;
           for(b=0;b<nbasis;b++){
-	    xvert[2*f]   +=  basis[e][b](u)*xB[ixB+b];
-	    xvert[2*f+1] +=  basis[e][b](u)*xB[ixB+b+nbasis];
+            xvert[2*f]   +=  basis[e][b](u)*xB[ixB+b];
+            xvert[2*f+1] +=  basis[e][b](u)*xB[ixB+b+nbasis];
           }
         }
             
-	inside = pointInTri(xloc,yloc,xvert[0],xvert[1],xvert[2],xvert[3],xvert[4],xvert[5]);	            
-	if(inside){
-  	  OSFeID[i*ngGL+j] = elemParentB[n]; 	// store mesh B parent elemID for this overset gauss pt 
+        inside = pointInTri(xloc,yloc,xvert[0],xvert[1],xvert[2],xvert[3],xvert[4],xvert[5]);	   
+        if(inside){
+          OSFeID[i*ngGL+j] = elemParentB[n]; 	// store mesh B parent elemID for this overset gauss pt 
           break; // exit loop over mesh B
-	}
+      	}
       }
 
-      // compute the rst coordinate
+      // recompute x0 for merged cells (needed to find rst)
+      if(elemParentB[n]!=n){
+          u[0]=eloc[e][1][0];
+          u[1]=eloc[e][1][1];
+
+          xvert[0] = 0.0;
+          xvert[1] = 0.0;
+          ixB = iptrB[pc*OSFeID[i*ngGL+j]+1]; 
+          for(b=0;b<nbasis;b++){
+            xvert[0] +=  basis[e][b](u)*xB[ixB+b];
+            xvert[1] +=  basis[e][b](u)*xB[ixB+b+nbasis];
+          }
+      }
+
+      // compute the rst coordinate u
+      // based on parent elem
       pt2[0] = xloc-xvert[0];
       pt2[1] = yloc-xvert[1];
       ij = iptrB[pc*OSFeID[i*ngGL+j]+4]; 
@@ -435,6 +453,7 @@ if(debug) printf("pre Ja = %f %f %f %f\n",Ja[0],Ja[1],Ja[2],Ja[3]);
         if(debug){
           printf("\t\t\tfound mesh A pt (%f, %f) in mesh B elem %i (parent is %i): (%f, %f), (%f, %f), (%f, %f)\n",xloc,yloc,n,OSFeID[i*ngGL+j],
                  xvert[0],xvert[1],xvert[2],xvert[3],xvert[4],xvert[5]);
+
           printf("\t\t\trst = %f %f\n",u[0],u[1]);
         }
       }
@@ -442,7 +461,7 @@ if(debug) printf("pre Ja = %f %f %f %f\n",Ja[0],Ja[1],Ja[2],Ja[3]);
       // get mesh B shape function values at quad pt and store in bfcutR
       for(int b=0; b<nbasis;b++){
         OSFshpR[m+b] = basis[e][b](u);
-	if(debug)  printf("\t\t\tOSFshpR %i = %f\n",b,OSFshpR[m+b]);
+        if(debug)  printf("\t\t\tOSFshpR %i = %f\n",b,OSFshpR[m+b]);
       }
 
       m=m+nbasis; // counter for bases
@@ -460,7 +479,7 @@ void SETUP_OVERSET(int* cut2e, int* cut2eB, int* cutoversetA,
 		   int necutA, int necutB, int nelemB)
 // For overset boundaries in mesh A, find corresponding elements and shape function values on mesh B. Build multiple segments along overset boundary to handle discontinuous overset flux across multiple elements
 {
-  int ip, ix, ixc, iq, ibf, ibfd, ifw, ic2n,iflx, cibf,flag, cid, ixn, iosf, ishp, ismerge;
+  int ip, ix, iji, ixc, iq, ibf, ibfd, ifw, ic2n,iflx, cibf,flag, cid, ixn, iosf, ishp, ismerge;
   int nfp = facePerElem[e];
   int eid, pid, i,j,k,m, count,jp1,debug,iface;
   int nbasis=order_to_basis(e,p);        // basis for solution
@@ -476,7 +495,8 @@ void SETUP_OVERSET(int* cut2e, int* cut2eB, int* cutoversetA,
     ip=pccut*i;
     eid = cut2e[i]; 
     pid = elemParentA[eid];
-    ix  =iptrA[eid*pc+1];
+    ix  =iptrA[pid*pc+1];
+    iji = iptrA[pc*pid+4];
     ixc = iptrcA[ip+1]; 
     ibf =iptrcA[ip+6];
     ic2n=iptrcA[ip+12];
@@ -494,7 +514,7 @@ void SETUP_OVERSET(int* cut2e, int* cut2eB, int* cutoversetA,
         if(cutoversetA[ic2n+j]==1){
           jp1 = j+1 % 3;
 
-	  // starting pt of current face
+          // starting pt of current face
           u[0]=eloc[e][1][d*j];
           u[1]=eloc[e][1][d*j+1]; 
           xseg[0] = 0;
@@ -505,7 +525,7 @@ void SETUP_OVERSET(int* cut2e, int* cut2eB, int* cutoversetA,
             xseg[1] += bv*xcutA[ixc+k+3];
           }
 
-	  // starting pt of next face
+          // starting pt of next face
           u[0]=eloc[e][1][d*jp1];
           u[1]=eloc[e][1][d*jp1+1]; 
           xseg[2] = 0;
@@ -517,26 +537,26 @@ void SETUP_OVERSET(int* cut2e, int* cut2eB, int* cutoversetA,
           }
           iface = j;
         
-	  if(isnan(xseg[0]) || isnan(xseg[1]) ||isnan(xseg[2]) ||isnan(xseg[3])){
-	    printf("ERROR: nan in xseg\n");
-	    printf("\t xseg = %.16e %.16e %.16e %.16e\n",xseg[0],xseg[1],xseg[2],xseg[3]);
-	    for(k=0;k<nbasis;k++) 
-	      printf("\t\t k = %i, xcutA = %.16e %.16e\n",k,xcutA[ixc+k],xcutA[ixc+k+3]);
-	    exit(1); 
-	  }
+          if(isnan(xseg[0]) || isnan(xseg[1]) ||isnan(xseg[2]) ||isnan(xseg[3])){
+            printf("ERROR: nan in xseg\n");
+            printf("\t xseg = %.16e %.16e %.16e %.16e\n",xseg[0],xseg[1],xseg[2],xseg[3]);
+            for(k=0;k<nbasis;k++) 
+              printf("\t\t k = %i, xcutA = %.16e %.16e\n",k,xcutA[ixc+k],xcutA[ixc+k+3]);
+            exit(1); 
+          }
 
-	  if(debug) 
-	    printf("cut elem %i, face %i, xseg = [%f %f; %f %f]\n",i,j,xseg[0],xseg[1],xseg[2],xseg[3]);
+          if(debug) 
+            printf("cut elem %i, face %i, xseg = [%f %f; %f %f]\n",i,j,xseg[0],xseg[1],xseg[2],xseg[3]);
         } // if overset
       } // loop faces
 
       // Distribute Gauss pts and fill OSFxn and OSFshpL and OSFshpR
-      // Note: JinvA corresponds to parent elem, NOT current elem
+      // Note: x and JinvA corresponds to parent elem, NOT current elem
       ismerge = (eid!=pid);
-      createOversetGauss(xA+ix,xB,xseg,JinvA+iptrA[pc*pid+4],JinvB,necutB,
-		         xcutA+ixc,xcutB,cut2eB,iptrB,iptrcB, elemParentB,
-			 OSFeID+iosf,OSFnseg+i,OSFxn+ixn,OSFshpL+ishp,OSFshpR+ishp,
-			 pc,pccut,e,p,d,nelemB,debug,iface,ixn,ismerge);
+      createOversetGauss(xA+ix,xB,xseg,JinvA+iji,JinvB,necutB,
+		                     xcutA+ixc,xcutB,cut2eB,iptrB,iptrcB, elemParentB,
+                         OSFeID+iosf,OSFnseg+i,OSFxn+ixn,OSFshpL+ishp,OSFshpR+ishp,
+                         pc,pccut,e,p,d,nelemB,debug,iface,ixn,ismerge);
     }
   }
 
