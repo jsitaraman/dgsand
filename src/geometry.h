@@ -506,8 +506,8 @@ void mass_matrix(double *M, double *x, double* Jinv, double* detJ, int d, int e,
   }
 }
 
-void Jacobian(double *x,double *bv, double *bvd, double *Jinv, 
-              double *detJ, int d, int e, int p)
+void Jacobian(double *x,double *Jinv, double * detJ,
+              int d, int e, int p)
 {
   int b,w,i,j,l,ld,ij,m,n;
   double u[d];
@@ -515,61 +515,90 @@ void Jacobian(double *x,double *bv, double *bvd, double *Jinv,
   int nbasis=order2basis[e][p+(p==0)];
   double bd[nbasis][d];  // basis derivative  
   int g=p2g[e][p];  // gauss quadrature data for this element type
-  //double xx,yy;
+
   l=n=m=ld=ij=0;
   for(w=0;w<ngElem[e][p];w++) // loop over gauss pts
     {
+
       for(j=0;j<d;j++) // get rs coordinates of gauss pt
-	u[j]=gauss[e][g][(d+1)*w+j];
-      //xx=yy=0;
-      for(b=0;b<nbasis;b++) // loop over bases
-	{
-	  for(j=0;j<d;j++) 
-	    bd[b][j]=basis_d[e][b*d+j](u); // accumulate bases derivs at quad pt
-	  if (p > 0) bv[l++]=basis[e][b](u); // filled in as bv[nGL][nbasis]
-	}
-      if (p==0) bv[l++]=1;
+        u[j]=gauss[e][g][(d+1)*w+j];
 
-      //for(b=0;b<nbasis;b++)
-        //for(i=0;i<d;i++)
-
-      //build jacobian dx/dr
-      for(i=0;i<d;i++)
-	{
-	  for(j=0;j<d;j++)
-	    {
-	      mat[i][j]=x[i*nbasis]*bd[0][j];
-	      for(b=1;b<nbasis+(nbasis==1);b++)
-		mat[i][j]+=x[i*nbasis+b]*bd[b][j];
-	    }
-	}
-
-      for(i=0;i<d;i++)
-	  for(j=0;j<d;j++)
-
-      //invert jacobian (stored in jac) and get detJ
-      if (d==2) invmat2x2(mat,jac,det);
-      for(i=0;i<d;i++)
-	for(j=0;j<d;j++) {
-	  Jinv[ij++]=jac[i][j];
-        }
-
-      // get basis derivs dN/dx = dN/dr*(dx/dr)^-1
-      if (p > 0) {
+      // accumulate basis derivs at quad pt
+      // in local element system
       for(b=0;b<nbasis;b++)
-	for(i=0;i<d;i++)
-	  {
-	     bvd[ld]=jac[0][i]*bd[b][0];
-	      for(j=1;j<d;j++)
-		bvd[ld]+=jac[j][i]*bd[b][j];
-	     ld++;
-	  }
+        for(j=0;j<d;j++)
+          bd[b][j]=basis_d[e][b*d+j](u);
+     
+      //build jacobian dx/dr for local element
+      for(i=0;i<d;i++){
+	      for(j=0;j<d;j++){
+          mat[i][j]=x[i*nbasis]*bd[0][j];
+          for(b=1;b<nbasis+(nbasis==1);b++)
+          	mat[i][j]+=x[i*nbasis+b]*bd[b][j];
+        }
       }
-      else {
-        for(i=0;i<d;i++) bvd[ld++]=0;
-      }
+
+      for(i=0;i<d;i++)
+        for(j=0;j<d;j++)
+          //invert jacobian (stored in jac) and get detJ
+          if (d==2) invmat2x2(mat,jac,det);
+          for(i=0;i<d;i++)
+            for(j=0;j<d;j++) 
+              Jinv[ij++]=jac[i][j];
       detJ[n++]=det;
     }
+} 
+
+void VolWeights(double *x,double *bv, double *bvd, double *Jinv, 
+              double *detJ, int* iptr, int pc, int eid, int pid, 
+              int d, int e, int p)
+{
+  int b,w,i,j,l,ld,ij,m,n;
+  double utmp[d],u[d];
+  double mat[d][d],jac[d][d],det;
+  int nbasis=order2basis[e][p+(p==0)];
+  int g=p2g[e][p];  // gauss quadrature data for this element type
+
+  double* xparent = x+iptr[pc*pid+1]; 
+  double* Jinvparent = Jinv+iptr[pc*pid+4];
+  double* xcur = x+iptr[pc*eid+1]; 
+  double JinvT[d*d], bd[d];
+
+  l=n=m=ld=ij=0;
+  for(w=0;w<ngElem[e][p];w++){
+    // get rs coordinates of gauss pt in local element
+    for(j=0;j<d;j++) 
+      utmp[j]=gauss[e][g][(d+1)*w+j];
+
+    // convert local rst coordinates (utmp)
+    // into parent elem system (u)
+    if(pid!=eid){ 
+      CellCoordInterp(xparent,d,e,p,Jinvparent,utmp,xcur,u,(pid!=eid));
+    }
+    else{
+      for(j=0;j<d;j++) u[j] = utmp[j];
+    }
+
+    if (p > 0) {
+      for(b=0;b<nbasis;b++){
+        // fill in shape function value bv[nGL][nbasis]
+        bv[l++]=basis[e][b](u);
+
+        // get bases and derivs in parent system 
+        // dN/dx = trans(Jinv)*[dN/dr;dN/ds]
+        for(i=0;i<d;i++){
+          bd[i] = basis_d[e][b*d+i](u);           
+          for(j=0;j<d;j++) JinvT[i*d+j] = Jinvparent[j*d+i];
+        }
+        axb(JinvT,bd,bvd+ld,d); 
+        ld += 2; // increment counter up to next shp function b
+      }
+    }
+    else {
+      bv[l++]=1;
+      for(i=0;i<d;i++) bvd[ld++]=0;
+    }
+  }
 }
 
 void FaceWeights(double *x, double *bf, double *bfd, double *Jinv, double *faceWeight, 
@@ -677,32 +706,49 @@ void FaceWeights(double *x, double *bf, double *bfd, double *Jinv, double *faceW
 
 void COMPUTE_GRID_METRICS(double *x, double *bv, double *bvd,double *JinvV, 
 			  double *detJ,double *bf, double *bfd, double *JinvF, double *faceWeight,
-			  int *iptr, int d, int e, int p, int nelem, int pc, int* iblank, int imesh)
+			  int *iptr, int *elemParent, int d, int e, int p, int nelem, 
+        int pc, int* iblank, int imesh)
 {
-  int i,j,b;
+  int i,j,b,pid;
   int ip,ix,ibv,ibvd,ibf,ij,idetj,ibfd,ijf,ifw;
   
-  // Metrics for the uncut cells
+  // Need to compute jacobians for all full elements first
   for(i=0;i<nelem;i++)
     {
       iblank[i] = 0; 
 
       ip=pc*i;
       ix   =iptr[ip+1];
-      ibv  =iptr[ip+2];
-      ibvd =iptr[ip+3];
       ij   =iptr[ip+4];
       idetj=iptr[ip+5];
 
+      Jacobian(x+ix,JinvV+ij,detJ+idetj,d,e,p); // basis on vol
+    }
+}
+
+void COMPUTE_SHAPE(double *x, double *bv, double *bvd,double *JinvV, 
+			  double *detJ,double *bf, double *bfd, double *JinvF, double *faceWeight,
+			  int *iptr, int *elemParent, int d, int e, int p, int nelem, 
+        int pc, int* iblank, int imesh)
+{
+  int i,j,b,pid;
+  int ip,ix,ibv,ibvd,ibf,ij,idetj,ibfd,ijf,ifw;
+  
+  // Now compute shape functions and derivs
+  for(i=0;i<nelem;i++)
+    {
+      pid = elemParent[i];  // fully zero b/c haven't computed cut cells yet
+
+      ip=pc*i;
+      ibv  =iptr[ip+2];
+      ibvd =iptr[ip+3];
       ibf  =iptr[ip+6];
       ibfd =iptr[ip+7];
       ijf  =iptr[ip+8];
       ifw  =iptr[ip+9];
 
-      Jacobian(x+ix, bv+ibv, bvd+ibvd, JinvV+ij,detJ+idetj,d,e,p); // basis on vol
+      VolWeights(x, bv+ibv, bvd+ibvd,JinvV,detJ+idetj,iptr,pc,i,pid,d,e,p); // basis on vol
       FaceWeights(x+ix,bf+ibf,bfd+ibfd,JinvF+ijf,faceWeight+ifw,d,e,p); // basis on face
-printf("ComputeGrid Metrics Elem %i\n", i); 
-printf("\tJinv = %f %f %f %f\n",JinvV[ij],JinvV[ij+1],JinvV[ij+2],JinvV[ij+3]);
     }
 }
 
@@ -892,9 +938,9 @@ void FIND_PARENTS(double* x, int* iptr, int* elem2face, int* faces,
   printf("\n===================\n");
 
   for(int i=0;i<nelem;i++){
-    elemParent[i] = -1; 
-    cneigh = -1; 
     if(cellmerge[i]==2){ // severely cut element that needs merging
+      elemParent[i] = -1; 
+      cneigh = -1; 
 
       ix=iptr[pc*i+1];
       findCentroid(x+ix,centroid,nbasis,npf,e,d,p);
@@ -918,22 +964,22 @@ void FIND_PARENTS(double* x, int* iptr, int* elem2face, int* faces,
             dist =  (ncentroid[0]-centroid[0])*(ncentroid[0]-centroid[0]);
             dist += (ncentroid[1]-centroid[1])*(ncentroid[1]-centroid[1]);
 
-	    //find nearest unblanked, stable element 
+            //find nearest unblanked, stable element 
             if(cellmerge[neigh]!=2 && dist<ndist && iblank[neigh]!=1){
-  	      ndist = dist; 
-  	      keep = neigh;
+       	      ndist = dist; 
+       	      keep = neigh;
             }
 
-  	    // save closest unblanked neighbor in case this doesn't work
-	    if(iblank[neigh]!=1 && dist<ndist2){
-	      ndist2 = dist;
-	      cneigh = neigh;
+      	    // save closest unblanked neighbor in case this doesn't work
+      	    if(iblank[neigh]!=1 && dist<ndist2){
+      	      ndist2 = dist;
+      	      cneigh = neigh;
             }
-	  } 
+      	  } 
         }// loop face neighbors
 
-	// check to see if this level worked
-	if(keep != -1) elemParent[i] = keep;
+      	// check to see if this level worked
+      	if(keep != -1) elemParent[i] = keep;
 
         // if not, update eid and try again 
         eid = cneigh;
@@ -942,7 +988,7 @@ void FIND_PARENTS(double* x, int* iptr, int* elem2face, int* faces,
 
       // if all face neighbors are STILL cut severely or blanked, give up
       if(elemParent[i]==-1){ 
-	printf("\nERROR: Bad hole cutting. Cannot find good parent element. Exiting.\n");
+      	printf("\nERROR: Bad hole cutting. Cannot find good parent element. Exiting.\n");
         exit(1); 
       }
     }

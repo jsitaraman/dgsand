@@ -60,7 +60,7 @@ void init_data(double *x,double *q, double *X, double *Q, int d, int nfields, in
 
 void INIT_FIELDS(double *xcoord,int *e2n, 
 		 double *Q, double *x, double *q, // data populated here
-		 int *iptr, int pde, int e, int p,
+		 int *iptr, int* elemParent, int pde, int e, int p,
 		 int d, int nbasis, int itype, int nelem, int pc,int imesh)
 {
   int nvert=order2basis[e][p+(p==0)];
@@ -73,27 +73,28 @@ void INIT_FIELDS(double *xcoord,int *e2n,
     {
       iq=iQ=iptr[pc*i];
       ix=iptr[pc*i+1];
+      elemParent[i] = i;
       if (p > 0) {
-	m=0;
-	for(j=0;j<nvert;j++)
-	  for(k=0;k<d;k++)
-	  X[m++]=xcoord[d*e2n[nvert*i+j]+k];
+        m=0;
+        for(j=0;j<nvert;j++)
+          for(k=0;k<d;k++)
+            X[m++]=xcoord[d*e2n[nvert*i+j]+k];
         init_fields[pde](X,&(Q[iQ]),d,nbasis,itype,imesh);      
-	init_data(&(x[ix]),&(q[iq]),X,&(Q[iQ]),d,nfields,e,p);
+        init_data(&(x[ix]),&(q[iq]),X,&(Q[iQ]),d,nfields,e,p);
       }
       else {
-	m=0;
-	for(k=0;k<d;k++)
-	  {
-	    X[m]=0;
-	    for(j=0;j<nvert;j++)
-	      {
-		x[ix+k*nvert+j]=xcoord[d*e2n[nvert*i+j]+k];
-		X[m]+=x[ix+k*nvert+j];
-	      }
-	    X[m]/=nvert;
-	    m++;
-	  }
+        m=0;
+        for(k=0;k<d;k++)
+          {
+          X[m]=0;
+          for(j=0;j<nvert;j++)
+            {
+              x[ix+k*nvert+j]=xcoord[d*e2n[nvert*i+j]+k];
+            	X[m]+=x[ix+k*nvert+j];
+            }
+          X[m]/=nvert;
+          m++;
+          }
         init_fields[pde](X,&(q[iq]),d,nbasis,itype);      
       }
     }  

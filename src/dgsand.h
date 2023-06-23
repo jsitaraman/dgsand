@@ -32,7 +32,7 @@ extern "C" {
 
   void INIT_FIELDS(double *xcoord,int *e2n, 
 		   double *Q, double *x, double *q, // data populated here
-		   int *iptr, int pde, int e, int p,
+		   int *iptr, int* elemParent, int pde, int e, int p,
 		   int d, int nbasis, int itype, int nelem, int pc,int imesh);  
 
   int number_of_fields(int pde,int d);
@@ -66,9 +66,13 @@ extern "C" {
 		       double *detJcut, int *iptrc, int d, int e, int p, int nelem,
 		       int pc, int pccut, int necut, int* cut2e, int imesh, int* elemParent );
 
+  void COMPUTE_SHAPE(double *x, double *bv, double *bvd,double *JinvV, 
+			    double *detJ,double *bf, double *bfd, double *JinvF, double *faceWeight,
+			    int *iptr, int *elemParent, int d, int e, int p, int nelem, int pc, int* iblank, int imesh);
+
   void COMPUTE_GRID_METRICS(double *x, double *bv, double *bvd,double *JinvV, 
 			    double *detJ,double *bf, double *bfd, double *JinvF, double *faceWeight,
-			    int *iptr, int d, int e, int p, int nelem, int pc, int* iblank, int imesh);
+			    int *iptr, int *elemParent, int d, int e, int p, int nelem, int pc, int* iblank, int imesh);
 
   void COMPUTE_CUT_METRICS(double *x, double *JinvV, 
 			   double *detJ,double *JinvF,
@@ -108,7 +112,9 @@ extern "C" {
   void EXCHANGE_OVERSET(double* OSFflux, double* OSFshpL, double* OSFshpR, 
                         int* OSFnseg, int* OSFeID, int* cut2eA,
                         double* qA, double* qB, int* cutoverset, int* iptrcA, 
-                        int* iptrA, int* iptrB, int necutA, int pccut, 
+                        int* iptrA, int* iptrB, 
+                        int* elemParentA, int* elemParentB, 
+                        int necutA, int pccut, 
                         int d, int e, int p, int pc, int pde, int imesh);
 
  double COMPUTE_CONSERVATION(double *q, double *detJ, double *bv, int *iptr, int *iblank,
@@ -299,7 +305,23 @@ class dgsand
 	  iptf[ix]+=(i*d*ngGL);            //faceNormal
 	  iptf[ix+1]+=(i*3*nfields*ngGL);  //faceFlux
 	}
-      };
+};
+
+    void findBases(int imesh) {
+      // fill bv and bf arrays
+      COMPUTE_SHAPE(x.data(),
+			   bv.data(),
+			   bvd.data(),
+			   JinvV.data(),
+			   detJ.data(),
+			   bf.data(),
+			   bfd.data(),
+			   JinvF.data(),
+			   faceWeight.data(),
+			   iptr.data(),
+         elemParent.data(),
+			   d,etype,p,nelem,pc,iblank.data(),imesh);      
+    }
 
     void init(int imesh) {
 
@@ -310,9 +332,10 @@ class dgsand
 		  x.data(),
 		  q.data(),
 		  iptr.data(),
+      elemParent.data(),
 		  pde,etype,p,d,nbasis,itype,nelem,pc,imesh);
       
-      /* compute grid metrics */
+      /* compute grid jacobians */
       COMPUTE_GRID_METRICS(x.data(),
 			   bv.data(),
 			   bvd.data(),
@@ -323,6 +346,7 @@ class dgsand
 			   JinvF.data(),
 			   faceWeight.data(),
 			   iptr.data(),
+         elemParent.data(),
 			   d,etype,p,nelem,pc,iblank.data(),imesh);      
     }
 
@@ -464,18 +488,18 @@ class dgsand
     void initTimeStepping(int imesh) {
       /* compute some statistics of the mesh and report them */
         printf("\n#---------MESH %i------------\n",imesh);
-	printf("#(nnodes, nelem, p)=(%d, %d, %d)\n",nnodes,nelem,p);
+        printf("#(nnodes, nelem, p)=(%d, %d, %d)\n",nnodes,nelem,p);
         printf("#nbasis=%d\n",nbasis);
-	printf("#ndof=%d\n",nelem*nbasis);
-	printf("#nfaces=%d\n",nfaces);
-	printf("#totalArea=%f\n",total_area(detJ.data(),etype,p,d,nelem));
-	printf("#ireg=%d\n",ireg);
-	printf("#nsteps=%d\n",nsteps);
-	printf("#Input parameters = ");
-	output_params();
-	printf("\n#--------------------------\n");
-	printf("#%s\t%10s\t%14s\t%10s\n","step","l2","linf-loc","linf");
-	ndof=nfields*nbasis*nelem;
+        printf("#ndof=%d\n",nelem*nbasis);
+        printf("#nfaces=%d\n",nfaces);
+        printf("#totalArea=%f\n",total_area(detJ.data(),etype,p,d,nelem));
+        printf("#ireg=%d\n",ireg);
+        printf("#nsteps=%d\n",nsteps);
+        printf("#Input parameters = ");
+        output_params();
+        printf("\n#--------------------------\n");
+        printf("#%s\t%10s\t%14s\t%10s\n","step","l2","linf-loc","linf");
+        ndof=nfields*nbasis*nelem;
     };
 
     void setupOverset(std::vector<int>& iptrB,
@@ -488,34 +512,35 @@ class dgsand
 		      int necutB, int nelemB)
     {
     SETUP_OVERSET(cut2e.data(),
-		  cut2eB.data(),
-		  cutoverset.data(),
+                  cut2eB.data(),
+                  cutoverset.data(),
                   iptr.data(),
                   iptrB.data(),
                   iptrc.data(),
                   iptrcB.data(),
                   x.data(),
                   xB.data(),
-		  xcut.data(),
-		  xcutB.data(),
+                  xcut.data(),
+                  xcutB.data(),
                   bfcutL.data(),
                   bfcutR.data(),
-		  JinvV.data(),
-		  JinvB.data(),
-		  elemParent.data(),
+                  JinvV.data(),
+                  JinvB.data(),
+                  elemParent.data(),
                   elemParentB.data(),
-		  OSFnseg.data(),
-		  OSFeID.data(),
-		  OSFxn.data(),
-		  OSFshpL.data(),
-		  OSFshpR.data(),
+                  OSFnseg.data(),
+                  OSFeID.data(),
+                  OSFxn.data(),
+                  OSFshpL.data(),
+                  OSFshpR.data(),
                   d, etype, p, pc, pccut,
                   necut, necutB, nelemB);
     }
     
     void exchangeOverset(std::vector<double>& qB,
-		         std::vector<int>& iptrB,
-			 int imesh)
+		         std::vector<int>& iptrB, 
+             std::vector<int>& elemParentB,
+      			 int imesh)
     {
       EXCHANGE_OVERSET(OSFflux.data(),
 		       OSFshpL.data(),
@@ -529,6 +554,8 @@ class dgsand
 		       iptrc.data(),
 		       iptr.data(),
 		       iptrB.data(),
+           elemParent.data(),
+           elemParentB.data(),
 		       necut,pccut,d,etype,p,pc,pde,imesh);
     } 
 
@@ -584,13 +611,13 @@ class dgsand
     {
       rmax=rnorm=0;
       for(int i=0;i<ndof;i++) 
-	{
-	  if (fabs(R[i])> rmax) {
-	    imax=i/nfields;
-	    rmax=fabs(R[i]);
+      	{
+      	  if (fabs(R[i])> rmax) {
+      	    imax=i/nfields;
+      	    rmax=fabs(R[i]);
           }
-	  rnorm+=(R[i]*R[i]);
-	}
+      	  rnorm+=(R[i]*R[i]);
+      	}
       rnorm=sqrt(rnorm/ndof);
       rmax*=(dtfac);
     };
@@ -604,13 +631,14 @@ class dgsand
     int getNecut()  { return necut;  };
     double getDt()  { return dt;};
 
-   double cons_metric(int fieldid) {
-    double cons= COMPUTE_CONSERVATION(q.data(),detJ.data(),bv.data(),iptr.data(),iblank.data(),
+    double cons_metric(int fieldid) {
+      double cons= COMPUTE_CONSERVATION(q.data(),detJ.data(),bv.data(),iptr.data(),iblank.data(),
                                       pc,pde,d,etype,p,fieldid,nelem,
                                       cut2e.data(),iptrc.data(),bvcut.data(),detJcut.data(),
                                       pccut,necut,fcflux.data(),cutoverset.data(),cut2neigh.data(),
-                                      fflux.data(),elem2face,faces,iptf.data(),pf,&faceFluxSum,dt,OSFflux.data(),OSFnseg.data());
-    return cons;
+                                      fflux.data(),elem2face,faces,iptf.data(),pf,&faceFluxSum,
+                                      dt,OSFflux.data(),OSFnseg.data());
+      return cons;
    }
 
    double compute_error(int imesh, int step) {
@@ -622,6 +650,7 @@ class dgsand
                   x.data(),
                   qexact.data(),
                   iptr.data(),
+                  elemParent.data(),
                   pde,etype,p,d,nbasis,1,nelem,pc,imesh);
 
       double error=

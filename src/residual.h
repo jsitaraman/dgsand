@@ -157,7 +157,7 @@ void volIntegral(double *residual, double *bv, double *bvd, double *q, double *d
   
   l=ld=0;
 
-  if(debug) printf("VOL INTEGRAL: EID = %i\n"); 
+  if(debug) printf("VOL INTEGRAL: EID = %i\n",eid); 
 
   // for all gauss-quadrature points 
   for(w=0;w<ngElem[e][p];w++)
@@ -166,6 +166,10 @@ void volIntegral(double *residual, double *bv, double *bvd, double *q, double *d
       /* collect basis values for this quadrature point */
       bvv=bv+w*nbasis;
       bvvd=bvd+w*nbasis*d;
+      if(debug){
+	      for(b=0;b<nbasis;b++)	    
+          printf("\tw = %i, bvv[%i] = %f\n",w,b,bvv[b]);
+      }
  
       /* project the q field to the gauss point */
       for(f=0;f<nfields;f++)
@@ -188,14 +192,14 @@ void volIntegral(double *residual, double *bv, double *bvd, double *q, double *d
       if(debug){
         printf("\n");
         for(f=0;f<nfields;f++){
-          printf("wgt = %.16e\n",wgt); 
-          printf("w = %i, qv = %.16e, qvd[%i] = %.16e %.16e\n",w,f,qv[f],qvd[f][0],qvd[f][1]);
+          printf("\twgt = %.16e\n",wgt); 
+          printf("\tw = %i, qv = %.16e, qvd[%i] = %.16e %.16e\n",w,f,qv[f],qvd[f][0],qvd[f][1]);
         }
         for(f=0;f<nfields;f++){
-          printf("flux[%i] = %.16e %.16e\n",f,flux[0][f],flux[1][f]);
+          printf("\tflux[%i] = %.16e %.16e\n",f,flux[0][f],flux[1][f]);
         }
         for(b=0;b<nbasis;b++){
-          printf("bvvd[%i] = %.16e %.16e\n",b,bvvd[0 + b*d], bvvd[1 + b*d]);
+          printf("\tbvvd[%i] = %.16e %.16e\n",b,bvvd[0 + b*d], bvvd[1 + b*d]);
         }
       }
 
@@ -1090,7 +1094,7 @@ void COMPUTE_RESIDUAL(double *R, double *mass, double *q, double *detJ, double *
       pix=pc*elemParent[i];
       iR=iq=iptr[pix];  // plug contributions into parent residual vector
  
-      /*
+      
       iR2 = iptr[pc*(i+1)];
       for(j=iR;j<iR2;j++)
         if(isnan(R[j])){
@@ -1098,39 +1102,39 @@ void COMPUTE_RESIDUAL(double *R, double *mass, double *q, double *detJ, double *
           exit(1);
         }
 
-      if(imesh==1 && i==20){
-        printf("DEBUG: Mesh %i, full cell %i:\n",imesh,i);
+//      if(imesh==0 && (eid==2 || eid == 3)){
+        printf("DEBUG: Mesh %i, cut cell %i:\n",imesh,i);
+        printf("FULL VOL:\n"); 
         debug = 1;
-      }
+/*      }
       else{
         debug = 0;
       }
+*/
 
       if(debug){ // print out node weights
         for(int f = 0; f<nfields; f++)
           for(int j = 0; j<nbasis; j++)
            printf("\tq weights, q(f = %i, b = %i) = %.16e\n",f,j,q[iq+f*nbasis+j]);
       }
-      */
 
       if(iblank[i]!=1){
         volIntegral(R+iR,bv+ibv,bvd+ibvd,q+iq,detJ+idet, pde,d,e,p,i,debug);
-        /*
+        
         if(debug){
           for(int f = 0; f<nfields; f++)
             for(int j = 0; j<nbasis; j++)
               printf("\tonly vol R(f = %i, b = %i) = %.16e\n",f,j,R[iR+f*nbasis+j]);
         }
-        */
-
-        faceIntegral(R+iR,fflux,bf+ibf,bfd+ibfd,elem2face+nfp*i,iptrf,q,pf,pde,d,e,p,i,faces,iblank,i);
-        /*
+// DEBUG PAUSING THIS FOR NOW XXX
+//        faceIntegral(R+iR,fflux,bf+ibf,bfd+ibfd,elem2face+nfp*i,iptrf,q,pf,pde,d,e,p,i,faces,iblank,i);
+        
         if(debug){
           for(int f = 0; f<nfields; f++)
             for(int j = 0; j<nbasis; j++)
               printf("\tfull R(f = %i, b = %i) = %.16e\n",f,j,R[iR+f*nbasis+j]);
         }
-        */
+        
       }
     }
 
@@ -1154,7 +1158,7 @@ void COMPUTE_RESIDUAL(double *R, double *mass, double *q, double *detJ, double *
       ishp=iptrc[ix+15];
       iflx2=iptrc[ix+16];
 
-      if(imesh==1 && eid==160){
+      if(imesh==0 && (eid==2 || eid == 3)){
         printf("DEBUG: Mesh %i, cut cell %i:\n",imesh,i);
         printf("CUT VOL:\n"); 
         debug = 1;

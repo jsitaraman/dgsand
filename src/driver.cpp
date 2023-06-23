@@ -35,6 +35,7 @@ int main(int argc, char *argv[])
   printf("\nx0 = %f, offset = %f\n",x0,offset);
 
   if(nmesh>1){
+    // cut mesh and setup cell merging
     for(i=0;i<nmesh;i++) {
       printf("\n=================\nCUTTING MESH %i\n=================\n",i);
       // setup conservative overset cut cells
@@ -61,6 +62,7 @@ int main(int argc, char *argv[])
 
   // Compute mass matrix (including merged cells)
   for(i=0;i<nmesh;i++) {
+    sol[i].findBases(i); 
     sol[i].mass_matrix(i);
     sol[i].initTimeStepping(i);
   }
@@ -83,7 +85,6 @@ int main(int argc, char *argv[])
   double cons0=cons;
  
 // 
-exit(1); 
 // 
   // ============= 
   // RUN TIMESTEPS 
@@ -99,7 +100,7 @@ exit(1);
           printf("EXCHANGING OVERSET FOR MESH %i Step %i, Euler \n",i,n); 
           printf("================================================\n");
           B = 1-i; 
-          sol[i].exchangeOverset(sol[B].q, sol[B].iptr,i); 
+          sol[i].exchangeOverset(sol[B].q, sol[B].iptr,sol[B].elemParent,i); 
         }
       	printf("==================\nCOMPUTING MESH %i Step %i, Euler \n===================\n",i,n);
         sol[i].computeRHS(sol[i].q,i);
@@ -113,7 +114,7 @@ exit(1);
 
         if(nmesh>1){
           B = 1-i; 
-          sol[i].exchangeOverset(sol[B].q, sol[B].iptr,i); 
+          sol[i].exchangeOverset(sol[B].q, sol[B].iptr,sol[B].elemParent,i); 
         }
 	      printf("==================\nCOMPUTING MESH %i Step %i, RK 1\n===================\n",i,n);
         sol[i].computeRHS(sol[i].q,i);
@@ -128,7 +129,7 @@ exit(1);
       for(i=0;i<nmesh;i++){
         if(nmesh>1){
           B = 1-i; 
-          sol[i].exchangeOverset(sol[B].qstar, sol[B].iptr, i); 
+          sol[i].exchangeOverset(sol[B].qstar, sol[B].iptr,sol[B].elemParent, i); 
         }
       	printf("==================\nCOMPUTING MESH %i Step %i, RK 2 \n===================\n",i,n);
         sol[i].computeRHS(sol[i].qstar,i);
@@ -139,7 +140,7 @@ exit(1);
       for(i=0;i<nmesh;i++){
         if(nmesh>1){
           B = 1-i; 
-          sol[i].exchangeOverset(sol[B].q, sol[B].iptr, i); 
+          sol[i].exchangeOverset(sol[B].q, sol[B].iptr,sol[B].elemParent, i); 
         }
       	printf("==================\nCOMPUTING MESH %i Step %i, RK 3\n===================\n",i,n);
         sol[i].computeRHS(sol[i].qstar,i);

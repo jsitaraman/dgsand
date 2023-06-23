@@ -470,13 +470,13 @@ void createOversetGauss(double* xA, double* xB, double* xseg, double* JinvA, dou
 }
 
 void SETUP_OVERSET(int* cut2e, int* cut2eB, int* cutoversetA, 
-		   int* iptrA, int* iptrB, int* iptrcA, int* iptrcB, 
-		   double* xA, double* xB, double* xcutA, double* xcutB, 
-		   double* bfcutLA, double* bfcutRA, double* JinvA, double* JinvB,
+                   int* iptrA, int* iptrB, int* iptrcA, int* iptrcB, 
+                   double* xA, double* xB, double* xcutA, double* xcutB, 
+                   double* bfcutLA, double* bfcutRA, double* JinvA, double* JinvB,
                    int* elemParentA, int* elemParentB, 
-		   int* OSFnseg, int* OSFeID, double* OSFxn, double* OSFshpL, double* OSFshpR, 
-		   int d, int e, int p, int pc, int pccut, 
-		   int necutA, int necutB, int nelemB)
+                   int* OSFnseg, int* OSFeID, double* OSFxn, double* OSFshpL, double* OSFshpR, 
+                   int d, int e, int p, int pc, int pccut, 
+                   int necutA, int necutB, int nelemB)
 // For overset boundaries in mesh A, find corresponding elements and shape function values on mesh B. Build multiple segments along overset boundary to handle discontinuous overset flux across multiple elements
 {
   int ip, ix, iji, ixc, iq, ibf, ibfd, ifw, ic2n,iflx, cibf,flag, cid, ixn, iosf, ishp, ismerge;
