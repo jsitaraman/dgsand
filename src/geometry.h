@@ -37,9 +37,12 @@ double total_area(double *detJ, int etype, int p, int d, int nelem)
       }
 }
 
-void CellCoordInterp(double *xdest, int d, int e, int p, double* Jinvdest, 
-                     double *ijk, double *xsource, 
-                     double* rst, int ismerged) 
+void CellCoordInterp(double *xsource, double *ijk, 
+                     double *xdest, double *Jinvdest, double *rst,
+                     int d, int e, int p, int ismerged)
+//void CellCoordInterp(double *xdest, int d, int e, int p, double* Jinvdest, 
+//                     double *ijk, double *xsource, 
+//                     double* rst, int ismerged) 
 //
 // Routine that converts local coordinates from one cell to another
 //
@@ -173,7 +176,8 @@ void BasesVCut(double *x, double *Jinv,double *detJ,
     for(j=0; j<d;j++) ijk[j] = gauss[e][g][(d+1)*w+j]; //double check inputs to gauss XXX
     
     // get bases and derivs at quad pt 
-    CellCoordInterp(x,d,e,p,Jinv,ijk,xcut,u,ismerged); 
+    CellCoordInterp(xcut, ijk, x, Jinv, u, d, e, p,ismerged); 
+    //CellCoordInterp(x,d,e,p,Jinv,ijk,xcut,u,ismerged); 
 
     //store bvcut at each quad pt
     for(b=0;b<nbasis;b++){ // loop over bases
@@ -267,7 +271,9 @@ void CutFaceWeights(double *x, double *Jinv, int pc, int* iptr, double *xcut, do
       pid = elemParent[iorig]; 
       ismerged = 0; 
       if(iorig!=elemParent[iorig]) ismerged = 1; 
-      CellCoordInterp(x+iptr[pc*pid+1],d,e,p,Jinv+iptr[pc*pid+8],ijk,xcut,uL,ismerged); 
+      CellCoordInterp(xcut, ijk, x+iptr[pc*pid+1], Jinv+iptr[pc*pid+8],
+                      uL, d, e, p, ismerged); 
+//      CellCoordInterp(x+iptr[pc*pid+1],d,e,p,Jinv+iptr[pc*pid+8],ijk,xcut,uL,ismerged); 
       printf("\t\tuL = %f %f\n",uL[0],uL[1]);
 
       // convert ijk coord on sub elem to rst coord on full R side elem
@@ -277,7 +283,9 @@ void CutFaceWeights(double *x, double *Jinv, int pc, int* iptr, double *xcut, do
       printf("\t\tneigh = %i, neighParent = %i\n",neigh,elemParent[neigh]);
       if(neigh>-1){
     	  pid = elemParent[neigh];
-        CellCoordInterp(x+iptr[pc*pid+1],d,e,p,Jinv+iptr[pc*pid+8],ijk,xcut,uR,ismerged); 
+        CellCoordInterp(xcut, ijk, x+iptr[pc*pid+1], Jinv+iptr[pc*pid+8],
+                        uR, d, e, p, ismerged); 
+        //CellCoordInterp(x+iptr[pc*pid+1],d,e,p,Jinv+iptr[pc*pid+8],ijk,xcut,uR,ismerged); 
         printf("\t\tuR = %f %f\n",uR[0],uR[1]);
 	     }
 
@@ -423,7 +431,8 @@ void cut_mass_matrix(double *M, double *x, double *Jinv, double *xcut, double *d
 	      // revaluate this if mesh is deforming 
 
         // subtract cut region from original mass matrix
-        CellCoordInterp(x,d,e,p,Jinv,ijk,xcut,u,ismerged); //,invJcut,detJcut); 
+        CellCoordInterp(xcut, ijk, x, Jinv, u, d, e, p, ismerged); 
+        //CellCoordInterp(x,d,e,p,Jinv,ijk,xcut,u,ismerged); //,invJcut,detJcut); 
 	      M[ij]-=(wgt*basis[e][i](u)*basis[e][j](u));
 	    }
   	}
@@ -460,7 +469,9 @@ void mass_matrix(double *M, double *x, double* Jinv, double* detJ, int d, int e,
             // convert to local coord of parent element
             // (parent != self for merged elems)
             if(ismerged){
-              CellCoordInterp(xparent,d,e,p,Jinvparent,utmp,xcur,u,ismerged);
+              CellCoordInterp(xcur, utmp, xparent, Jinvparent, 
+                              u, d, e, p, ismerged); 
+              //CellCoordInterp(xparent,d,e,p,Jinvparent,utmp,xcur,u,ismerged);
               if(debug){
                 double x0cur[2]={0,0},x0par[2]={0,0};
                 int nbasisx=order2basis[e][1]; 
@@ -539,20 +550,6 @@ void Jacobian(double *x,double *Jinv, double * detJ,
         }
       }
 
-// debug start
-printf("w = %i\n",w); 
-printf("\tu = %f %f\n",u[0],u[1]);
-      for(b=0;b<nbasis;b++)
-        for(j=0;j<d;j++)
-          printf("bd[%i][%i] = %f\n",b,j,bd[b][j]);
-      for(i=0;i<d;i++)
-        for(b=0;b<nbasis;b++)
-          printf("x[%i] = %f\n",i*nbasis+b,x[i*nbasis+b]);
-      for(i=0;i<d;i++)
-	      for(j=0;j<d;j++)
-          printf("Jac[%i][%i] = %f\n",i,j,mat[i][j]);
-// debug end
-
       for(i=0;i<d;i++)
         for(j=0;j<d;j++)
           //invert jacobian (stored in jac) and get detJ
@@ -562,13 +559,6 @@ printf("\tu = %f %f\n",u[0],u[1]);
               Jinv[ij++]=jac[i][j];
       detJ[n++]=det;
     }
-
-// debug 
-  ij=0; 
-  for(w=0;w<ngElem[e][p];w++) // loop over gauss pts
-      for(i=0;i<d;i++)
-        for(j=0;j<d;j++)
-          printf("\tJinv[%i] = %f\n",ij,Jinv[ij++]);
 } 
 
 void VolWeights(double *x,double *bv, double *bvd, double *Jinvparent, 
@@ -576,7 +566,7 @@ void VolWeights(double *x,double *bv, double *bvd, double *Jinvparent,
               int d, int e, int p)
 {
   int b,w,i,j,l,ld,ij,m,n;
-  double utmp[d],u[d];
+  double ucur[d],upar[d];
   double mat[d][d],jac[d][d],det;
   int nbasis=order2basis[e][p+(p==0)];
   int g=p2g[e][p];  // gauss quadrature data for this element type
@@ -589,26 +579,28 @@ void VolWeights(double *x,double *bv, double *bvd, double *Jinvparent,
   for(w=0;w<ngElem[e][p];w++){
     // get rs coordinates of gauss pt in local element
     for(j=0;j<d;j++) 
-      utmp[j]=gauss[e][g][(d+1)*w+j];
+      ucur[j]=gauss[e][g][(d+1)*w+j];
 
-    // convert local rst coordinates (utmp)
-    // into parent elem system (u)
+    // convert local rst coordinates 
+    // into parent elem system 
     if(pid!=eid){ 
-      CellCoordInterp(xparent,d,e,p,Jinvparent,utmp,xcur,u,(pid!=eid));
+      CellCoordInterp(xcur, ucur, xparent, Jinvparent, 
+                      upar, d, e, p, (eid!=pid));
+      //CellCoordInterp(xparent,d,e,p,Jinvparent,ucur,xcur,upar,(pid!=eid));
     }
     else{
-      for(j=0;j<d;j++) u[j] = utmp[j];
+      for(j=0;j<d;j++) upar[j] = ucur[j];
     }
 
     if (p > 0) {
       for(b=0;b<nbasis;b++){
         // fill in shape function value bv[nGL][nbasis]
-        bv[l++]=basis[e][b](u);
+        bv[l++]=basis[e][b](upar);
 
         // get bases and derivs in parent system 
         // dN/dx = trans(Jinv)*[dN/dr;dN/ds]
         for(i=0;i<d;i++){
-          bd[i] = basis_d[e][b*d+i](u);           
+          bd[i] = basis_d[e][b*d+i](upar);           
           for(j=0;j<d;j++) JinvT[i*d+j] = Jinvparent[j*d+i];
         }
         axb(JinvT,bd,bvd+ld,d); 
@@ -620,6 +612,8 @@ void VolWeights(double *x,double *bv, double *bvd, double *Jinvparent,
       for(i=0;i<d;i++) bvd[ld++]=0;
     }
   }
+
+/*
   l=n=m=ld=ij=0;
   for(w=0;w<ngElem[e][p];w++){
     for(b=0;b<nbasis;b++){
@@ -629,112 +623,103 @@ void VolWeights(double *x,double *bv, double *bvd, double *Jinvparent,
       }
     }
   }
-
-
+*/
 
 }
 
-void FaceWeights(double *x, double *bf, double *bfd, double *Jinv, double *faceWeight, 
-		 int d, int e, int p)
+void FaceWeights(double *x, double *bf, double *bfd, double *JinvV, 
+                 double *JinvF, double *faceWeight, 
+              	 int d, int e, int p, int eid, int pid,
+                 int* iptr, int pc)
 {
   int b,w,i,j,ij,l,ld,n,m,f,f1;
-  double u[d],v,wgt;
+  double ucur[d],upar[d],v,wgt;
   double mat[d][d],jac[d][d],det;
   int nbasis=order2basis[e][p+(p==0)];
-  double bd[nbasis][d];  // basis derivative  
+  double bd[d];  // basis derivative  
   int nfaces=facePerElem[e];
   int g=p2gf[e][p]; // gauss quadrature type for this element type
   double xx,yy;
   // ok, we are not going above 3D now
   double Ja[3];
   double Jb[3]={0,0,1};
+  double JinvT[d*d];
 
   // for every face
   m=l=0;
   ld=ij=0;
 
+  double* xcur    = x+iptr[pc*eid+1]; 
+  double* xparent = x+iptr[pc*pid+1]; 
+  double* Jinvcur = JinvV+iptr[pc*eid+4];
+  double* Jinvpar = JinvV+iptr[pc*pid+4];
   //printf("---------------\n");
   for(f=0;f<nfaces;f++)
     {
       // for every Gauss-point on this face
       for(w=0;w<ngGL[e][p];w++)
-	{
-	  v=gaussgl[e][g][(d)*w];  // gauss location
-	  wgt=gaussgl[e][g][(d)*w+1];	 // gauss weight
+        {
+          v=gaussgl[e][g][(d)*w];  // gauss location
+          wgt=gaussgl[e][g][(d)*w+1];	 // gauss weight
 
-	  /* this is specific to 2-D */
-	  /* remember fill order will be reversed for element
+          /* this is specific to 2-D */
+          /* remember fill order will be reversed for element
              sharing this edge */  
           f1=(f+1)%nfaces;
-	  // u is coordinate of gauss pt in rst
-	  u[0]=(1-v)*eloc[e][p][d*f]  +v*eloc[e][p][d*f1]; //eloc is node location in rst; doing 1D interp?
-	  u[1]=(1-v)*eloc[e][p][d*f+1]+v*eloc[e][p][d*f1+1];
-	  //xx=yy=0;
+
+          // get location of gauss pt in local and parent element coord sys
+          ucur[0]=(1-v)*eloc[e][p][d*f]  +v*eloc[e][p][d*f1];
+          ucur[1]=(1-v)*eloc[e][p][d*f+1]+v*eloc[e][p][d*f1+1];
+          if(eid!=pid){ // cell merged
+            // convert ucur into parent element coord rst
+            CellCoordInterp(xcur, ucur, xparent, Jinvpar, 
+                            upar, d, e, p, (eid!=pid));
+            //CellCoordInterp(xparent,d,e,p,Jinvpar,ucur,xcur,upar,(pid!=eid));
+          }
+          else{ // not cell merged
+            for(i=0;i<d;i++) upar[i] = ucur[i];
+          }
 	  
-	  // get the bases and derivs at gauss legendre pts
-	  for(b=0;b<nbasis;b++)
-	    {
-	      for(j=0;j<d;j++)
-		{
-		  bd[b][j]=basis_d[e][b*d+j](u); 
-		  //bfd[ld++]=bd[b][j];      // filled in as bfd[nfaces][nGL][nbasis][d];
-		}
-	      // basis[][](u) computes basis function at u
-	      if (p > 0) bf[l++]=basis[e][b](u);  // filled as bf[nfaces][nGL][nbasis]
-	      //xx+=x[b]*bf[l-1];
-	      //yy+=x[nbasis+b]*bf[l-1];
-	    }
-	  if (p==0) bf[l++]=1.0;
-	  //printf("(r,s,xx,yy)=%f %f %f %f\n",r,s,xx,yy);
+          // Assuming straight edge elements
+          // Jacobian is constant everywhere in element
+          // Using JinvV that's already precalculated
+          for(i=0;i<d;i++)
+            for(j=0;j<d;j++)
+              JinvF[ij++]=Jinvpar[d*i+j];
+          
+          // Get shape function value at gauss pt 
+          // using parent bases
+          for(b=0;b<nbasis;b++)
+            if (p > 0) bf[l++]=basis[e][b](upar);  // filled as bf[nfaces][nGL][nbasis]
 
-	  // build the jacobians of the edge
-	  for(i=0;i<d;i++)
-	    {
-              faceWeight[d*m+i]=0;
-	      Ja[i]=0;
-	      for(j=0;j<d;j++)
-		{
-	          mat[i][j]=x[i*nbasis]*bd[0][j];
-		  for(b=1;b<nbasis+(nbasis==1);b++)
-		    mat[i][j]+=x[i*nbasis+b]*bd[b][j]; 
-		} 
-	      /* need a cross product here */
-              for(j=0;j<d;j++)
-	       {
-                Ja[i]+=(mat[i][j]*face2elem[e][d*f+j]); // face2elem goes from edge coord to rst elem coord
-		//TODO add Jb[i] calculation for 3D elements here
-	       }
+          // Get shape function derivs at gauss pt
+          // using parent bases
+          // dN/dx = trans(Jinv)*[dN/dr;dN/ds]
+          for(b=0;b<nbasis;b++){
+            for(i=0;i<d;i++){
+              bd[i] = basis_d[e][b*d+i](upar);           
+              for(j=0;j<d;j++) JinvT[i*d+j] = Jinvpar[j*d+i];
             }
-	    // do faceWeight = Ja x zhat
-	    // This gives me the normal vector
-	    cross(&(faceWeight[2*m]),Ja,Jb,d); 
-            //printf("fw:(%f %f)\n",faceWeight[2*m],faceWeight[2*m+1]);
+            axb(JinvT,bd,bfd+ld,d); 
+            ld += 2; // increment counter up to next shp function b
+          }
+  
+          // Get edge vector in physical space
+          for(i=0;i<d;i++){
+            Ja[i]=0;
+            for(j=0;j<d;j++)
+              // face2elem is edge vector in rst of current element
+              Ja[i]+=(Jinvcur[i*d+j]*face2elem[e][d*f+j]); 
+          }
 
-            // get [dx/dr]^-1
-            if (d==2) invmat2x2(mat,jac,det);
-
-            // compute [dr/dx][dN/dr]
-	    if (p > 0) {
- 	     for(b=0;b<nbasis;b++)
-	      {
-		for(i=0;i<d;i++)
-		  {
-		    bfd[ld]=jac[0][i]*bd[b][0];
-		    for(j=1;j<d;j++)
-		       bfd[ld]+=jac[j][i]*bd[b][j];
-		    ld++;
-		  }
-	      }
-	    }
-	    else {
-              for(i=0;i<d;i++) bfd[ld++]=0;
-	    }
-	    for(i=0;i<d;i++)
-              for(j=0;j<d;j++)
-	          Jinv[ij++]=jac[i][j];
-	    m++;
-	}
-    }
+          // do faceWeight = Ja x zhat
+          // This gives me the normal vector in physical space
+          cross(&(faceWeight[2*m]),Ja,Jb,d); 
+          
+          // 
+          m++;
+        } // loop over gauss
+    } // loop over faces
 }
 
 void COMPUTE_GRID_METRICS(double *x, double *bv, double *bvd,double *JinvV, 
@@ -789,21 +774,8 @@ printf("\t ip %i, ibv %i, ibvd %i, ibf %i, ibfd %i, ijf %i, ifw %i\n",ip,ibv,ibv
 
       VolWeights(x, bv+ibv, bvd+ibvd,JinvV+ijp,detJ+idetj,iptr,pc,i,pid,d,e,p); // basis on vol
 
-
-  int l=0;
-  int  ld=0;
-  for(int w=0;w<ngElem[e][p];w++){
-    for(b=0;b<nbasis;b++){
-      printf("\tw %i b %i ibv %i:bv[%i] = %f\n",w,b,ibv, ibv+l,bv[ibv+l]);
-      l++; 
-//      for(int k=0;k<d;k++){
-//        printf("bvd[%i] = %f\n", k,ibvd+ld,bvd[ibvd+ld]); 
-//        ld++;
-//      }
-    }
-  }
-
-//      FaceWeights(x+ix,bf+ibf,bfd+ibfd,JinvF+ijf,faceWeight+ifw,d,e,p); // basis on face
+      FaceWeights(x,bf+ibf,bfd+ibfd,JinvV,JinvF+ijf,faceWeight+ifw,
+                  d,e,p,i,pid,iptr,pc); // basis on face
     }
 }
 
