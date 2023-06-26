@@ -261,7 +261,7 @@ class dgsand
 	int ngGL=get_ngGL(etype,p);
 	
 	x.resize((d*(nbasisx))*nelem);                 // coord modal coefficients (p0 mod)   
-	bv.resize((nbasis*ngElem));	       // basis value at volume QP	     
+	bv.resize((nbasis*ngElem*nelem));	       // basis value at volume QP	     
 	bvd.resize((d*nbasis*ngElem*nelem)); // basis derivative value at volume QP 
 	JinvV.resize((d*d*ngElem*nelem));    // J^{-1} at volume QP		     
 	detJ.resize((ngElem*nelem));	       // |J| at volume QP		     
@@ -272,7 +272,7 @@ class dgsand
 	/* geometrical parameters per face QP of each element */
 	/* TODO : some these such as bf and JinvF can optimized/omitted */
 	int fpe = face_per_elem(etype);
-	bf.resize(nbasis*ngGL*fpe);            // basis value at face QP	  
+	bf.resize(nbasis*ngGL*fpe*nelem);            // basis value at face QP	  
 	bfd.resize(d*nbasis*ngGL*fpe*nelem);   // basis der. value at face QP  
 	JinvF.resize(d*d*ngGL*fpe*nelem);      // J^{-1} at face QP		  
 	faceWeight.resize(d*ngGL*fpe*nelem);   // faceNormals at face QP	  
@@ -289,12 +289,12 @@ class dgsand
 	  int ix=pc*i;
 	  iptr[ix]+=i*(nfields*nbasis);               // q, Q, R
 	  iptr[ix+1]+=i*(d*(nbasisx));                // x
-	  iptr[ix+2]+=0;                              // bv (this is same per element type)
+	  iptr[ix+2]+=i*(nbasis*ngElem);    // bv (different for each eleme b/c of cell merging)
 	  iptr[ix+3]+=i*(d*nbasis*ngElem);  // bvd
 	  iptr[ix+4]+=i*(d*d*ngElem);       // JinvV
 	  iptr[ix+5]+=i*(ngElem);           // detJ
 	  
-	  iptr[ix+6]+=0;                              // bf (this is same per element type)
+	  iptr[ix+6]+=i*(nbasis*ngGL*fpe);  // bf (different for each eleme b/c of cell merging)
 	  iptr[ix+7]+=i*(d*nbasis*ngGL*fpe);// bfd
 	  iptr[ix+8]+=i*(d*d*ngGL*fpe);     // JinvF
 	  iptr[ix+9]+=i*(d*ngGL*fpe);       // faceWeight

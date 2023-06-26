@@ -92,8 +92,8 @@ void CellCoordInterp(double *xdest, int d, int e, int p, double* Jinvdest,
   // [xysource] = [jac_source]*[ij] + x0_source
   axb(jsource,ijk,xysource,d);
   for(j=0;j<d;j++) xysource[j] = xysource[j] + x0source[j] - x0[j];
-  printf("\t\t\txy = %f %f\n",xysource[0],xysource[1]);
-  printf("\t\t\tJinvdest = %f %f; %f %f\n",Jinvdest[0],Jinvdest[1],Jinvdest[2],Jinvdest[3]); 
+//  printf("\t\t\txy = %f %f\n",xysource[0],xysource[1]);
+//  printf("\t\t\tJinvdest = %f %f; %f %f\n",Jinvdest[0],Jinvdest[1],Jinvdest[2],Jinvdest[3]); 
 
   // Compute rst coord of source cell quad
   // [rs] = [Jinv_dest][xysource - x0_dest]
@@ -471,6 +471,7 @@ void mass_matrix(double *M, double *x, double* Jinv, double* detJ, int d, int e,
                   x0cur[0] += xcur[k]*basis[e][k](v);
                   x0cur[1] += xcur[k+nbasisx]*basis[e][k](v);
                 }
+                printf("\t\t\tJinvparr = %f %f %f %f\n",Jinvparent[0],Jinvparent[1],Jinvparent[2],Jinvparent[3]);
                 printf("\t\t\tx0par = %f %f\n\t\t\tx0cur = %f %f\n",
                         x0par[0],x0par[1],x0cur[0],x0cur[1]);            
               }
@@ -538,6 +539,20 @@ void Jacobian(double *x,double *Jinv, double * detJ,
         }
       }
 
+// debug start
+printf("w = %i\n",w); 
+printf("\tu = %f %f\n",u[0],u[1]);
+      for(b=0;b<nbasis;b++)
+        for(j=0;j<d;j++)
+          printf("bd[%i][%i] = %f\n",b,j,bd[b][j]);
+      for(i=0;i<d;i++)
+        for(b=0;b<nbasis;b++)
+          printf("x[%i] = %f\n",i*nbasis+b,x[i*nbasis+b]);
+      for(i=0;i<d;i++)
+	      for(j=0;j<d;j++)
+          printf("Jac[%i][%i] = %f\n",i,j,mat[i][j]);
+// debug end
+
       for(i=0;i<d;i++)
         for(j=0;j<d;j++)
           //invert jacobian (stored in jac) and get detJ
@@ -547,9 +562,16 @@ void Jacobian(double *x,double *Jinv, double * detJ,
               Jinv[ij++]=jac[i][j];
       detJ[n++]=det;
     }
+
+// debug 
+  ij=0; 
+  for(w=0;w<ngElem[e][p];w++) // loop over gauss pts
+      for(i=0;i<d;i++)
+        for(j=0;j<d;j++)
+          printf("\tJinv[%i] = %f\n",ij,Jinv[ij++]);
 } 
 
-void VolWeights(double *x,double *bv, double *bvd, double *Jinv, 
+void VolWeights(double *x,double *bv, double *bvd, double *Jinvparent, 
               double *detJ, int* iptr, int pc, int eid, int pid, 
               int d, int e, int p)
 {
@@ -559,9 +581,8 @@ void VolWeights(double *x,double *bv, double *bvd, double *Jinv,
   int nbasis=order2basis[e][p+(p==0)];
   int g=p2g[e][p];  // gauss quadrature data for this element type
 
-  double* xparent = x+iptr[pc*pid+1]; 
-  double* Jinvparent = Jinv+iptr[pc*pid+4];
   double* xcur = x+iptr[pc*eid+1]; 
+  double* xparent = x+iptr[pc*pid+1]; 
   double JinvT[d*d], bd[d];
 
   l=n=m=ld=ij=0;
@@ -599,6 +620,18 @@ void VolWeights(double *x,double *bv, double *bvd, double *Jinv,
       for(i=0;i<d;i++) bvd[ld++]=0;
     }
   }
+  l=n=m=ld=ij=0;
+  for(w=0;w<ngElem[e][p];w++){
+    for(b=0;b<nbasis;b++){
+      printf("w=%i,b=%i,bv = %f\n",w,b,bv[l++]);
+      for(i=0;i<2;i++){
+        printf("dN/dx%i = %f\n", i,bvd[ld++]); 
+      }
+    }
+  }
+
+
+
 }
 
 void FaceWeights(double *x, double *bf, double *bfd, double *Jinv, double *faceWeight, 
@@ -722,6 +755,7 @@ void COMPUTE_GRID_METRICS(double *x, double *bv, double *bvd,double *JinvV,
       ij   =iptr[ip+4];
       idetj=iptr[ip+5];
 
+      printf("Debug Jacobian Elem %i, ij = %i\n",i,ij);
       Jacobian(x+ix,JinvV+ij,detJ+idetj,d,e,p); // basis on vol
     }
 }
@@ -732,12 +766,15 @@ void COMPUTE_SHAPE(double *x, double *bv, double *bvd,double *JinvV,
         int pc, int* iblank, int imesh)
 {
   int i,j,b,pid;
-  int ip,ix,ibv,ibvd,ibf,ij,idetj,ibfd,ijf,ifw;
+  int ip,ix,ibv,ibvd,ibf,ij,idetj,ibfd,ijf,ifw,ijp;
   
+  int nbasis=order2basis[e][p+(p==0)];
   // Now compute shape functions and derivs
   for(i=0;i<nelem;i++)
     {
       pid = elemParent[i];  // fully zero b/c haven't computed cut cells yet
+
+printf("COMPUTESHAPE: ELEM %i, Parent %i\n",i,pid); 
 
       ip=pc*i;
       ibv  =iptr[ip+2];
@@ -747,8 +784,26 @@ void COMPUTE_SHAPE(double *x, double *bv, double *bvd,double *JinvV,
       ijf  =iptr[ip+8];
       ifw  =iptr[ip+9];
 
-      VolWeights(x, bv+ibv, bvd+ibvd,JinvV,detJ+idetj,iptr,pc,i,pid,d,e,p); // basis on vol
-      FaceWeights(x+ix,bf+ibf,bfd+ibfd,JinvF+ijf,faceWeight+ifw,d,e,p); // basis on face
+      ijp =iptr[pc*pid+4]; // parent inverse jacobian
+printf("\t ip %i, ibv %i, ibvd %i, ibf %i, ibfd %i, ijf %i, ifw %i\n",ip,ibv,ibvd, ibf, ibfd, ijf, ifw); 
+
+      VolWeights(x, bv+ibv, bvd+ibvd,JinvV+ijp,detJ+idetj,iptr,pc,i,pid,d,e,p); // basis on vol
+
+
+  int l=0;
+  int  ld=0;
+  for(int w=0;w<ngElem[e][p];w++){
+    for(b=0;b<nbasis;b++){
+      printf("\tw %i b %i ibv %i:bv[%i] = %f\n",w,b,ibv, ibv+l,bv[ibv+l]);
+      l++; 
+//      for(int k=0;k<d;k++){
+//        printf("bvd[%i] = %f\n", k,ibvd+ld,bvd[ibvd+ld]); 
+//        ld++;
+//      }
+    }
+  }
+
+//      FaceWeights(x+ix,bf+ibf,bfd+ibfd,JinvF+ijf,faceWeight+ifw,d,e,p); // basis on face
     }
 }
 

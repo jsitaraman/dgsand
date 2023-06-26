@@ -15,9 +15,9 @@ void init_data(double *x,double *q, double *X, double *Q, int d, int nfields, in
     V[i]=(double *)malloc(sizeof(double)*nbasis);
     for(j=0;j<nbasis;j++)
       {
-	for(k=0;k<d;k++)
-	  u[k]=eloc[e][p][i*d+k];
-	V[i][j]=basis[e][j](u);
+        for(k=0;k<d;k++)
+        u[k]=eloc[e][p][i*d+k];
+        V[i][j]=basis[e][j](u);
       }
   }
   /* form the RHS matrix from physical values of coordinates and
@@ -30,10 +30,10 @@ void init_data(double *x,double *q, double *X, double *Q, int d, int nfields, in
   for(j=0;j<nbasis;j++)
     {
       for(i=0;i<d;i++)
-	Y[i][j]=X[d*j+i];
+        Y[i][j]=X[d*j+i];
 //        printf("X(%i) = %f\n",d*j+i,Y[i][j]);    
       for(i=d;i<nfields+d;i++)
-	Y[i][j]=Q[(i-d)*nbasis+j];
+        Y[i][j]=Q[(i-d)*nbasis+j];
     }
   /* solve V Y' = Y, Y=Y' on return from function */ 
   solvec(V,Y,&iflag,nbasis,nfields+d);
@@ -44,11 +44,11 @@ void init_data(double *x,double *q, double *X, double *Q, int d, int nfields, in
   for(i=d;i<nfields+d;i++)
     {
       for(j=0;j<nbasis;j++)
-	{
-	  q[(i-d)*nbasis+j]=Y[i][j];
-	  //printf("%16.12f ",Y[i][j]);
-	}
-      //printf("\n");
+        {
+          q[(i-d)*nbasis+j]=Y[i][j];
+          //printf("%16.12f ",Y[i][j]);
+        }
+        //printf("\n");
     }
   
   for(i=0;i<nbasis;i++) free(V[i]);
