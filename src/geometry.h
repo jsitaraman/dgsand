@@ -101,7 +101,7 @@ void CellCoordInterp(double *xsource, double *ijk,
   // Compute rst coord of source cell quad
   // [rs] = [Jinv_dest][xysource - x0_dest]
   axb(Jinvdest,xysource,rst,d);
-  printf("\t\t\trs = %f %f\n",rst[0],rst[1]);
+//  printf("\t\t\trs = %f %f\n",rst[0],rst[1]);
 
   if(ismerged==0 && (rst[0]<-1e-13 || rst[1]<-1e-13 || rst[0] > 1+1e-10 || rst[1] > 1+1e-10)){
     axb(jsource,ijk,xysource,d);
@@ -641,9 +641,9 @@ void FaceWeights(double *x, double *bf, double *bfd, double *JinvV,
   int g=p2gf[e][p]; // gauss quadrature type for this element type
   double xx,yy;
   // ok, we are not going above 3D now
+  double JinvT[d*d];
   double Ja[3];
   double Jb[3]={0,0,1};
-  double JinvT[d*d];
 
   // for every face
   m=l=0;
@@ -659,6 +659,7 @@ void FaceWeights(double *x, double *bf, double *bfd, double *JinvV,
       // for every Gauss-point on this face
       for(w=0;w<ngGL[e][p];w++)
         {
+
           v=gaussgl[e][g][(d)*w];  // gauss location
           wgt=gaussgl[e][g][(d)*w+1];	 // gauss weight
 
@@ -680,17 +681,24 @@ void FaceWeights(double *x, double *bf, double *bfd, double *JinvV,
             for(i=0;i<d;i++) upar[i] = ucur[i];
           }
 	  
+printf("\tf=%i, w=%i, ucur = %f %f, upar = %f %f\n",f,w,ucur[0],ucur[1],upar[0],upar[1]); 
+
           // Assuming straight edge elements
           // Jacobian is constant everywhere in element
           // Using JinvV that's already precalculated
           for(i=0;i<d;i++)
-            for(j=0;j<d;j++)
+            for(j=0;j<d;j++){
               JinvF[ij++]=Jinvpar[d*i+j];
-          
+              mat[i][j] =Jinvcur[d*i+j];
+            }
+          invmat2x2(mat,jac,det); // get Jac of current elem
+
           // Get shape function value at gauss pt 
           // using parent bases
-          for(b=0;b<nbasis;b++)
+          for(b=0;b<nbasis;b++){
             if (p > 0) bf[l++]=basis[e][b](upar);  // filled as bf[nfaces][nGL][nbasis]
+printf("\tf=%i, w=%i, b=%i, bf[%i] = %f\n",f,w,b,l-1,bf[l-1]);
+          }
 
           // Get shape function derivs at gauss pt
           // using parent bases
@@ -701,6 +709,7 @@ void FaceWeights(double *x, double *bf, double *bfd, double *JinvV,
               for(j=0;j<d;j++) JinvT[i*d+j] = Jinvpar[j*d+i];
             }
             axb(JinvT,bd,bfd+ld,d); 
+printf("\tf=%i, w=%i, b=%i, dir=%i, bfd[%i, %i] = %f %f\n",f,w,b,i,ld,ld+1,bfd[ld],bfd[ld+1]);
             ld += 2; // increment counter up to next shp function b
           }
   
@@ -709,12 +718,14 @@ void FaceWeights(double *x, double *bf, double *bfd, double *JinvV,
             Ja[i]=0;
             for(j=0;j<d;j++)
               // face2elem is edge vector in rst of current element
-              Ja[i]+=(Jinvcur[i*d+j]*face2elem[e][d*f+j]); 
+              Ja[i]+=(jac[i][j]*face2elem[e][d*f+j]); 
           }
-
+printf("\tf=%i, w=%i, Jinv = %f %f %f %f\n",f,w,Jinvcur[0],Jinvcur[1],Jinvcur[2],Jinvcur[3]);
           // do faceWeight = Ja x zhat
           // This gives me the normal vector in physical space
           cross(&(faceWeight[2*m]),Ja,Jb,d); 
+printf("\tf=%i, w=%i, Ja = %f %f\n",f,w,Ja[0],Ja[1]);
+printf("\tf=%i, w=%i, faceWeight = %f %f\n",f,w,faceWeight[2*m],faceWeight[2*m+1]);
           
           // 
           m++;
