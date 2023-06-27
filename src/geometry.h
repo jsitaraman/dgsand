@@ -341,64 +341,8 @@ void CutFaceWeights(double *x, double *Jinv, int pc, int* iptr, double *xcut, do
        // get [dx/dr]^-1
        if (d==2) invmat2x2(mat,jacL,det);
 
-//Commenting all this out b/c currently not using viscous
-/*
- 	    // build the jacobians of the R neighbor cell 
-//   	    How do I account for the wrong arc length b/c we're using x and not xcut
-
-  	    if(eid!=-1){
-  	      for(i=0;i<d;i++){	    
-	        for(j=0;j<d;j++){
-                  mat[i][j] =  x[iptr[eid*pc+1]+i*3]*bdR[0][j]; 
-	          for(b=1;b<3;b++)
-	            mat[i][j]+=x[iptr[eid*pc+1]+i*3+b]*bdR[b][j];  
-  	        } 
-              }
-              if (d==2) invmat2x2(mat,jacR,det);
-
-              // XXX need to multiply det by cut length? XXX
-
-              // get [dx/dr]^-1
-              if (d==2) invmat2x2(mat,jacR,det);
-	    }
-
-            // compute [dr/dx][dN/dr]
-	    if (p > 0) {
- 	      for(b=0;b<nbasis;b++){ 
-		for(i=0;i<d;i++){
-
-		  bfdcutL[ld]=jacL[0][i]*bdL[b][0];
-		  for(j=1;j<d;j++)
-		    bfdcutL[ld]+=jacL[j][i]*bdL[b][j];
-
-		  if(eid!=-1){
-  		    bfdcutR[ld]=jacL[0][i]*bdR[b][0];
-		    for(j=1;j<d;j++)
-		      bfdcutR[ld]+=jacL[j][i]*bdR[b][j]; // what to do abou jac here? should it be jacL or R?
-		  }
-		  else{
-  		    bfdcutR[ld] = 0.0; 
-		  }
-
-		  ld++;
-		}
-	      }
-	    }
-	    else {
-              for(i=0;i<d;i++){
-		 bfdcutL[ld]=0;
-		 bfdcutR[ld]=0; 
-		 ld++;
-	      }
-	    }
-*/
-// MEMORY LEAK HERE, fix later
-//	    for(i=0;i<d;i++)
-//              for(j=0;j<d;j++)	     
-//  	        Jinvcut[ij++]=jacL[i][j];
-	    m++;
+	     m++;
 	}// loop over gauss pts
-//     } // if cut overset face
    } //loop over faces
 }
 
@@ -659,7 +603,6 @@ void FaceWeights(double *x, double *bf, double *bfd, double *JinvV,
       // for every Gauss-point on this face
       for(w=0;w<ngGL[e][p];w++)
         {
-
           v=gaussgl[e][g][(d)*w];  // gauss location
           wgt=gaussgl[e][g][(d)*w+1];	 // gauss weight
 
@@ -681,8 +624,6 @@ void FaceWeights(double *x, double *bf, double *bfd, double *JinvV,
             for(i=0;i<d;i++) upar[i] = ucur[i];
           }
 	  
-printf("\tf=%i, w=%i, ucur = %f %f, upar = %f %f\n",f,w,ucur[0],ucur[1],upar[0],upar[1]); 
-
           // Assuming straight edge elements
           // Jacobian is constant everywhere in element
           // Using JinvV that's already precalculated
@@ -695,11 +636,9 @@ printf("\tf=%i, w=%i, ucur = %f %f, upar = %f %f\n",f,w,ucur[0],ucur[1],upar[0],
 
           // Get shape function value at gauss pt 
           // using parent bases
-          for(b=0;b<nbasis;b++){
+          for(b=0;b<nbasis;b++)
             if (p > 0) bf[l++]=basis[e][b](upar);  // filled as bf[nfaces][nGL][nbasis]
-printf("\tf=%i, w=%i, b=%i, bf[%i] = %f\n",f,w,b,l-1,bf[l-1]);
-          }
-
+          
           // Get shape function derivs at gauss pt
           // using parent bases
           // dN/dx = trans(Jinv)*[dN/dr;dN/ds]
@@ -709,7 +648,6 @@ printf("\tf=%i, w=%i, b=%i, bf[%i] = %f\n",f,w,b,l-1,bf[l-1]);
               for(j=0;j<d;j++) JinvT[i*d+j] = Jinvpar[j*d+i];
             }
             axb(JinvT,bd,bfd+ld,d); 
-printf("\tf=%i, w=%i, b=%i, dir=%i, bfd[%i, %i] = %f %f\n",f,w,b,i,ld,ld+1,bfd[ld],bfd[ld+1]);
             ld += 2; // increment counter up to next shp function b
           }
   
@@ -720,12 +658,10 @@ printf("\tf=%i, w=%i, b=%i, dir=%i, bfd[%i, %i] = %f %f\n",f,w,b,i,ld,ld+1,bfd[l
               // face2elem is edge vector in rst of current element
               Ja[i]+=(jac[i][j]*face2elem[e][d*f+j]); 
           }
-printf("\tf=%i, w=%i, Jinv = %f %f %f %f\n",f,w,Jinvcur[0],Jinvcur[1],Jinvcur[2],Jinvcur[3]);
+
           // do faceWeight = Ja x zhat
           // This gives me the normal vector in physical space
           cross(&(faceWeight[2*m]),Ja,Jb,d); 
-printf("\tf=%i, w=%i, Ja = %f %f\n",f,w,Ja[0],Ja[1]);
-printf("\tf=%i, w=%i, faceWeight = %f %f\n",f,w,faceWeight[2*m],faceWeight[2*m+1]);
           
           // 
           m++;

@@ -217,7 +217,7 @@ void volIntegral(double *residual, double *bv, double *bvd, double *q, double *d
       	}
       }
 
-      if(debug){
+/*      if(debug){
         printf("\n");
         m=0;
         n=0; 
@@ -236,13 +236,14 @@ void volIntegral(double *residual, double *bv, double *bvd, double *q, double *d
           printf("\n");
         }
       }
-    }
+*/
+    } // gauss pt loop
 }
 
 
 void faceIntegral(double *residual, double *fflux, double *bf, double *bfd, int *elem2face,
 		  int *iptrf,double *q, int pf, int pde, int d, int e, int p, int ielem,
-		  int *faces, int* iblank, int eid)
+		  int *faces, int* iblank, int eid, int debug)
 {
   int b,w,i,j,l,ld,m,f,fid,fst,fsgn,neigh;
   int nbasis=order2basis[e][p];
@@ -264,6 +265,7 @@ void faceIntegral(double *residual, double *fflux, double *bf, double *bfd, int 
       fsgn=elem2face[i]/abs(elem2face[i]);
       fid=abs(elem2face[i])-1;
       neigh = faces[6*fid+2] == eid ? faces[6*fid+4] : faces[6*fid+2];
+
       // make sure to get the right place to take the flux
       fst=iptrf[pf*(fid+(1-fsgn)/2)+1]-(1-fsgn)*nfields/2+(1+fsgn)*nfields;
       for(w=0;w<ngGL[e][p];w++){
@@ -286,29 +288,28 @@ void faceIntegral(double *residual, double *fflux, double *bf, double *bfd, int 
 
               if(isnan(residual[m]))
                 printf("faceIntegral NaN: i=%i m=%i fst=%i f=%i b=%i %.16e %.16e %.16e\n",
-                       i,m,fst,f,b,wgt,flux[f],bvv[b]);
+                       i,m,fst,f,b,wgt,fflux[fst+f],bvv[b]);
       		    m++;
 	 	        }
 	        }
 	      }
 
-        /*if(ielem==2){
+        if(debug){
           printf("\n"); 
           m = 0; 
-          for(f=0;f<nfields;f++)
+          f=0;
+//          for(f=0;f<nfields;f++)
             for(b=0;b<nbasis;b++){
-              printf("face %i, w %i, flux[%i] = %.16e, bvv[%i] = %.16e\n\tresf[%i]=%.16e\n",i, w,f,flux[f],b,bvv[b],m,flux[f]*bvv[b]); 
+              printf("face %i, w %i, flux[%i] = %f, bvv[%i] = %f, resf[%i]=%f\n",i, w,f,flux[f],b,bvv[b],m,flux[f]*bvv[b]); 
             	m++;
              }
-          }
-        */
+        }
 
 	      fst+=(3*fsgn*nfields);
 	    }
     }
 
-    /*
-    if(ielem==2){
+    if(debug){
       printf("\n"); 
       m = 0; 
       for(f=0;f<nfields;f++)
@@ -317,7 +318,6 @@ void faceIntegral(double *residual, double *fflux, double *bf, double *bfd, int 
         	m++;
         }
     }
-    */
 }
 
 void cutVol(double *residual, double *bv, double *bvd, double *q, double *detJ,
@@ -546,20 +546,21 @@ void setFaceQuantities(double *fnorm,double *fflux,int *elem2face, int *iptrf,
     {
       fsgn=elem2face[i]/abs(elem2face[i]);
       fid=abs(elem2face[i])-1; 
-      neigh = faces[6*fid+4];
-      if(neigh != -1){
-        neigh = elemParent[neigh];
+      neigh = faces[6*fid+2] == eid ? faces[6*fid+4] : faces[6*fid+2];
+
+      if(neigh != -1){ // if neighbor not BC face
         blank = iblank[neigh];
       }
       else{
-        blank = 0;
+        blank = 0; // overset faces are not blanked
       }
 
       // pick out the right location for inserting fields for this face
       // the cell with negative sign for the edge fills in backward order
       //
-      // nst = fst if fsgn > 0 
-      // fst = iptrf[pf*(fid+1)+1] - 2*nfields ? if fsgn < 0 
+      // Note: 
+      //   nst = fst if fsgn > 0 
+      //   fst = iptrf[pf*(fid+1)+1] - 2*nfields ? if fsgn < 0 
       nst=iptrf[pf*fid];
       fst=iptrf[pf*(fid+(1-fsgn)/2)+1]-(1-fsgn)*nfields;
       n=0;
@@ -571,16 +572,14 @@ void setFaceQuantities(double *fnorm,double *fflux,int *elem2face, int *iptrf,
       	  for(f=0;f<nfields;f++)
 	          {
      	        floc=fst+f; // increments through fields and gauss pts
-	            if(blank!=1 && elemParent[eid]!=neigh){
-                //if(eid==160)
-                //  for(b=0;b<nbasis;b++)	    
-                //    printf("setFaceQuantities: q[%i] = %.16e\n",b,q[f*nbasis+b]);
+	            if(blank==0){
+                for(b=0;b<nbasis;b++)	    
 
   	            fflux[floc]=bvv[0]*q[f*nbasis];
       	        for(b=1;b<nbasis;b++)	    
 	  	            fflux[floc]+=(bvv[b]*q[f*nbasis+b]); 
       	      }
-	            else{ //if neighbor blanked or we have same parent, zero out flux
+	            else{ // otherwise 0 fluxes 
       	        fflux[floc]=0.0;
 	            }
       	    }	  
@@ -612,8 +611,8 @@ void setCutFacesQuantities(double *x, double *q, int *iptr, int pc,
     fid=cut2face[j]; 
 
     //check to see who my neighbor is
-    if(cut2neigh[j]==-1){
-      neigh = -1;
+    if(cut2neigh[j]<=-1){
+      neigh = cut2neigh[j]; // -1: BC face, -2: overset face
     }
     else{
       neigh = elemParent[cut2neigh[j]];
@@ -666,7 +665,7 @@ void FILL_FACES(double *x, double *fnorm, double *fflux, int *elem2face,int *ipt
                 double *fwcut, double *bfcutL, double *bfcutR, int* cut2e, int necut, int pccut,
             		int* faces, int* iblank, int* elemParent)
 {
-  int i,ix,eid,ic2n;
+  int i,ix,eid,ic2n,w,f;
   int ifw,ibf,ibfd,iq,iflx;
   int nfields=get_nfields[pde](d);
   int nfp=facePerElem[e];
@@ -684,9 +683,8 @@ void FILL_FACES(double *x, double *fnorm, double *fflux, int *elem2face,int *ipt
                   			faceWeight+ifw, bf+ibf, bfd+ibfd, q+iq,
                   			nfields, pf, pde, d, e, p, faces, iblank,
                         i, elemParent);
-      //      printf("FILL_FACE: i = %i, fflux[6336] = %.16e\n",i,fflux[6336]);
-      //      if(fflux[6336]<0) exit(1); 
     }
+
 
   if(necut>0){
     for(i=0;i<necut;i++){
@@ -707,6 +705,7 @@ void FILL_FACES(double *x, double *fnorm, double *fflux, int *elem2face,int *ipt
                             iblank, elemParent); 
     }
   }
+
 }
 
 void FILL_BC(double *fnorm,double *fflux, int *faces,
@@ -743,29 +742,38 @@ void FILL_BC(double *fnorm,double *fflux, int *faces,
 void COMPUTE_FACE_FLUXES(double *fnorm, double *fflux,
 		                  	 int pde, int d, int e, int p, int nfaces, int *faces,
                   			 int necut, int pccut, int *iptrc, double *fcflux, double *fwcut,
-                         int* OSFnseg, int* OSFeID, double* OSFflux, double* OSFxn, double* OSFshpL, double* OSFshpR, 
-                   			 int* cut2e, int* cutoverset, int* cut2neigh,int* iblank)
+                         int* OSFnseg, int* OSFeID, double* OSFflux, 
+                         double* OSFxn, double* OSFshpL, double* OSFshpR, 
+                   			 int* cut2e, int* cutoverset, int* cut2neigh,int* iblank,
+                         int* elemParent)
 {
   int nfields=get_nfields[pde](d);
   double normal[d],xnorm[d];
   int i,j,k,g,m,n,w,floc,wloc,ifl,ifr,iflux,ic2n,f,eid,ico,neigh,ixn,iflx;
   int nfp = facePerElem[e];
+  int e1,e2;
   double *flux, *norm;
   double keep[3];
 
   // Full Faces
   for(i=0;i<nfaces*ngGL[e][p];i++)
     {
+    
       f=i/ngGL[e][p];
-      for(j=0;j<d;j++)
-	    xnorm[j]=fnorm[d*i+j];
+      e1 = faces[6*f+2];
+      e2 = faces[6*f+4];
 
+      for(j=0;j<d;j++)
+	      xnorm[j]=fnorm[d*i+j];
+      
       ifl=i*3*nfields;
       ifr=ifl+nfields;
       iflux=ifr+nfields;
       gradient_indep_flux[pde](fflux+ifl,fflux+ifr,fflux+iflux,xnorm,0.0);
 
-      for(int j=1;j<nfields;j++){
+//        printf("COMPUTE_FACE_FLUX: fflux[%i] = %f, fflux[%i] = %f, fflux[%i] = %f\n",ifl,fflux[ifl],ifr,fflux[ifr],iflux,fflux[iflux]);
+
+      for(int j=0;j<nfields;j++){
         double tmpL = fflux[ifl+j];
         double tmpR = fflux[ifr+j];
         double tmpF = fflux[ifl+j];
@@ -776,13 +784,6 @@ void COMPUTE_FACE_FLUXES(double *fnorm, double *fflux,
           exit(1); 
         }
       }
-//if(isnan(fflux[6344])){
-//  printf("NAN i = %i, lflux[%i] = %.16e, rflux[%i] = %.16e, net[%i] = %.16e, xnorm = %.16e, fflux[6344] = %.16e\n",i,ifl,fflux[ifl],ifr,fflux[ifr],iflux,fflux[iflux],xnorm,fflux[6344]);
-//  exit(1);
-//}
-//else{
-//  printf("i = %i, fflux[6344] = %.16e\n",i,fflux[6344]);
-//}
 
 /*
 if(i==1){
@@ -1093,29 +1094,20 @@ void COMPUTE_RESIDUAL(double *R, double *mass, double *q, double *detJ, double *
 
       pix=pc*elemParent[i];
       iR=iq=iptr[pix];  // plug contributions into parent residual vector
- 
       
-      iR2 = iptr[pc*(i+1)];
-      for(j=iR;j<iR2;j++)
-        if(isnan(R[j])){
-          printf("Pre-cut res for elem %i is NaN\n",i);
-          exit(1);
-        }
-
-//      if(imesh==0 && (eid==2 || eid == 3)){
-        printf("DEBUG: Mesh %i, cut cell %i:\n",imesh,i);
-        printf("FULL VOL:\n"); 
-        debug = 1;
-/*      }
-      else{
-        debug = 0;
-      }
-*/
-
+      printf("DEBUG: Mesh %i, Elem %i, Parent %i:\n",imesh,i,elemParent[i]);
+      printf("FULL VOL:\n"); 
+      debug = 0;
+      if(elemParent[i]!=i) debug = 1;
       if(debug){ // print out node weights
         for(int f = 0; f<nfields; f++)
           for(int j = 0; j<nbasis; j++)
            printf("\tq weights, q(f = %i, b = %i) = %.16e\n",f,j,q[iq+f*nbasis+j]);
+
+          for(int f = 0; f<nfields; f++)
+            for(int j = 0; j<nbasis; j++)
+              printf("\tinitla R(f = %i, b = %i) = %.16e\n",f,j,R[iR+f*nbasis+j]);
+      
       }
 
       if(iblank[i]!=1){
@@ -1126,18 +1118,30 @@ void COMPUTE_RESIDUAL(double *R, double *mass, double *q, double *detJ, double *
             for(int j = 0; j<nbasis; j++)
               printf("\tonly vol R(f = %i, b = %i) = %.16e\n",f,j,R[iR+f*nbasis+j]);
         }
-// DEBUG PAUSING THIS FOR NOW XXX
-//        faceIntegral(R+iR,fflux,bf+ibf,bfd+ibfd,elem2face+nfp*i,iptrf,q,pf,pde,d,e,p,i,faces,iblank,i);
+
+        faceIntegral(R+iR,fflux,bf+ibf,bfd+ibfd,elem2face+nfp*i,
+                     iptrf,q,pf,pde,d,e,p,i,faces,iblank,i,debug);
         
         if(debug){
           for(int f = 0; f<nfields; f++)
             for(int j = 0; j<nbasis; j++)
               printf("\tfull R(f = %i, b = %i) = %.16e\n",f,j,R[iR+f*nbasis+j]);
         }
+
         
       }
     }
+// debug
+/*for(i=0;i<nelem;i++){
+      iR=iq=iptr[pc*i]; // plug contributions into parent residual vector
+      f=0;
+//        for(int f = 0; f<nfields; f++)
+            for(int j = 0; j<nbasis; j++)
+              printf("Elem %i, full R(f = %i, b = %i) = %.16e\n",i,f,j,R[iR+f*nbasis+j]);
+}
+*/
 
+exit(1); 
   //Modify residual for cut cells
   for(i=0;i<necut;i++)
     {
@@ -1158,14 +1162,15 @@ void COMPUTE_RESIDUAL(double *R, double *mass, double *q, double *detJ, double *
       ishp=iptrc[ix+15];
       iflx2=iptrc[ix+16];
 
-      if(imesh==0 && (eid==2 || eid == 3)){
+     // if(imesh==0 && (eid==2 || eid == 3)){
         printf("DEBUG: Mesh %i, cut cell %i:\n",imesh,i);
         printf("CUT VOL:\n"); 
         debug = 1;
-      }
+/*      }
       else{
         debug = 0;
       }
+*/
 
       cutVol(R+iR,bvcut+ibv,bvdcut+ibvd,q+iq,detJcut+idet,pde,d,e,p,eid,debug);
 
@@ -1245,9 +1250,24 @@ void COMPUTE_RHS(double *R,double *mass,double *bv, double *bvd, double *JinvV, 
 
   FILL_BC(fnorm,fflux,faces,pde,d,e,p,nfaces);
 
+
   COMPUTE_FACE_FLUXES(fnorm,fflux,pde,d,e,p,nfaces,faces,necut,pccut,iptrc,fcflux,fwcut,
                       OSFnseg, OSFeID, OSFflux, OSFxn,OSFshpL, OSFshpR,
-            		      cut2e,cutoverset,cut2neigh,iblank);
+            		      cut2e,cutoverset,cut2neigh,iblank,elemParent);
+
+  //debug
+  int i,w,f,nfields=4;
+  int iflx = 0; 
+  for(i=0;i<nfaces;i++){
+    
+    printf("FACE %i: elems %i %i\n",i,faces[6*i+2],faces[6*i+4]);
+    for(w=0;w<ngGL[e][p];w++){
+      for(f=0;f<3*nfields;f++){
+        printf("\t w=%i, fflux[%i] = %f\n",w,iflx,fflux[iflx]);
+        iflx++;
+      }
+    }
+  }
 
   //CHECK_GRADIENTS(x, q,bv, bvd, bf, bfd,iptr,pc,pde,d,e,p,nelem);
 
