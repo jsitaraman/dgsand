@@ -254,6 +254,7 @@ void faceIntegral(double *residual, double *fflux, double *bf, double *bfd, int 
   int g=p2gf[e][p];
   int nfp=facePerElem[e];
   double resf[nfields*nbasis];
+  int blank; 
 
   l=ld=m=0;
   for(f=0;f<nfields;f++)
@@ -280,7 +281,13 @@ void faceIntegral(double *residual, double *fflux, double *bf, double *bfd, int 
 
     	  m=0;
 	      for(f=0;f<nfields;f++){
-	        if(iblank[neigh]!=1){
+          if(neigh<0){
+            blank = 0; 
+          }
+          else{
+            blank = iblank[neigh];
+          }
+	        if(blank!=1){
             flux[f]=fflux[fst+f]*wgt;
   	        for(b=0;b<nbasis;b++){
               resf[m]-=(flux[f]*bvv[b]);
@@ -349,73 +356,70 @@ void cutVol(double *residual, double *bv, double *bvd, double *q, double *detJ,
  
       /* project the q field to the gauss point */
       for(f=0;f<nfields;f++)
-	{
-	  qv[f]=bvv[0]*q[f*nbasis];
-	  for(b=1;b<nbasis;b++)	    
-	    qv[f]+=(bvv[b]*q[f*nbasis+b]);
-	  for(j=0;j<d;j++)
-	    {
-	      qvd[f][j]=bvvd[j]*q[f*nbasis];
-	      for(b=1;b<nbasis;b++)
-		qvd[f][j]+=(bvvd[b*d+j]*q[f*nbasis+b]);
-	    }
-	}
-      /* compute the flux function in each dimension */
+        {
+          qv[f]=bvv[0]*q[f*nbasis];
+          for(b=1;b<nbasis;b++)	    
+            qv[f]+=(bvv[b]*q[f*nbasis+b]);
+          for(j=0;j<d;j++)
+            {
+              qvd[f][j]=bvvd[j]*q[f*nbasis];
+              for(b=1;b<nbasis;b++)
+                qvd[f][j]+=(bvvd[b*d+j]*q[f*nbasis+b]);
+            }
+        }
+        /* compute the flux function in each dimension */
       for(j=0;j<d;j++)
-	flux_function[pde](flux[j],qv,qvd,j);
+        flux_function[pde](flux[j],qv,qvd,j);
       m=0;
 
-
-
- if(debug){
-printf("\n");
-for(f=0;f<nfields;f++){
-printf("\tcut wgt = %.16e\n",wgt); 
-printf("\tcut w = %i, qv = %.16e, qvd[%i] = %.16e %.16e\n",w,f,qv[f],qvd[f][0],qvd[f][1]);
-}
-for(f=0;f<nfields;f++){
-printf("\tcut flux[%i] = %.16e %.16e\n",f,flux[0][f],flux[1][f]);
-}
-for(b=0;b<nbasis;b++){
-printf("\tcut bvvd[%i] = %.16e %.16e\n",b,bvvd[0 + b*d], bvvd[1 + b*d]);
-}
-}
+      if(debug){
+        printf("\n");
+        for(f=0;f<nfields;f++){
+        printf("\tcut wgt = %.16e\n",wgt); 
+        printf("\tcut w = %i, qv = %.16e, qvd[%i] = %.16e %.16e\n",w,f,qv[f],qvd[f][0],qvd[f][1]);
+      }
+      for(f=0;f<nfields;f++){
+        printf("\tcut flux[%i] = %.16e %.16e\n",f,flux[0][f],flux[1][f]);
+      }
+      for(b=0;b<nbasis;b++){
+        printf("\tcut bvvd[%i] = %.16e %.16e\n",b,bvvd[0 + b*d], bvvd[1 + b*d]);
+      }
+      }
 
       for(f=0;f<nfields;f++)
         {
          for(j=0;j<d;j++) flux[j][f]*=wgt;
-	 for(b=0;b<nbasis;b++)
-	  {
-	    for(j=0;j<d;j++){
- 	      //notice the sign change from the volIntegral routine
- 	      if(isnan(bvvd[b*d+j]*flux[j][f]) ||  isnan(residual[m])){
-		printf("Uh Oh 1\n");
-		  int abcd = 1; 
-		}
-	      residual[m]-=(bvvd[b*d+j]*flux[j][f]); /* \grad b . F */
+         for(b=0;b<nbasis;b++)
+          {
+            for(j=0;j<d;j++){
+              //notice the sign change from the volIntegral routine
+              if(isnan(bvvd[b*d+j]*flux[j][f]) ||  isnan(residual[m])){
+                printf("Uh Oh 1\n");
+                int abcd = 1; 
+          	  }
+              residual[m]-=(bvvd[b*d+j]*flux[j][f]); /* \grad b . F */
               keep[m]+=(bvvd[b*d+j]*flux[j][f]);
- 	      if(isnan(bvvd[b*d+j]*flux[j][f]) ||  isnan(residual[m])){
-		printf("Uh Oh 2\n");
-		  int abcd = 1; 
-		}
-	    }
-	    m++;
-	  }
+ 	            if(isnan(bvvd[b*d+j]*flux[j][f]) ||  isnan(residual[m])){
+                printf("Uh Oh 2\n");
+                int abcd = 1; 
+      	      }
+    	      }
+            m++;
+          }
         }
+    } //loop w
+
+  if(debug){
+    printf("\n");
+    for(f=0;f<nfields;f++){
+    for(b=0;b<nbasis;b++)
+      printf("\tR_volcut[%i] = %.16e\n",f*nbasis+b,keep[f*nbasis+b]);
+      printf("\n");
     }
-
-if(debug){
-printf("\n");
-  for(f=0;f<nfields;f++){
-  for(b=0;b<nbasis;b++)
-  printf("\tR_volcut[%i] = %.16e\n",f*nbasis+b,keep[f*nbasis+b]);
-  printf("\n");
   }
-  }
-
 }
 
-  double signum(int a)
+double signum(int a)
 {
   if(a<0){
     return 1.0; 
@@ -425,12 +429,12 @@ printf("\n");
   }
 }
 
-  void cutFace(double *residual, double *fflux, double *bfL, double *bfR, 
-  	       double *q, int pf, int pde, int d, int e, int p, int iorig,
-	       int *cutoverset, int debug, int* cut2neigh, int* cut2face, int* iblank,
-	       double* OSFflux, double* OSFshpL, double* OSFxn, int OSFnseg)
+void cutFace(double *residual, double *fflux, double *bfL, double *bfR, 
+     	       double *q, int pf, int pde, int d, int e, int p, int iorig,
+             int *cutoverset, int debug, int* cut2neigh, int* cut2face, int* iblank,
+             double* OSFflux, double* OSFshpL, double* OSFxn, int OSFnseg)
 {
-  int b,w,i,j,l,ld,m,n,f,floc,z;
+  int b,w,i,j,l,ld,m,n,f,floc,z,blank;
   int nbasis=order2basis[e][p];
   double wgt,v;
   double *bvv,*bvvd,*flux;
@@ -439,100 +443,100 @@ printf("\n");
   int nfp=facePerElem[e];
   double keep[nbasis*nfields],sgn; 
 
+  //debug
   for(f=0;f<nfields;f++)
   for(b=0;b<nbasis;b++)
   keep[f*nbasis+b]=0;
 
   l=ld=m=z=0;
-//  floc = 2*nfields; 
-//
-  for(i=0;i<nfp;i++)
-    {
+  for(i=0;i<nfp;i++){
+    if(cut2neigh[i]<0){
+      blank = 0; 
+    }
+    else{
+      blank = iblank[cut2neigh[i]];
+    }
 
-if(debug){  
-m=0;
-printf("\n");
-            for(f=0;f<nfields;f++){
-              for(b=0;b<nbasis;b++){
-printf("\tstarting res[%i] = %.16e\n",m,residual[m]);
-m++;
-}
-printf("\n");
-}
-}
-
-if(debug)	  printf("\tcutoverset = %i, iblank neigh = %i, cut2face = %i\n",cutoverset[i],iblank[cut2neigh[i]],cut2face[i]);
-
-      if(cutoverset[i]>-1){ // cut overset face
-        for(n=0;n<OSFnseg;n++){
-          for(w=0;w<ngGL[e][p];w++){
-	    wgt=gaussgl[e][g][(d)*w+1]; 
-            bvv = OSFshpL+n*ngGL[e][p]*nbasis+w*nbasis; 
-            flux = OSFflux+n*ngGL[e][p]*3*nfields+w*3*nfields+2*nfields;
-
-            m=0; 
-            for(f=0;f<nfields;f++){
-              for(b=0;b<nbasis;b++){
-		keep[m]+=(wgt*flux[f]*bvv[b]);
-                residual[m]-=(wgt*flux[f]*bvv[b]); // note minus sign b/c we're adding flux through overset face
-if(f==0 && debug)		  printf("\tside %i, cut overset = 1\n\t seg %i, w = %.16e , field %i, basis %i, m = %i,\n\tOSFflux[%i] = %.16e, bvv[%i] = %.16e, res inc = %.16e, curr res = %.16e\n",i,n,wgt,f,b,m,n*ngGL[e][p]*3*nfields+w*3*nfields+2*nfields+f,flux[f],n*ngGL[e][p]*nbasis+w*nbasis+b,bvv[b],flux[f]*bvv[b]*wgt,residual[m]);
-                m++;
-	      }
-            } // loop over fields
-
-          } // loop over gauss
-        } // loop over segs
-        l += nbasis*ngGL[e][p]; // increment through basis aray
+    if(debug){  
+      m=0;
+      printf("\n");
+      for(f=0;f<nfields;f++){
+        for(b=0;b<nbasis;b++){
+//          printf("\tstarting res[%i] = %.16e\n",m,residual[m]);
+          m++;
+        }
+        printf("\n");
       }
-      else if(cut2face[i]!=-1){ // skip if it's an internal cut face
+      printf("\tcutoverset = %i, iblank neigh = %i, cut2face = %i\n",cutoverset[i],blank,cut2face[i]);
+    }
+
+    if(cutoverset[i]>-1){ // cut overset face
+      for(n=0;n<OSFnseg;n++){
+        for(w=0;w<ngGL[e][p];w++){
+          wgt=gaussgl[e][g][(d)*w+1]; 
+          bvv = OSFshpL+n*ngGL[e][p]*nbasis+w*nbasis; 
+          flux = OSFflux+n*ngGL[e][p]*3*nfields+w*3*nfields+2*nfields;
+
+          m=0; 
+          for(f=0;f<nfields;f++){
+            for(b=0;b<nbasis;b++){
+            	keep[m]+=(wgt*flux[f]*bvv[b]);
+              residual[m]-=(wgt*flux[f]*bvv[b]); // note minus sign b/c we're adding flux through overset face
+              if(f==0 && debug)		  
+                printf("\tside %i, cut overset = 1\n\t seg %i, w = %.16e , field %i, basis %i, m = %i,\n\tOSFflux[%i] = %.16e, bvv[%i] = %.16e, res inc = %.16e, curr res = %.16e\n",i,n,wgt,f,b,m,n*ngGL[e][p]*3*nfields+w*3*nfields+2*nfields+f,flux[f],n*ngGL[e][p]*nbasis+w*nbasis+b,bvv[b],flux[f]*bvv[b]*wgt,residual[m]);
+              m++;
+            }
+          } // loop over fields
+
+        } // loop over gauss
+      } // loop over segs
+      l += nbasis*ngGL[e][p]; // increment through basis aray
+    }
+    else if(cut2face[i]!=-1){ // skip if it's an internal cut face
       floc=i*ngGL[e][p]*3*nfields+2*nfields; // directly set floc
-        for(w=0;w<ngGL[e][p];w++)
-	  {
-	    wgt=gaussgl[e][g][(d)*w+1]; 
-            // get the basis and basis derivative for this gauss point
-            bvv=bfL+l;
-            l+=nbasis; 
+      for(w=0;w<ngGL[e][p];w++){
+        wgt=gaussgl[e][g][(d)*w+1]; 
 
-            if(iblank[cut2neigh[i]]!=1){ // skip if neighbor is blanked
+        // get the basis and basis derivative for this gauss point
+        bvv=bfL+l;
+        l+=nbasis; 
+
+        if(blank!=1){ // skip if neighbor is blanked
   	      m=0;
-	      for(f=0;f<nfields;f++)
-	        {
-                  flux=fflux+floc;
-  	          for(b=0;b<nbasis;b++)
-	  	    {
-		      keep[m]+=(wgt*flux[f]*bvv[b]);
-  		      residual[m]+=(wgt*flux[f]*bvv[b]); // note plus sign b/c we're subtracting cut flux from entire edge flux
-if(debug && f ==0)		  printf("\tside %i, cut overset = %i\n\tw %i = %.16e, field %i, basis %i, m %i,\n\tflux[%i] = %.16e, bvv = %.16e, res inc = %.16e, curr res = %.16e\n",i,cutoverset[i],w,wgt,f,b,m,floc+f,flux[f],bvv[b],flux[f]*bvv[b]*wgt,residual[m]);
-		      m++;
-		    }
-	          }
+          for(f=0;f<nfields;f++){
+            flux=fflux+floc;
+            for(b=0;b<nbasis;b++){
+		          keep[m]+=(wgt*flux[f]*bvv[b]);
+     		      residual[m]+=(wgt*flux[f]*bvv[b]); // note plus sign b/c we're subtracting cut flux from entire edge flux
+              if(debug && f ==0) printf("\tside %i, cut overset = %i\n\tw %i = %.16e, field %i, basis %i, m %i,\n\tflux[%i] = %.16e, bvv = %.16e, res inc = %.16e, curr res = %.16e\n",i,cutoverset[i],w,wgt,f,b,m,floc+f,flux[f],bvv[b],flux[f]*bvv[b]*wgt,residual[m]);
+      	      m++;
+      	    }
+	        }
 	      }
-	    floc+=(3*nfields); // increment through flux array, 3 is where the completed fluxes are computed
-	    z++; 
-	}
-      } // if not cut face
-    } // loop over faces
+    	  floc+=(3*nfields); // increment through flux array, 3 is where the completed fluxes are computed
+	      z++; 
+	    }
+    } // if not cut face
+  } // loop over faces
 
-
-if(debug){
-printf("\n"); 
-m=0;
-  for(f=0;f<nfields;f++){
-  for(b=0;b<nbasis;b++){
-  printf("\tR_facecut[%i] = %.16e\n",f*nbasis+b,keep[m]);
-  m++ ;
+  if(debug){
+    printf("\n"); 
+    m=0;
+    for(f=0;f<nfields;f++){
+      for(b=0;b<nbasis;b++){
+        printf("\tR_facecut[%i] = %.16e\n",f*nbasis+b,keep[m]);
+        m++ ;
+      }
+      printf("\n");
+    }
   }
-  printf("\n");
-  }
-}
-
 
 }
 
 void setFaceQuantities(double *fnorm,double *fflux,int *elem2face, int *iptrf,
 		       double *faceWeight, double *bf,double *bfd, double *q, 
 		       int nfields, int pf, int pde, int d , int e, int p, 
-		       int* faces, int* iblank, int eid, int* elemParent)
+		       int* faces, int* iblank, int eid, int* elemParent, int ifw)
 {
   int b,w,i,j,k,l,f,n,fid,floc,fst,fsgn,nst;
   int neigh, blank;
@@ -583,6 +587,7 @@ void setFaceQuantities(double *fnorm,double *fflux,int *elem2face, int *iptrf,
       	        fflux[floc]=0.0;
 	            }
       	    }	  
+
       	  for(j=0;j<d*fsgn;j++)
 	          fnorm[nst+(n++)]=faceWeight[k+j];
           k+=d;
@@ -592,8 +597,7 @@ void setFaceQuantities(double *fnorm,double *fflux,int *elem2face, int *iptrf,
 }
 
 
-void setCutFacesQuantities(double *x, double *q, int *iptr, int pc,
-			   double *fcflux, 
+void setCutFacesQuantities(double *x, double *q, int *iptr, int pc, double* fcflux,
 			   int *cut2face, int *cut2neigh, double *fwcut, 
 			   double *bfcutL, double *bfcutR,
 			   int nfields, int pde, int d, int e, int p, 
@@ -605,6 +609,7 @@ void setCutFacesQuantities(double *x, double *q, int *iptr, int pc,
   int nbasis=order2basis[e][p];
   int floc = 0;
   int bloc = 0; 
+  int blank; 
 
   for(j=0;j<nfp;j++){
     //need faceid of current uncut face
@@ -613,15 +618,15 @@ void setCutFacesQuantities(double *x, double *q, int *iptr, int pc,
     //check to see who my neighbor is
     if(cut2neigh[j]<=-1){
       neigh = cut2neigh[j]; // -1: BC face, -2: overset face
+      blank = 0; 
     }
     else{
       neigh = elemParent[cut2neigh[j]];
+      blank = iblank[cut2neigh[j]];
     }
     
     for(w=0;w<ngGL[e][p];w++){
-      if(iblank[cut2neigh[j]]!=1 && 
-         neigh != elemParent[iorig]){
-
+      if(blank!=1){
         // L side quantities
         eid = elemParent[iorig];
         for(f=0;f<nfields;f++){ 
@@ -629,6 +634,7 @@ void setCutFacesQuantities(double *x, double *q, int *iptr, int pc,
           for(b=1;b<nbasis;b++)
             fcflux[floc+f]+=bfcutL[bloc+b]*q[iptr[eid*pc]+f*nbasis+b];
         }// loop over nfields
+        printf("\tface %i, w %i, L fcflux[%i] = %f\n",j,w,floc,fcflux[floc]);
     
         // R side quantities
         // only do if it's face cut by cut boundary interface
@@ -643,9 +649,9 @@ void setCutFacesQuantities(double *x, double *q, int *iptr, int pc,
         else if(neigh==-1){ // inflow face
           far_field[pde](fcflux+floc+nfields);
         } // end of r side
+        printf("\tface %i, w %i, R fcflux[%i] = %f\n",j,w,floc+nfields,fcflux[floc+nfields]);
       } 
-      else{ // flux = 0 for faces with blanked neighbors or 
-            // shared parents
+      else{ // flux = 0 for faces with blanked neighbors 
         // L side quantities
         for(f=0;f<nfields;f++){
           fcflux[floc+f]=0.0; // l side
@@ -671,18 +677,20 @@ void FILL_FACES(double *x, double *fnorm, double *fflux, int *elem2face,int *ipt
   int nfp=facePerElem[e];
   for(i=0;i<nelem;i++)
     {
+      ix=pc*i;
+      ifw=iptr[ix+9];
+
       ix=pc*elemParent[i];
       iq=iptr[ix]; 
       ibf=iptr[ix+6];
       ibfd=iptr[ix+7];
-      ifw=iptr[ix+9];
 
       // have every elem fill in it's L state
       // do q = sum(N*q)      
       setFaceQuantities(fnorm,fflux,elem2face+nfp*i, iptrf, 
                   			faceWeight+ifw, bf+ibf, bfd+ibfd, q+iq,
                   			nfields, pf, pde, d, e, p, faces, iblank,
-                        i, elemParent);
+                        i, elemParent,ifw);
     }
 
 
@@ -698,6 +706,7 @@ void FILL_FACES(double *x, double *fnorm, double *fflux, int *elem2face,int *ipt
       ic2n=iptrc[ix+12]; 
 
       // grab both L and R fluxes for cut cells
+      printf("DEBUG SETCUTFACE CUT %i EID %i PID %i\n",i,eid,elemParent[eid]);
       setCutFacesQuantities(x, q, iptr,pc, fcflux+iflx,
                   			    cut2face+ic2n,cut2neigh+ic2n,  
                             fwcut+ifw,bfcutL+ibf, bfcutR+ibf, 
@@ -751,7 +760,7 @@ void COMPUTE_FACE_FLUXES(double *fnorm, double *fflux,
   double normal[d],xnorm[d];
   int i,j,k,g,m,n,w,floc,wloc,ifl,ifr,iflux,ic2n,f,eid,ico,neigh,ixn,iflx;
   int nfp = facePerElem[e];
-  int e1,e2;
+  int e1,e2,blank,parcheck;
   double *flux, *norm;
   double keep[3];
 
@@ -852,10 +861,10 @@ if(i==1) printf("\tflx = %.16e %.16e %.16e %.16e\n\n",fflux[iflux+0],fflux[iflux
               exit(1);
             }
 
-            /*
+            
             if(debug){
               printf("\tflux index:\n\t\tiflux = %i\n\t\tseg ind = %i\n\t\tcur gauss = %i\n",iflx,n*ngGL[e][p]*3*nfields,w*3*nfields);
-              printf("\nORIG %i, CUT i %i, j %i, seg %i, w %i\n",eid,i,j,n,w);
+              printf("\nORIG %i, CUT i %i, face %i, seg %i, w %i\n",eid,i,j,n,w);
               printf("\tcutoverset = %i\n",cutoverset[ico+j]); 
               printf("\tcut2neigh = %i\n",cut2neigh[ic2n+j]); 
               //printf("\tifl %i, ifr %i, iflux %i\n",ifl,ifr,iflux);
@@ -869,7 +878,7 @@ if(i==1) printf("\tflx = %.16e %.16e %.16e %.16e\n\n",fflux[iflux+0],fflux[iflux
               //printf("\tflx = %.16e \n",keep[2]);
               printf("\txNorm[%i] = %.16e %.16e \n",ixn + n*d*ngGL[e][p] + w*d,xnorm[0],xnorm[1]);
             }
-            */
+            
 
           }// loop over gauss pts
         }// loop over segments
@@ -887,20 +896,31 @@ if(i==1) printf("\tflx = %.16e %.16e %.16e %.16e\n\n",fflux[iflux+0],fflux[iflux
           iflux=ifr+nfields;
 
       	  neigh = cut2neigh[ic2n+j];
-  	      if(neigh!=eid && iblank[neigh]!=1) // ignore cut edges interior to orig elem
+          if(neigh<0){ // BC face
+            blank = 0; 
+            //parcheck = 1; 
+          }
+          else{
+            blank = iblank[neigh];
+            //parcheck = (elemParent[eid] != elemParent[neigh]); 
+          }
+          parcheck = 1;
+  	      if(blank!=1) // ignore cut edges interior to orig elem
             gradient_indep_flux[pde](fcflux+ifl,fcflux+ifr,fcflux+iflux,xnorm,0.0);
-    	    keep[0] = fcflux[ifl+2];
-	        keep[1] = fcflux[ifr+2];
-    	    keep[2] = fcflux[iflux+2];
+    	    keep[0] = fcflux[ifl];
+	        keep[1] = fcflux[ifr];
+    	    keep[2] = fcflux[iflux];
 
       	  floc = floc + 3*nfields;
       	  g++; 
 
-          /*
+          
           if(debug){
-            printf("\nORIG %i, CUT i %i, j %i, w %i\n",eid,i,j,w);
+            printf("\nORIG %i, CUT i %i, face %i, w %i\n",eid,i,j,w);
             printf("\tcutoverset = %i\n",cutoverset[ico+j]); 
+            printf("\tneigh = %i\n",neigh); 
             printf("\tcut2neigh = %i\n",cut2neigh[ic2n+j]); 
+            printf("\tparcheck = %i\n",parcheck);
             //printf("\tifl %i, ifr %i, iflux %i\n",ifl,ifr,iflux);
             //printf("\tLflx = %.16e %.16e %.16e %.16e\n",fcflux[ifl+0],fcflux[ifl+1],fcflux[ifl+2],fcflux[ifl+3]); 
             //printf("\tRflx = %.16e %.16e %.16e %.16e\n",fcflux[ifr+0],fcflux[ifr+1],fcflux[ifr+2],fcflux[ifr+3]); 
@@ -909,7 +929,7 @@ if(i==1) printf("\tflx = %.16e %.16e %.16e %.16e\n\n",fflux[iflux+0],fflux[iflux
             printf("\tflx = %.16e \n",keep[2]);
             printf("\txNorm[%i] = %.16e %.16e \n",wloc,xnorm[0],xnorm[1]);
             }
-            */
+            
         } // if gauss pt
       	m = m+d*ngGL[e][p];
       } // if cutoverset
@@ -1097,7 +1117,7 @@ void COMPUTE_RESIDUAL(double *R, double *mass, double *q, double *detJ, double *
       
       printf("DEBUG: Mesh %i, Elem %i, Parent %i:\n",imesh,i,elemParent[i]);
       printf("FULL VOL:\n"); 
-      debug = 0;
+      debug = 1;
       if(elemParent[i]!=i) debug = 1;
       if(debug){ // print out node weights
         for(int f = 0; f<nfields; f++)
@@ -1106,7 +1126,7 @@ void COMPUTE_RESIDUAL(double *R, double *mass, double *q, double *detJ, double *
 
           for(int f = 0; f<nfields; f++)
             for(int j = 0; j<nbasis; j++)
-              printf("\tinitla R(f = %i, b = %i) = %.16e\n",f,j,R[iR+f*nbasis+j]);
+              printf("\tinitial R(f = %i, b = %i) = %.16e\n",f,j,R[iR+f*nbasis+j]);
       
       }
 
@@ -1141,7 +1161,6 @@ void COMPUTE_RESIDUAL(double *R, double *mass, double *q, double *detJ, double *
 }
 */
 
-exit(1); 
   //Modify residual for cut cells
   for(i=0;i<necut;i++)
     {
@@ -1180,7 +1199,10 @@ exit(1);
           printf("Post-vol-cut res for elem %i is NaN\n",eid);
           exit(1);
         }
-      if(debug) printf("\nCUT FACE: cut elem %i\n",i);
+      if(debug){
+        printf("\nCUT FACE: cut elem %i\n",i);
+        
+      }
 
       cutFace(R+iR,fcflux+iflx,bfcutL+ibf,bfcutR+ibf,q,pf,pde,d,e,p,eid,
               cutoverset+ic2n,debug,cut2neigh+ic2n,cut2face+ic2n,iblank, 
@@ -1208,6 +1230,17 @@ exit(1);
     	  stop = 1;
     	  if(fabs(R[iR+j]) > max) max = fabs(R[iR+j]);  
     	}
+
+
+        if(debug){
+ printf("SOLVING ELEM %i\n",i);
+            for(int i = 0; i<nbasis; i++)
+            for(int j = 0; j<nbasis; j++)
+              printf("\tMass[%i %i] = %f\n",i,j,mass[im+i*nbasis+j]);
+          for(int f = 0; f<nfields; f++)
+            for(int j = 0; j<nbasis; j++)
+              printf("\tfinal R(f = %i, b = %i) = %.16e\n",f,j,R[iR+f*nbasis+j]);
+        }
 #if 0      
       if(stop){
 	printf("===============\n");
@@ -1255,7 +1288,7 @@ void COMPUTE_RHS(double *R,double *mass,double *bv, double *bvd, double *JinvV, 
                       OSFnseg, OSFeID, OSFflux, OSFxn,OSFshpL, OSFshpR,
             		      cut2e,cutoverset,cut2neigh,iblank,elemParent);
 
-  //debug
+/*  //debug
   int i,w,f,nfields=4;
   int iflx = 0; 
   for(i=0;i<nfaces;i++){
@@ -1268,7 +1301,7 @@ void COMPUTE_RHS(double *R,double *mass,double *bv, double *bvd, double *JinvV, 
       }
     }
   }
-
+*/
   //CHECK_GRADIENTS(x, q,bv, bvd, bf, bfd,iptr,pc,pde,d,e,p,nelem);
 
   COMPUTE_RESIDUAL(R,mass,q,detJ,fflux,

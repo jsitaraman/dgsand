@@ -83,11 +83,6 @@ void EXCHANGE_OVERSET(double* OSFflux, double* OSFshpL, double* OSFshpR, int* OS
     pid = elemParentA[eid];
     iq = iptrA[pid*pc]; // using parent's q values
 
-    if(i==2 && eid == 1){
-      debug = 1;
-    } else{
-      debug=0;
-    }
     if(debug) printf("In Exchange\n");
 
     // does this cut cell have an overset boundary?
@@ -358,7 +353,7 @@ void createOversetGauss(double* xA, double* xB, double* xseg, double* JinvA, dou
         for(bb=0;bb<d;bb++)
           Ja[aa]+=(mat[aa][bb]*face2elem[e][d*iface+bb]); // face2elem goes from edge coord to rst elem coord
       } // aa loop over d
-      if(debug) printf("pre Ja = %f %f %f %f\n",Ja[0],Ja[1],Ja[2],Ja[3]);
+//      if(debug) printf("pre Ja = %f %f %f %f\n",Ja[0],Ja[1],Ja[2],Ja[3]);
 
       // scale Ja to be segment length
       double norm = 0.0;
@@ -504,7 +499,7 @@ void SETUP_OVERSET(int* cut2e, int* cut2eB, int* cutoversetA,
     iosf=iptrcA[ip+14];
     ishp=iptrcA[ip+15];
 
-    debug = 1;
+    debug = 0;
     if(debug) printf("DEBUG cut elem %i, ixn = %i\n",i,ixn);
 
     // only handle elements with overset boundaries

@@ -41,7 +41,6 @@ int main(int argc, char *argv[])
       // setup conservative overset cut cells
       sol[i].cut(x0,i);		// find cut cells
       sol[i].findParents(i);	 // find parents for merged cells
-      sol[i].cut_metrics(x0,i); // find cut bases and etc
     }
 
     // setup overset gauss pts and bases
@@ -63,6 +62,7 @@ int main(int argc, char *argv[])
   // Compute mass matrix (including merged cells)
   for(i=0;i<nmesh;i++) {
     sol[i].findBases(i); 
+    if(nmesh>1) sol[i].cut_metrics(x0,i); // find cut bases and etc
     sol[i].mass_matrix(i);
     sol[i].initTimeStepping(i);
   }
