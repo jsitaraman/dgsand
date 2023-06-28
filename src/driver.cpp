@@ -62,8 +62,8 @@ int main(int argc, char *argv[])
   // Compute mass matrix (including merged cells)
   for(i=0;i<nmesh;i++) {
     sol[i].findBases(i); 
-    if(nmesh>1) sol[i].cut_metrics(x0,i); // find cut bases and etc
     sol[i].mass_matrix(i);
+    if(nmesh>1) sol[i].cut_metrics(x0,i); // find cut bases and etc
     sol[i].initTimeStepping(i);
   }
 	  

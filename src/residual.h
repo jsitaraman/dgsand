@@ -953,7 +953,6 @@ void invertMass(double *mass, double *R, int pde, int d , int e, int p,int ireg,
   int nfields=get_nfields[pde](d);
   double b[nbasis];
 
-  printf("\nelem %i\n",ielem);
   // store residual vector to check solution later
   for(int i=0;i<nbasis;i++) b[i] = R[i]; 
   lusolve(mass, R, nbasis,nfields); 

@@ -321,7 +321,7 @@ void createOversetGauss(double* xA, double* xB, double* xseg, double* JinvA, dou
 
       // Using JinvA from parent element of msh A
       axb(JinvA,pt2,u,d);
-      printf("===============\n");
+//      printf("===============\n");
       for(k=0;k<nbasis;k++){
         OSFshpL[m+k] = basis[e][k](u);
         if(ismerge==0 && OSFshpL[m+k]<0 && fabs(OSFshpL[m+k])>1e-14){

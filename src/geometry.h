@@ -238,13 +238,13 @@ void CutFaceWeights(double *x, double *Jinv, int pc, int* iptr, double *xcut,
   // for every face
   double ijk[2];
 
-  printf("debug: cutfaceweights: icut = %i, iorig = %i, iparent = %i\n",icut,iorig,elemParent[iorig]);
+//  printf("debug: cutfaceweights: icut = %i, iorig = %i, iparent = %i\n",icut,iorig,elemParent[iorig]);
   m=l=0;
   ld=ij=0;
   for(f=0;f<nfaces;f++){    
     // for every Gauss-point on this sub face
     for(w=0;w<ngGL[e][p];w++){
-      printf("\t face %i weight %i\n",f,w);
+//      printf("\t face %i weight %i\n",f,w);
       v=gaussgl[e][g][(d)*w];  // gauss location from 0 to 1
 	    wgt=gaussgl[e][g][(d)*w+1];	 // gauss weight
 
@@ -264,20 +264,20 @@ void CutFaceWeights(double *x, double *Jinv, int pc, int* iptr, double *xcut,
       Jinvpar = Jinv+iptr[pc*pid+8];
       CellCoordInterp(xcut, ijk, x+iptr[pc*pid+1], Jinvpar,
                       uL, d, e, p, ismerged); 
-      printf("\t\tijk = %f %f, uL = %f %f\n",ijk[0],ijk[1],uL[0],uL[1]);
-      printf("\t\tJinvpar = %f %f %f %f\n",Jinvpar[0],Jinvpar[1],Jinvpar[2],Jinvpar[3]);
+//      printf("\t\tijk = %f %f, uL = %f %f\n",ijk[0],ijk[1],uL[0],uL[1]);
+//      printf("\t\tJinvpar = %f %f %f %f\n",Jinvpar[0],Jinvpar[1],Jinvpar[2],Jinvpar[3]);
 
       // convert ijk coord on sub elem to rst coord on full R side elem
       neigh = cut2neigh[f];
       ismerged = 0; 
-      printf("\t\tneigh = %i, neighParent = %i\n",neigh,elemParent[neigh]);
+//      printf("\t\tneigh = %i, neighParent = %i\n",neigh,elemParent[neigh]);
       if(neigh>-1){
     	  pid = elemParent[neigh];
         Jinvpar = Jinv+iptr[pc*pid+8];
         CellCoordInterp(xcut, ijk, x+iptr[pc*pid+1], Jinvpar,
                         uR, d, e, p,(neigh!=elemParent[neigh])); 
-        printf("\t\tuR = %f %f\n",uR[0],uR[1]);
-        printf("\t\tJinvpar = %f %f %f %f\n",Jinvpar[0],Jinvpar[1],Jinvpar[2],Jinvpar[3]);
+//        printf("\t\tuR = %f %f\n",uR[0],uR[1]);
+//        printf("\t\tJinvpar = %f %f %f %f\n",Jinvpar[0],Jinvpar[1],Jinvpar[2],Jinvpar[3]);
 	     }
 
   	   // get the bases and derivs at gauss legendre pts
@@ -324,9 +324,9 @@ void CutFaceWeights(double *x, double *Jinv, int pc, int* iptr, double *xcut,
 	     // This gives me the normal vector
     	 cross(&(faceWeight[2*m]),Ja,Jb,d); 
 
-       printf("\tmat = %f %f %f %f\n",mat[0][0],mat[0][1],mat[1][0],mat[1][1]);
-       printf("\tJa = %f %f %f\n",Ja[0],Ja[1],Ja[2]); 
-       printf("\tfwcut[%i-%i] = %f %f \n",2*m,2*m+1,faceWeight[2*m],faceWeight[2*m+1]); 
+//       printf("\tmat = %f %f %f %f\n",mat[0][0],mat[0][1],mat[1][0],mat[1][1]);
+//       printf("\tJa = %f %f %f\n",Ja[0],Ja[1],Ja[2]); 
+//       printf("\tfwcut[%i-%i] = %f %f \n",2*m,2*m+1,faceWeight[2*m],faceWeight[2*m+1]); 
 
        // get [dx/dr]^-1
        if (d==2) invmat2x2(mat,jacL,det);
@@ -413,10 +413,10 @@ void mass_matrix(double *M, double *x, double* Jinv, double* detJ, int d, int e,
                   x0par[1] += xparent[k+nbasisx]*basis[e][k](v);
                   x0cur[0] += xcur[k]*basis[e][k](v);
                   x0cur[1] += xcur[k+nbasisx]*basis[e][k](v);
+//                  printf("\t\t\tJinvparr = %f %f %f %f\n",Jinvparent[0],Jinvparent[1],Jinvparent[2],Jinvparent[3]);
+//                  printf("\t\t\tx0par = %f %f\n\t\t\tx0cur = %f %f\n",
+//                        x0par[0],x0par[1],x0cur[0],x0cur[1]);            
                 }
-                printf("\t\t\tJinvparr = %f %f %f %f\n",Jinvparent[0],Jinvparent[1],Jinvparent[2],Jinvparent[3]);
-                printf("\t\t\tx0par = %f %f\n\t\t\tx0cur = %f %f\n",
-                        x0par[0],x0par[1],x0cur[0],x0cur[1]);            
               }
             } 
 	          else{
@@ -672,7 +672,7 @@ void COMPUTE_GRID_METRICS(double *x, double *bv, double *bvd,double *JinvV,
       ij   =iptr[ip+4];
       idetj=iptr[ip+5];
 
-      printf("Debug Jacobian Elem %i, ij = %i\n",i,ij);
+//      printf("Debug Jacobian Elem %i, ij = %i\n",i,ij);
       Jacobian(x+ix,JinvV+ij,detJ+idetj,d,e,p); // basis on vol
 //      for(int w=0;w<ngElem[e][p];w++)
 //          for(int ii=0;ii<4;ii++) printf("\tJinvV[%i] = %f\n",ij+4*w+ii,JinvV[ij+w*4+ii]);
@@ -757,7 +757,7 @@ void COMPUTE_CUT_METRICS(double *x, double *JinvV,
     int ismerged=0; 
     if(eid!=pid) ismerged=1; 
 
-printf("COMPUTE_CUT_METRICS: CUT %i, ELEM %i, PARENT %i\n",i,eid,pid);
+//printf("COMPUTE_CUT_METRICS: CUT %i, ELEM %i, PARENT %i\n",i,eid,pid);
     BasesVCut(x+ix, JinvV+ij,
               xcut+cix, bvcut+cibv, bvdcut+cibvd,
               JinvVcut+cij, detJcut+cidetj,
@@ -794,7 +794,7 @@ void MASS_MATRIX(double *mass,double *x, int *iptr, int d, int e, int p, int nel
   for(i=0;i<nelem;i++){
     pid=elemParent[i];
     debug = 1;
-    if(debug) printf("\n\nDEBUG: Mesh %i, cell %i, parent %i:\n",imesh,i,pid); 
+//    if(debug) printf("\n\nDEBUG: Mesh %i, cell %i, parent %i:\n",imesh,i,pid); 
     ix=iptr[pc*i+1]; // current element x
     im=iptr[pc*pid+10]; // parent mass matrix
     mass_matrix(mass,x,Jinv,detJ,d,e,p,debug,i,pid,iptr,pc); 
@@ -836,16 +836,23 @@ void CUT_MASS_MATRIX(double *mass,double *x, double *Jinv, int *iptr, double *xc
       ixc=iptrc[pccut*i+1];
       id=iptrc[pccut*i+5]; 
 
+        int m = 0; 
+        for(int j=0;j<nbasis;j++)
+          for(int k=0;k<nbasis;k++){
+            printf("Mesh %i, eid %i, pid %i, cut cell %i, pre-cut mass[%i] = %f\n",imesh,eid,pid,i,im+m,mass[im+m]);
+            m++;
+          }
+
       ismerged=0;
       if(pid!=eid) ismerged=1; 
       cut_mass_matrix(&(mass[im]),&(x[ix]),&(Jinv[ij]),&(xcut[ixc]),&(detJcut[id]),d,e,p,ismerged);
 
       int debug = 1; 
       if(debug){
-        int m = 0; 
+        m = 0; 
         for(int j=0;j<nbasis;j++)
           for(int k=0;k<nbasis;k++){
-            printf("Mesh %i, cell %i, cut mass[%i] = %f\n",imesh,i,im+m,mass[im+m]);
+            printf("\t cut mass[%i] = %f\n",im+m,mass[im+m]);
             m++;
           }
           printf("Mesh %i, cell %i, cut %i detJ = %f\n",imesh,eid,i,detJcut[id]); 

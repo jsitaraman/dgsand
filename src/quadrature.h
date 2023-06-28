@@ -51,17 +51,17 @@ double quad2[27] = {1.127016653792585e-01, 1.127016653792585e-01, 0.077160493827
 */
                   
 //debug 
-double *gauss[1][3]={tri0,tri0,tri0};
-double *gaussgl[1][3]={gl0,gl0,gl0};
-//double *gauss[1][3]={tri0,tri1,tri2};
-//double *gaussgl[1][3]={gl0,gl1,gl2};
+//double *gauss[1][3]={tri0,tri0,tri0};
+//double *gaussgl[1][3]={gl0,gl0,gl0};
+double *gauss[1][3]={tri0,tri1,tri2};
+double *gaussgl[1][3]={gl0,gl1,gl2};
 
 /* number of quadrature points per element type and polynomial order  */
 //debug 
-int ngElem[1][5]={1,1,1,6,6};
-int ngGL[1][5]={1,1,1,3,3};
-//int ngElem[1][5]={1,3,6,6,6};
-//int ngGL[1][5]={1,2,3,3,3};
+//int ngElem[1][5]={1,1,1,6,6};
+//int ngGL[1][5]={1,1,1,3,3};
+int ngElem[1][5]={1,3,6,6,6};
+int ngGL[1][5]={1,2,3,3,3};
 /* map of polynomial order to gauss-quadrature type for volume integration */
 int p2g[1][5]={0,1,2,2,2};
 /* map of polynomial order to gauss-quadrature type for face integration */
