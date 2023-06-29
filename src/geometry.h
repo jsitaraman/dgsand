@@ -801,6 +801,7 @@ void MASS_MATRIX(double *mass,double *x, int *iptr, int d, int e, int p, int nel
   }
 
   // DEBUG 
+  /*
   for(i=0;i<nelem;i++){
     pid=elemParent[i];
     if(pid!=i) debug = 1;
@@ -815,6 +816,7 @@ void MASS_MATRIX(double *mass,double *x, int *iptr, int d, int e, int p, int nel
           }
     }
   }
+  */
 }
 
 void CUT_MASS_MATRIX(double *mass,double *x, double *Jinv, int *iptr, double *xcut, double *detJcut, 
@@ -836,18 +838,20 @@ void CUT_MASS_MATRIX(double *mass,double *x, double *Jinv, int *iptr, double *xc
       ixc=iptrc[pccut*i+1];
       id=iptrc[pccut*i+5]; 
 
-        int m = 0; 
+/*        int m = 0; 
         for(int j=0;j<nbasis;j++)
           for(int k=0;k<nbasis;k++){
             printf("Mesh %i, eid %i, pid %i, cut cell %i, pre-cut mass[%i] = %f\n",imesh,eid,pid,i,im+m,mass[im+m]);
             m++;
           }
-
+*/
       ismerged=0;
       if(pid!=eid) ismerged=1; 
       cut_mass_matrix(&(mass[im]),&(x[ix]),&(Jinv[ij]),&(xcut[ixc]),&(detJcut[id]),d,e,p,ismerged);
 
-      int debug = 1; 
+
+      int debug = 0; 
+/*
       if(debug){
         m = 0; 
         for(int j=0;j<nbasis;j++)
@@ -857,7 +861,7 @@ void CUT_MASS_MATRIX(double *mass,double *x, double *Jinv, int *iptr, double *xc
           }
           printf("Mesh %i, cell %i, cut %i detJ = %f\n",imesh,eid,i,detJcut[id]); 
       }
-
+*/
   }
 }
 

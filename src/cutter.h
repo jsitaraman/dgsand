@@ -490,11 +490,12 @@ void CUT_CELLS(double x0, double *x, double* xcut, int* iptr, int* cut2e, int d,
       printf("\n\telem %i, area_cut = %f, area = %f, cellmerge = %i\n",i,area_cut,area,cellmerge[i]);
   } // nelem loop
 
-  // Debug
+/*  // Debug
   for(int aa = 0;aa<n;aa++)
     for(int f = 0;f<nfp;f++){
       printf("\norig %i, el %i, side %i = %i\n",cut2e[aa],aa,f);
       printf("\tcutoverset[%i] = %i\n",aa*nfp+f,cutoverset[aa*nfp+f]);
     }
+*/
 }
 

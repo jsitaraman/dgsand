@@ -1192,12 +1192,13 @@ void COMPUTE_RESIDUAL(double *R, double *mass, double *q, double *detJ, double *
 
       cutVol(R+iR,bvcut+ibv,bvdcut+ibvd,q+iq,detJcut+idet,pde,d,e,p,eid,debug);
 
-      iR2 = iptr[pc*(eid+1)];
+/*      iR2 = iptr[pc*(eid+1)];
       for(j=iR;j<iR2;j++)
         if(isnan(R[j])){
           printf("Post-vol-cut res for elem %i is NaN\n",eid);
           exit(1);
         }
+*/
       if(debug){
         printf("\nCUT FACE: cut elem %i\n",i);
         
@@ -1207,16 +1208,21 @@ void COMPUTE_RESIDUAL(double *R, double *mass, double *q, double *detJ, double *
               cutoverset+ic2n,debug,cut2neigh+ic2n,cut2face+ic2n,iblank, 
               OSFflux+iflx2, OSFshpL+ishp, OSFxn+ixn, OSFnseg[i]);
 
+/*
       iR2 = iptr[pc*(eid+1)];
       for(j=iR;j<iR2;j++)
         if(isnan(R[j])){
           printf("Post-face-cut res for elem %i is NaN\n",eid);
           exit(1);
         }
+*/
     }
+
 
   //Solve each element
   max = 0; 
+  for(i=0;i<nelem;i++) printf("DEBUG elemParents[%i] = %i\n",i,elemParent[i]);
+
   for(i=0;i<nelem;i++)
     {
       ix=pc*i;
@@ -1232,7 +1238,7 @@ void COMPUTE_RESIDUAL(double *R, double *mass, double *q, double *detJ, double *
 
 
         if(debug){
- printf("SOLVING ELEM %i\n",i);
+ printf("SOLVING MESH %i ELEM %i PARENT %i\n",imesh,i,elemParent[i]);
             for(int i = 0; i<nbasis; i++)
             for(int j = 0; j<nbasis; j++)
               printf("\tMass[%i %i] = %f\n",i,j,mass[im+i*nbasis+j]);
@@ -1273,6 +1279,7 @@ void COMPUTE_RHS(double *R,double *mass,double *bv, double *bvd, double *JinvV, 
                  int necut, int* cut2e, int *cut2face, int* cut2neigh, int* iblank, int ireg,
             		 int* cutoverset, int* elemParent, int imesh)
 {
+
   FILL_FACES(x, fnorm, fflux, elem2face, iptr, iptrf, 
 	           faceWeight, bf, bfd, q, 
       	     pc, pf, pde, d, e, p, nelem,nfaces, 
@@ -1281,7 +1288,6 @@ void COMPUTE_RHS(double *R,double *mass,double *bv, double *bvd, double *JinvV, 
              pccut,faces,iblank,elemParent);
 
   FILL_BC(fnorm,fflux,faces,pde,d,e,p,nfaces);
-
 
   COMPUTE_FACE_FLUXES(fnorm,fflux,pde,d,e,p,nfaces,faces,necut,pccut,iptrc,fcflux,fwcut,
                       OSFnseg, OSFeID, OSFflux, OSFxn,OSFshpL, OSFshpR,

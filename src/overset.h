@@ -11,6 +11,7 @@ void setOversetFluxes(double *OSFflux, int OSFnseg, int* OSFeID, double* OSFshpL
   int ngauss = ngGL[e][p]; 
   int nfields=get_nfields[pde](d);
   int eid, pid, iq;   
+  int b;
 
   if(debug) printf("in setOversetFluxes\n"); 
 
@@ -24,7 +25,7 @@ void setOversetFluxes(double *OSFflux, int OSFnseg, int* OSFeID, double* OSFshpL
       iq = iptrB[pc*pid]; 
 
       if(debug) printf("seg %i, gauss %i\n",i,j); 
-      if(debug) for(int b=0;b<nbasis;b++) printf("\t\tdebug: OSFshpL[%i] = %f, OSFshpR[%i] = %f\n",
+      if(debug) for(b=0;b<nbasis;b++) printf("\t\tdebug: OSFshpR[%i] = %f, OSFshpL[%i] = %f\n",
                                                   bloc+b,OSFshpR[bloc+b],bloc+b,OSFshpL[bloc+b]);
 
       for(int f=0;f<nfields;f++){
@@ -66,10 +67,12 @@ void EXCHANGE_OVERSET(double* OSFflux, double* OSFshpL, double* OSFshpR, int* OS
                       int* iptrcA, int* iptrA, int* iptrB, int* elemParentA, int* elemParentB, 
                       int necutA, int pccut, int d, int e, int p, int pc, int pde, int imesh)
 {
-  int iel,ishp, ip, ix, iq, ibf, ic2n, iflx, ico;
+  int i, iel,ishp, ip, ix, iq, ibf, ic2n, iflx, ico;
   int nfp = facePerElem[e];
   int eid, pid, flag, debug, m;
   int nbasis=order_to_basis(e,p);        // basis for solution
+
+
   // Loop over cut cells in mesh A
   for(int i = 0; i<necutA; i++){
     flag = 0; 
@@ -208,6 +211,9 @@ void createOversetGauss(double* xA, double* xB, double* xseg, double* JinvA, dou
   int ngGL=get_ngGL(e,p);
   double xcpy[maxseg*ngGL*d]; // tmp copy of xseg
   double x0[2],xN[2],xloc,yloc; 
+  double nx, ny, s, L,norm;
+  int aa,bb,cc;
+  int g=p2gf[e][p];
   
   // get x0 for the full parent element
   x0[0] = 0.0;
@@ -289,8 +295,6 @@ void createOversetGauss(double* xA, double* xB, double* xseg, double* JinvA, dou
   }
 
   // Distribute gauss pts between each of the segments
-  double nx, ny, s, L;
-  int aa,bb,cc;
   m = 0; 
   for(i=0;i<OSFnseg[0];i++){
     // define segment end pts
@@ -303,7 +307,6 @@ void createOversetGauss(double* xA, double* xB, double* xseg, double* JinvA, dou
     L = sqrt(nx*nx+ny*ny); 
 
     // distribute gauss pts
-    int g=p2gf[e][p];
     for(j=0;j<ngGL;j++){
       s = gaussgl[e][g][2*j]; 
 
@@ -356,7 +359,7 @@ void createOversetGauss(double* xA, double* xB, double* xseg, double* JinvA, dou
 //      if(debug) printf("pre Ja = %f %f %f %f\n",Ja[0],Ja[1],Ja[2],Ja[3]);
 
       // scale Ja to be segment length
-      double norm = 0.0;
+      norm = 0.0;
       for(aa=0;aa<3;aa++)
         norm+=Ja[aa]*Ja[aa];
       norm=sqrt(norm);

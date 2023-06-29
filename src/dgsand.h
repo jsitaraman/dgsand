@@ -32,7 +32,7 @@ extern "C" {
 
   void INIT_FIELDS(double *xcoord,int *e2n, 
 		   double *Q, double *x, double *q, // data populated here
-		   int *iptr, int* elemParent, int pde, int e, int p,
+		   int *iptr, int pde, int e, int p,
 		   int d, int nbasis, int itype, int nelem, int pc,int imesh);  
 
   int number_of_fields(int pde,int d);
@@ -332,7 +332,6 @@ class dgsand
 		  x.data(),
 		  q.data(),
 		  iptr.data(),
-      elemParent.data(),
 		  pde,etype,p,d,nbasis,itype,nelem,pc,imesh);
       
       /* compute grid jacobians */
@@ -422,9 +421,10 @@ class dgsand
         	  elem2face, faces, iblank.data(),
         	  cutoverset.data(),imesh,ngGL,cellmerge.data());
 	
-        for(int i=0;i<necut;i++)
+/*        for(int i=0;i<necut;i++)
           printf("cut elem %i: neigh = %i %i %i\n",
                  i,cut2neigh[3*i+0],cut2neigh[3*i+1],cut2neigh[3*i+2]);
+*/
       }
     };
 
@@ -650,7 +650,6 @@ class dgsand
                   x.data(),
                   qexact.data(),
                   iptr.data(),
-                  elemParent.data(),
                   pde,etype,p,d,nbasis,1,nelem,pc,imesh);
 
       double error=
