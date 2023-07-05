@@ -11,7 +11,7 @@
 #include<math.h>
 extern "C" {
   void parseInputs(char *inputfile,char *gridfile,int *pde, int *itype, int *nsteps, double *dt, int *nsave,
-		   int *ireg);
+		   int *imerge);
 
   void output_params();
 
@@ -85,29 +85,29 @@ extern "C" {
 			   int* cut2neigh, int imesh, int* cutoverset, int* elemParent);
   
   void COMPUTE_RHS(double *R,double *mass,double *bv, double *bvd, double *JinvV, double *detJ,
-		 double *bf, double *bfd, double *JinvF,
-		 double *faceWeight, double *fnorm, double *fflux,
-		 double *x, double *q, int *elem2face, int *iptr, int *iptrf, int *faces,
-		 int pc, int pf, int pccut, int pde, int d , int e, int p, int nfaces, int nelem,
-                 double *bvcut, double *bvdcut,double *detJcut,
-                 double *bfcutL, double *bfcutR,double *fwcut, double *fcflux,
-                 int* OSFnseg, int* OSFeID, double* OSFxn, double* OSFshpL, 
-		 double* OSFshpR, double* OSFflux,
-		 int *iptrc, int necut, int* cut2e, int *cut2face, int* cut2neigh, int* iblank, int ireg,
-		 int *cutoverset, int* elemParent, int imesh);
+                   double *bf, double *bfd, double *JinvF,
+                   double *faceWeight, double *fnorm, double *fflux,
+                   double *x, double *q, int *elem2face, int *iptr, int *iptrf, int *faces,
+                   int pc, int pf, int pccut, int pde, int d , int e, int p, int nfaces, int nelem,
+                   double *bvcut, double *bvdcut,double *detJcut,
+                   double *bfcutL, double *bfcutR,double *fwcut, double *fcflux,
+                   int* OSFnseg, int* OSFeID, double* OSFxn, double* OSFshpL, 
+                   double* OSFshpR, double* OSFflux,
+                   int *iptrc, int necut, int* cut2e, int *cut2face, int* cut2neigh, int* iblank, 
+                   int *cutoverset, int* elemParent, int imesh);
 
   void UPDATE_DOFS(double *qdest, double coef, double *qsrc, double *R, int ndof);
 
-  void OUTPUT_TECPLOT(int meshid, int step,double *x, double *q,
+  void OUTPUT_TECPLOT(int meshid, int step,double *x, double *q, double* JinvV, int* elemParent,
 		    int pc, int *iptr, int pde, int d, int e, int p, int nelem);
 
   void SETUP_OVERSET(int* cut2e, int* cut2eB, int* cut2neighA, 
-		     int* iptrA, int* iptrB, int* iptrcA, int* iptrcB, 
-		     double* xA, double* xB, double* xcutA, double* xcutB,
+                     int* iptrA, int* iptrB, int* iptrcA, int* iptrcB, 
+                     double* xA, double* xB, double* xcutA, double* xcutB,
                      double* bfcutLA, double* bfcutRA, double* JinvA, double* JinvB,
- 		     int* elemParentA, int* elemParentB,
-		     int* OSFnseg, int* OSFeID, double* OSFxn, double* OSFshpL, double* OSFshpR,
-		     int d, int e, int p, int pc, int pccut, int necutA, int necutB, int nelemB); 
+              	     int* elemParentA, int* elemParentB,
+                     int* OSFnseg, int* OSFeID, double* OSFxn, double* OSFshpL, double* OSFshpR,
+                     int d, int e, int p, int pc, int pccut, int necutA, int necutB, int nelemB); 
 
   void EXCHANGE_OVERSET(double* OSFflux, double* OSFshpL, double* OSFshpR, 
                         int* OSFnseg, int* OSFeID, int* cut2eA,
@@ -148,8 +148,8 @@ class dgsand
   int nfields;
   /// initialization type
   int itype;
-  ///  use Tikhonov reg. on cut cells, 0: don't
-  int ireg; 			    
+  ///  use cell merging on severely cut cells, 0: don't
+  int imerge;		    
   /// overset inputs
   int nmesh = 2;
   
@@ -234,7 +234,7 @@ class dgsand
     {
         /* parse inputs */
 	char grid_file[20];
-	parseInputs(input_file,grid_file, &pde,&itype,&nsteps,&dt,&nsave,&ireg);
+	parseInputs(input_file,grid_file, &pde,&itype,&nsteps,&dt,&nsave,&imerge);
 	nfields=number_of_fields(pde,d);
 	
 	/* read a 2D grid */
@@ -493,7 +493,7 @@ class dgsand
         printf("#ndof=%d\n",nelem*nbasis);
         printf("#nfaces=%d\n",nfaces);
         printf("#totalArea=%f\n",total_area(detJ.data(),etype,p,d,nelem));
-        printf("#ireg=%d\n",ireg);
+        printf("#imerge=%d\n",imerge);
         printf("#nsteps=%d\n",nsteps);
         printf("#Input parameters = ");
         output_params();
@@ -598,7 +598,7 @@ class dgsand
 		  cut2face.data(),
 		  cut2neigh.data(),
 		  iblank.data(),
-		  ireg,cutoverset.data(),
+		  cutoverset.data(),
 		  elemParent.data(),imesh);
     }
 
@@ -623,7 +623,9 @@ class dgsand
     };
     
     void output(int meshid, int istep) {
-      OUTPUT_TECPLOT(meshid,istep,x.data(),q.data(),pc,iptr.data(),pde,d,etype,p,nelem);
+      OUTPUT_TECPLOT(meshid,istep,x.data(),q.data(),JinvV.data(),
+                     elemParent.data(),pc,iptr.data(),
+                     pde,d,etype,p,nelem);
     }
     
     int getNsteps() { return nsteps; };

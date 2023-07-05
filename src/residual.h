@@ -945,7 +945,7 @@ if(i==1) printf("\tflx = %.16e %.16e %.16e %.16e\n\n",fflux[iflux+0],fflux[iflux
 }
 
 
-void invertMass(double *mass, double *R, int pde, int d , int e, int p,int ireg, int ielem)
+void invertMass(double *mass, double *R, int pde, int d , int e, int p, int ielem)
 {
   int i,j,f;
   int nbasis=order2basis[e][p];
@@ -1086,7 +1086,7 @@ void COMPUTE_RESIDUAL(double *R, double *mass, double *q, double *detJ, double *
                       double *detJcut, double *fcflux,
                       double *bvcut, double *bvdcut, double *bfcutL, double *bfcutR,
                       int *iptrc, int necut, int* cut2e, int* cut2neigh, 
-                      int* cut2face, int* iblank, int ireg, 
+                      int* cut2face, int* iblank,  
             		      int *cutoverset,int imesh,int* faces,
                       double* OSFflux, double* OSFshpL, double* OSFxn, int* OSFnseg, 
                       int* elemParent)
@@ -1263,7 +1263,7 @@ void COMPUTE_RESIDUAL(double *R, double *mass, double *q, double *detJ, double *
       }
 #endif     
       if(elemParent[i]==i)
-        invertMass(mass+im,R+iR,pde,d,e,p,ireg,i);
+        invertMass(mass+im,R+iR,pde,d,e,p,i);
     }
 }
 
@@ -1276,7 +1276,7 @@ void COMPUTE_RHS(double *R,double *mass,double *bv, double *bvd, double *JinvV, 
                  double *bfcutL, double *bfcutR,double *fwcut, double* fcflux,
                  int* OSFnseg, int* OSFeID, double* OSFxn, double* OSFshpL, double* OSFshpR, 
                  double* OSFflux, int *iptrc,
-                 int necut, int* cut2e, int *cut2face, int* cut2neigh, int* iblank, int ireg,
+                 int necut, int* cut2e, int *cut2face, int* cut2neigh, int* iblank, 
             		 int* cutoverset, int* elemParent, int imesh)
 {
 
@@ -1316,7 +1316,7 @@ void COMPUTE_RHS(double *R,double *mass,double *bv, double *bvd, double *JinvV, 
             		   pde,d, e, p, nelem,
                    detJcut, fcflux, 
                    bvcut, bvdcut, bfcutL, bfcutR,
-                   iptrc, necut, cut2e, cut2neigh, cut2face,iblank,ireg,cutoverset,imesh,faces,
+                   iptrc, necut, cut2e, cut2neigh, cut2face,iblank,cutoverset,imesh,faces,
             		   OSFflux, OSFshpL, OSFxn, OSFnseg, elemParent); 
 }
 

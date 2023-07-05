@@ -38,39 +38,55 @@ double l2_error(double *x,double *q, double *qexact,
   return error;
 }
 
-void output_coords(FILE *fp,double *x,double *q, int d, int e , int p, int nfields)
+void output_coords(FILE *fp,double *x,double *q, double *Jinvparent, int d, int e , int p, int nfields, 
+                   int eid, int pid, int* iptr, int pc)
 {
   int i,j, k,b;
-  double u[d], bi;
+  double ucur[d], upar[d], bi;
   double xv[d],qv[nfields];
   int nbasis=order2basis[e][p];
   
+  double* xcur = x+iptr[pc*eid+1]; 
+  double* xpar = x+iptr[pc*pid+1]; 
+  double* qcur = q+iptr[pc*eid];
+  double* qpar = q+iptr[pc*pid];
+
   for(i=0;i<nbasis;i++)
     {
       for(j=0;j<nbasis;j++)
-	{
-	  u[0]=eloc[e][p][i*d+0];
-	  u[1]=eloc[e][p][i*d+1];
-	  bi=basis[e][0](u);
-	  for(k=0;k<d;k++)
-	    xv[k]=bi*x[k*nbasis];
-	  for(k=0;k<nfields;k++)
-	    qv[k]=bi*q[k*nbasis];
-	  for(b=1;b<nbasis;b++)
-	    {
-	      bi=basis[e][b](u);
-	      for(k=0;k<d;k++)
-		xv[k]+=(bi*x[k*nbasis+b]);
-	      for(k=0;k<nfields;k++)
-		qv[k]+=(bi*q[k*nbasis+b]);
-	    }
-	}
-  for(k=0;k<d;k++)
-    fprintf(fp,"%18.16f ",xv[k]);
-  for(k=0;k<nfields;k++)
-    fprintf(fp,"%18.16f ",qv[k]);
-  fprintf(fp,"\n");
-  }
+        {
+          ucur[0]=eloc[e][p][i*d+0];
+          ucur[1]=eloc[e][p][i*d+1];
+
+          if(pid!=eid){ 
+            CellCoordInterp(xcur, ucur, xpar, Jinvparent, 
+                            upar, d, e, p, (eid!=pid));
+          }
+          else{
+            for(k=0;k<d;k++) upar[k] = ucur[k];
+          }
+
+          bi=basis[e][0](upar);
+          for(k=0;k<d;k++)
+            xv[k]=bi*xpar[k*nbasis];
+          for(k=0;k<nfields;k++)
+            qv[k]=bi*qpar[k*nbasis];
+          for(b=1;b<nbasis;b++)
+            {
+              bi=basis[e][b](upar);
+              for(k=0;k<d;k++)
+                xv[k]+=(bi*xpar[k*nbasis+b]);
+              for(k=0;k<nfields;k++)
+                qv[k]+=(bi*qpar[k*nbasis+b]);
+            }
+        }
+      for(k=0;k<d;k++)
+        fprintf(fp,"%18.16f ",xv[k]);
+      for(k=0;k<nfields;k++)
+        fprintf(fp,"%18.16f ",qv[k]);
+      fprintf(fp,"\n");
+
+    }
 }
 
 void output_connectivity(FILE *fp,int offset,int p)
@@ -101,8 +117,8 @@ double L2_ERROR(double *x, double *q, double *qexact, int *iblank,
 }
 
 
-void OUTPUT_TECPLOT(int meshid, int step,double *x, double *q,
-		    int pc, int *iptr, int pde, int d, int e, int p, int nelem)
+void OUTPUT_TECPLOT(int meshid, int step,double *x, double *q, double* JinvV, int* elemParent,
+              	    int pc, int *iptr, int pde, int d, int e, int p, int nelem)
 {
 
   char fname[80];
@@ -113,7 +129,7 @@ void OUTPUT_TECPLOT(int meshid, int step,double *x, double *q,
   int nsubtri[3]={1,1,4};
   
   FILE *fp;
-  int ix,iq,i,j,k;
+  int ix,iq,iji,i,j,k,pid;
   //
   sprintf(intstring,"%d",100000+step);
   sprintf(fname,"flow_%d_%s.dat",meshid,&(intstring[1]));
@@ -138,18 +154,18 @@ void OUTPUT_TECPLOT(int meshid, int step,double *x, double *q,
   if (p==0) {
     for (j=0;j<d;j++)
       for(i=0;i<nelem;i++)
-	for(k=0;k<nvert;k++)
-	  fprintf(fp,"%f\n",x[i*d*nvert+j*nvert+k]);
+        for(k=0;k<nvert;k++)
+          fprintf(fp,"%f\n",x[i*d*nvert+j*nvert+k]);
     for(j=0;j<nfields;j++)
       for(i=0;i<nelem;i++)
-	fprintf(fp,"%f\n",q[i*nfields+j]);
+        fprintf(fp,"%f\n",q[i*nfields+j]);
   }
   else {
     for(i=0;i<nelem;i++)
       {
-	ix=iptr[pc*i+1];
-	iq=iptr[pc*i];
-	output_coords(fp,x+ix,q+iq,d,e,p,nfields);
+        pid = elemParent[i];
+        iji = iptr[pc*pid+4];
+        output_coords(fp,x,q,JinvV+iji,d,e,p,nfields,i,pid,iptr,pc);
       }
   }
   for(i=0;i<nelem;i++)

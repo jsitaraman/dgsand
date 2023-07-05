@@ -79,7 +79,7 @@ printf("NECUT = %i\n",necut);
   return necut; 
 }
 
-void CUT_CELLS(double x0, double *x, double* xcut, int* iptr, int* cut2e, int d, int e, int p, int nelem, int pc, int *cut2face, int* cut2neigh, int* elem2face, int* faces, int* iblank, int* cutoverset, int imesh, int ng, int* cellmerge)
+void CUT_CELLS(double x0, double *x, double* xcut, int* iptr, int* cut2e, int d, int e, int p, int nelem, int pc, int *cut2face, int* cut2neigh, int* elem2face, int* faces, int* iblank, int* cutoverset, int imesh, int ng, int* cellmerge, int imerge)
 // This routine cuts the cells according to some arbitrary vertical line. 
 // This is for testing purposes and will eventually be replaced with 
 // an actual cutting routine.
@@ -478,14 +478,19 @@ void CUT_CELLS(double x0, double *x, double* xcut, int* iptr, int* cut2e, int d,
       } // if cut cell
 
       // Check if cell needs merging
-      if(area_cut<1e-14){
-        cellmerge[i] = 0;
-      }
-      else if(area_cut/area < 0.5){
-        cellmerge[i] = 1; // cut but doesn't require cell merging
+      if(imerge == 1){
+        if(area_cut<1e-14){
+          cellmerge[i] = 0;
+        }
+        else if(area_cut/area < 0.5){
+          cellmerge[i] = 1; // cut but doesn't require cell merging
+        }
+        else{
+          cellmerge[i] = 2; // requires cell merging
+        }
       }
       else{
-        cellmerge[i] = 2; // requires cell merging
+        cellmerge[i] = 0; 
       }
       printf("\n\telem %i, area_cut = %f, area = %f, cellmerge = %i\n",i,area_cut,area,cellmerge[i]);
   } // nelem loop
