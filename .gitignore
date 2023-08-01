@@ -5,4 +5,4 @@ dgsand
 *.o
 *swp
 overset_case*
-Test*
+tools/*dat

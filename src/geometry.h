@@ -352,29 +352,29 @@ void cut_mass_matrix(double *M, double *x, double *Jinv, double *xcut, double *d
     // This is needed to interp between cut cell coords and parent elem coords
     for(i=0;i<nbasis;i++)
       for(j=0;j<nbasis;j++)
-	{
-	  ij=nbasis*i+j;
-	  for(w=0;w<ngElem[e][p+1];w++) // 
-	    {
-	      for(jj=0;jj<d;jj++)
-      		ijk[jj]=gauss[e][g][(d+1)*w+jj];
+      {
+        ij=nbasis*i+j;
+        for(w=0;w<ngElem[e][p+1];w++) // 
+        {
+           for(jj=0;jj<d;jj++)
+             ijk[jj]=gauss[e][g][(d+1)*w+jj];
 
-	      wgt=gauss[e][g][(d+1)*w+2]*detJcut[0];
+           wgt=gauss[e][g][(d+1)*w+2]*detJcut[0];
 
-	      // could use bv here instead of reevaluating 
-	      // revaluate this if mesh is deforming 
+           // could use bv here instead of reevaluating 
+           // reevaluate this if mesh is deforming 
 
-        // subtract cut region from original mass matrix
-        CellCoordInterp(xcut, ijk, x, Jinv, u, d, e, p, ismerged); 
-	      M[ij]-=(wgt*basis[e][i](u)*basis[e][j](u));
-	    }
-  	}
+           // subtract cut region from original mass matrix
+           CellCoordInterp(xcut, ijk, x, Jinv, u, d, e, p, ismerged); 
+	         M[ij]-=(wgt*basis[e][i](u)*basis[e][j](u));
+        }
+  	  }
   }
   /// XXX What to do here? 
-  else {
-    // p=0 
-      M[0]-=0.5*detJcut[0];
-  }
+    else {
+      // p=0 
+        M[0]-=0.5*detJcut[0];
+    }
 }
 
 void mass_matrix(double *M, double *x, double* Jinv, double* detJ, int d, int e, int p, int debug, int eid, int pid, int* iptr, int pc)
@@ -794,14 +794,14 @@ void MASS_MATRIX(double *mass,double *x, int *iptr, int d, int e, int p, int nel
   for(i=0;i<nelem;i++){
     pid=elemParent[i];
     debug = 1;
-//    if(debug) printf("\n\nDEBUG: Mesh %i, cell %i, parent %i:\n",imesh,i,pid); 
+    if(debug) printf("\n\nDEBUG: Mesh %i, cell %i, parent %i:\n",imesh,i,pid); 
     ix=iptr[pc*i+1]; // current element x
     im=iptr[pc*pid+10]; // parent mass matrix
     mass_matrix(mass,x,Jinv,detJ,d,e,p,debug,i,pid,iptr,pc); 
   }
 
   // DEBUG 
-  /*
+ 
   for(i=0;i<nelem;i++){
     pid=elemParent[i];
     if(pid!=i) debug = 1;
@@ -816,14 +816,13 @@ void MASS_MATRIX(double *mass,double *x, int *iptr, int d, int e, int p, int nel
           }
     }
   }
-  */
 }
 
 void CUT_MASS_MATRIX(double *mass,double *x, double *Jinv, int *iptr, double *xcut, double *detJcut, 
                      int *iptrc, int d, int e, int p, int nelem, int pc, int pccut, int necut, 
                      int* cut2e, int imesh, int* elemParent)
 {
-  int i,j,k,ld,eid,pid;
+  int i,j,k,ld,eid,pid,m;
   int ix,im,ij,ixc,id;
   int ismerged;
   int nbasis=order2basis[e][p]; // XXX double check last argument, should be p=1 for cut cell
@@ -838,20 +837,21 @@ void CUT_MASS_MATRIX(double *mass,double *x, double *Jinv, int *iptr, double *xc
       ixc=iptrc[pccut*i+1];
       id=iptrc[pccut*i+5]; 
 
-/*        int m = 0; 
+        int m = 0; 
         for(int j=0;j<nbasis;j++)
           for(int k=0;k<nbasis;k++){
             printf("Mesh %i, eid %i, pid %i, cut cell %i, pre-cut mass[%i] = %f\n",imesh,eid,pid,i,im+m,mass[im+m]);
             m++;
           }
-*/
+
       ismerged=0;
       if(pid!=eid) ismerged=1; 
+      printf("Cutting mass...\n");
       cut_mass_matrix(&(mass[im]),&(x[ix]),&(Jinv[ij]),&(xcut[ixc]),&(detJcut[id]),d,e,p,ismerged);
 
 
       int debug = 0; 
-/*
+
       if(debug){
         m = 0; 
         for(int j=0;j<nbasis;j++)
@@ -861,7 +861,19 @@ void CUT_MASS_MATRIX(double *mass,double *x, double *Jinv, int *iptr, double *xc
           }
           printf("Mesh %i, cell %i, cut %i detJ = %f\n",imesh,eid,i,detJcut[id]); 
       }
-*/
+
+  }
+
+// debug print final mass
+  for(i=0;i<nelem;i++){
+    im=iptr[pc*elemParent[i]+10];
+    m=0; 
+    printf("Final Parent Mass: Elem %i, Parent %i\n",i,elemParent[i]);
+    for(int j=0;j<nbasis;j++)
+      for(int k=0;k<nbasis;k++){
+        printf("\tMfinal(%i,%i) = %f\n",j+1,k+1,mass[im+m]);
+        m++; 
+      }
   }
 }
 

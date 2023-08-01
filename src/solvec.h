@@ -169,7 +169,7 @@ void lusolve(double* A, double* b, int n, int neq)
   double eps = 1e-15; 
 
   lu(A,L,U,n);
-
+/*
   for(int i=0;i<n;i++)
     if(L[i*n+i]==0 || U[i*n+i]==0){
       printf("\nFAIL: L or U has zero in diagonal!\n");
@@ -181,15 +181,14 @@ void lusolve(double* A, double* b, int n, int neq)
         printf("\nU(%i,%i) = %.16e;\n",j+1,k+1,U[j*n+k]);
       exit(1); 
     }
-/*
   for(int i=0;i<n;i++)
   for(int j=0;j<n;j++)
     printf("L(%i,%i) = %.16e;\n",i+1,j+1,L[i*n+j]);
   for(int i=0;i<n;i++)
   for(int j=0;j<n;j++)
     printf("U(%i,%i) = %.16e;\n",i+1,j+1,U[i*n+j]);
-*/  
-
+*/
+  
   for(int i=0;i<neq;i++){
     for(int j=0;j<n;j++) btmp[j] = b[n*i+j];
     fsub(L,y,btmp,n);

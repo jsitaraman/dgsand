@@ -85,7 +85,7 @@ void EXCHANGE_OVERSET(double* OSFflux, double* OSFshpL, double* OSFshpR, int* OS
     eid = cut2eA[i];
     pid = elemParentA[eid];
     iq = iptrA[pid*pc]; // using parent's q values
-
+debug = 0;
     if(debug) printf("In Exchange\n");
 
     // does this cut cell have an overset boundary?

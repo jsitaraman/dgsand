@@ -97,7 +97,7 @@ void CUT_CELLS(double x0, double *x, double* xcut, int* iptr, int* cut2e, int d,
   int nfp=facePerElem[e];
   int i,f,j,k,l,m,n,tally[nfp],sum,ix,jp1,jp2,j0,fid;
 
-  double jac[4],det=-1000; 
+  double jac[4],det=-1000,tol; 
   double u[2],a,b,ycut1,ycut2;
   double xvert[6]; // x1 y1 x2 y2 x3 y3
   double xtmp[6];
@@ -207,7 +207,7 @@ void CUT_CELLS(double x0, double *x, double* xcut, int* iptr, int* cut2e, int d,
         forig[0] = fid; 
         neigh[0] = faces[6*fid+2] == i ? faces[6*fid+4] : faces[6*fid+2]; 
 
-        forig[1] = -1; 
+        forig[1] = -1; // self boundary
         neigh[1] = -2; // overset boundary
 
         fid = abs(elem2face[i*3+jp2])-1;
@@ -324,7 +324,7 @@ void CUT_CELLS(double x0, double *x, double* xcut, int* iptr, int* cut2e, int d,
         forig[1] = fid; 
         neigh[1] = faces[6*fid+2] == i ? faces[6*fid+4] : faces[6*fid+2]; 
 
-        forig[2] = -1; 
+        forig[2] = -1; // self 
         neigh[2] = i;  // this face's fluxes cancel out
 
         // initialize cutoverset index array
@@ -478,11 +478,12 @@ void CUT_CELLS(double x0, double *x, double* xcut, int* iptr, int* cut2e, int d,
       } // if cut cell
 
       // Check if cell needs merging
+      tol = 0.5;
       if(imerge == 1){
         if(area_cut<1e-14){
           cellmerge[i] = 0;
         }
-        else if(area_cut/area < 0.5){
+        else if(area_cut/area < tol){
           cellmerge[i] = 1; // cut but doesn't require cell merging
         }
         else{

@@ -57,7 +57,7 @@ extern "C" {
 
   void CUT_CELLS(double x0, double *x, double* xcut, int* iptr, int* cut2e, int d, int e, int p,
 		 int nelem, int pc, int *cut2face, int* cut2neigh, int* elem2face, int* faces,
-		 int* iblank, int* cutoverset, int imesh, int ng, int* cellmerge);
+		 int* iblank, int* cutoverset, int imesh, int ng, int* cellmerge, int imerge);
 
   void MASS_MATRIX(double *mass,double *x, int *iptr, int d, int e, int p, int nelem, int pc, int imesh,
  		   int* elemParent, double* Jinv, double* detJ);
@@ -419,7 +419,7 @@ class dgsand
         	  d, etype, p, nelem, pc,
         	  cut2face.data(),cut2neigh.data(),
         	  elem2face, faces, iblank.data(),
-        	  cutoverset.data(),imesh,ngGL,cellmerge.data());
+        	  cutoverset.data(),imesh,ngGL,cellmerge.data(),imerge);
 	
 /*        for(int i=0;i<necut;i++)
           printf("cut elem %i: neigh = %i %i %i\n",
